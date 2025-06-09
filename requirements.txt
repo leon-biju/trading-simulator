@@ -1,6 +1,11 @@
 asgiref==3.8.1
 Django==5.2.2
 htmx-django==0.1.1
-psycopg[binary]==3.2.9
+iniconfig==2.1.0
+packaging==25.0
+pluggy==1.6.0
+psycopg-binary==3.2.9
+Pygments==2.19.1
+pytest==8.4.0
 python-dotenv==1.1.0
 sqlparse==0.5.3
