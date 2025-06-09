@@ -42,19 +42,19 @@ jobs:
       - name: Django checks
         run: |
           docker run --rm --network host \
-            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DATABASE_HOST \
+            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
             trade-sim-django python manage.py check --deploy
 
       # Migrations (fails if model/state drift)
       - name: Run migrations
         run: |
           docker run --rm --network host \
-            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DATABASE_HOST \
+            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
             trade-sim-django python manage.py migrate --noinput
 
       # Unit + integration tests
       - name: Pytest suite
         run: |
           docker run --rm --network host \
-            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DATABASE_HOST \
+            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
             trade-sim-django pytest -q
