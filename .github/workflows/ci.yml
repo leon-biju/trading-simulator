@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # transient Postgres service
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER:     ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB:       ${{ secrets.POSTGRES_DB }}
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U $${POSTGRES_USER}"
+          --health-interval=5s
+          --health-retries=5
+
+    #  Share DB creds with the steps that run docker
+    env:
+      POSTGRES_USER:     ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB:       ${{ secrets.POSTGRES_DB }}
+      DB_HOST:           localhost
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build the same image used locally
+      - name: Build application image
+        run: docker build -t trade-sim-django .
+
+      # Django system checks (catches missing settings)
+      - name: Django checks
+        run: |
+          docker run --rm --network host \
+            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
+            trade-sim-django python manage.py check --deploy
+
+      # Migrations (fails if model/state drift)
+      - name: Run migrations
+        run: |
+          docker run --rm --network host \
+            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
+            trade-sim-django python manage.py migrate --noinput
+
+      # Unit + integration tests
+      - name: Pytest suite
+        run: |
+          docker run --rm --network host \
+            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
+            trade-sim-django pytest -q
