@@ -55,6 +55,10 @@ jobs:
       # Unit + integration tests
       - name: Pytest suite
         run: |
-          docker run --rm --network host \
-            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
-            trade-sim-django pytest -q
+          if docker run --rm trade-sim-django /bin/sh -c "ls -R | grep -qE 'test_.*\\.py|.*_test\\.py'"; then
+            docker run --rm \
+              -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
+              trade-sim-django pytest -q
+          else
+            echo "No test files yet: skipping pytest"
+          fi
