@@ -1,5 +1,7 @@
 asgiref==3.8.1
+crispy-bootstrap5==2025.6
 Django==5.2.2
+django-crispy-forms==2.4
 htmx-django==0.1.1
 iniconfig==2.1.0
 packaging==25.0
