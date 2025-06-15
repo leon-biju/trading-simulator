@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% load humanize %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h2>Dashboard</h2>
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Welcome {{ profile.user.username }}.</h5>
+        <p class="card-text">Current Balance: <strong>${{ profile.cash_balance|intcomma }}</strong></p>
+    </div>
+</div>
+</form>
+{% endblock %}
