@@ -47,6 +47,7 @@ def logout_view(request):
     # User should be logged in to access logout
     if not request.user.is_authenticated:
         return redirect("/accounts/login/")
+    if request.method == "POST":
+        logout(request)
     
-    logout(request)
     return redirect("/accounts/login/")
