@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <title>{% block title %}{% endblock %} | TradeSim</title>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- bootstrap css -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
@@ -17,7 +17,13 @@
 
   <!-- TODO: NAVBAR -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    
+    {% if profile.user.is_authenticated %}
+    <ul class="nav navbar-nav navbar-right">
+        <li>
+            <a href="/accounts/logout">Logout</a>
+        </li>
+    </ul>
+    {% endif %}
   </nav>
 
   <!-- MAIN PAGE CONTENT -->
