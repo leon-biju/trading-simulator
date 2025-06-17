@@ -1,0 +1,9 @@
+
+/* DROPDOWN TOGGLE FLIP */
+.dropdown-toggle::after {
+    transition: transform .35s ease;
+}
+.dropdown-toggle[aria-expanded="true"]::after {
+    transform: rotate(180deg); 
+}
+
