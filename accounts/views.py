@@ -37,7 +37,7 @@ def login_view(request):
                 login(request, user)
                 return redirect("/dashboard/")
             else:
-                form.add_error(None, "Invalid email or password")
+                form.add_error(None, "Invalid username or password")
     else:
         form = LoginForm()
     
