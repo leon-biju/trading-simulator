@@ -21,6 +21,7 @@ def register_view(request):
     
     return render(request, "accounts/register.html", {"form": form})
 
+
 def login_view(request):
     # User shouldn't be logged in to access the login page
     if request.user.is_authenticated:
@@ -42,6 +43,7 @@ def login_view(request):
         form = LoginForm()
     
     return render(request, "accounts/login.html", {"form": form})
+
 
 def logout_view(request):
     # User should be logged in to access logout
