@@ -2,13 +2,12 @@ from django.contrib.auth.forms import UserCreationForm
 from django import forms
 from django.contrib.auth import get_user_model
 
-User = get_user_model()
 
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(required=True)
 
     class Meta(UserCreationForm.Meta):
-        model  = User
+        model  = get_user_model()
         fields = ("username", "email")
 
     #Reject emails that only differ in case
@@ -19,9 +18,3 @@ class SignUpForm(UserCreationForm):
 class LoginForm(forms.Form):
     username = forms.CharField(max_length=150, required=True)
     password = forms.CharField(widget=forms.PasswordInput, required=True)
-
-    def clean_username(self):
-        return self.cleaned_data["username"].lower()
-    
-    def clean_password(self):
-        return self.cleaned_data["password"]
