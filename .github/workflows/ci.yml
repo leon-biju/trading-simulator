@@ -36,29 +36,26 @@ jobs:
 
       # Build the same image used locally
       - name: Build application image
-        run: docker build -t trade-sim-django .
+        run: docker build -t trading-simulator .
 
       # Django system checks (catches missing settings)
       - name: Django checks
         run: |
           docker run --rm --network host \
             -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
-            trade-sim-django python manage.py check --deploy
+            trading-simulator python manage.py check --deploy
 
       # Migrations (fails if model/state drift)
       - name: Run migrations
         run: |
           docker run --rm --network host \
             -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
-            trade-sim-django python manage.py migrate --noinput
+            trading-simulator python manage.py migrate --noinput
 
       # Unit + integration tests
       - name: Pytest suite
         run: |
-          if docker run --rm trade-sim-django /bin/sh -c "ls -R | grep -qE 'test_.*\\.py|.*_test\\.py'"; then
-            docker run --rm \
-              -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
-              trade-sim-django pytest -q
-          else
-            echo "No test files yet: skipping pytest"
-          fi
+          docker run --rm \
+            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
+            trading-simulator pytest -q
+
