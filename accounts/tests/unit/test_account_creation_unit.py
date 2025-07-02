@@ -3,7 +3,7 @@ import pytest
 from accounts.forms import SignUpForm
 
 
-# Test email normalisation
+#1. Test email normalisation
 @pytest.mark.parametrize(
     "raw, expected",
     [
