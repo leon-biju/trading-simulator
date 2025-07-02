@@ -9,7 +9,7 @@
 <div class="card mb-4">
   <div class="card-body">
     <h5 class="card-title">Welcome {{ profile.user.username }}.</h5>
-    <p class="card-text">Current Balance: <strong>${{ profile.cash_balance|intcomma }}</strong></p>
+    <p class="card-text">Current Balance: <strong>£{{ profile.cash_balance_gbp|intcomma }}</strong></p>
   </div>
 </div>
 </form>
