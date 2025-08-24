@@ -11,10 +11,15 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-from dotenv import load_dotenv
+
 import os
 
-load_dotenv('.env')
+TESTING = os.getenv("TEST").lower() == "true"
+
+if not TESTING:
+    from dotenv import load_dotenv
+    load_dotenv('.env')
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -88,12 +93,13 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         "ENGINE": "django.db.backends.postgresql",
         "NAME":     os.getenv("POSTGRES_DB", "postgres"),
-        "USER":     os.getenv("POSTGRES_USER", "user"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "password"),
+        "USER":     os.getenv("POSTGRES_USER", "postgres"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
         "HOST":     os.getenv("DB_HOST", "db"),
         "PORT":     os.getenv("DB_PORT", "5432"),
     }
