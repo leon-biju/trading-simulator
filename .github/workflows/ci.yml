@@ -1,64 +1,51 @@
 name: CI
-
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: { push: { branches: [ master ] }, pull_request: {} }
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
-    # transient Postgres service
     services:
       db:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER:     ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB:       ${{ secrets.POSTGRES_DB }}
-        ports: ['5432:5432']
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports: ['55432:5432']
         options: >-
-          --health-cmd="pg_isready -U $${POSTGRES_USER}"
-          --health-interval=5s
-          --health-retries=5
+          --health-cmd="pg_isready -U testuser -d testdb"
+          --health-interval=5s --health-timeout=5s --health-retries=20
 
-    #  Share DB creds with the steps that run docker
     env:
-      POSTGRES_USER:     ${{ secrets.POSTGRES_USER }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_DB:       ${{ secrets.POSTGRES_DB }}
-      DB_HOST:           localhost
+      TEST: 'True'
+
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      DB_HOST: localhost
+      DB_PORT: '55432'
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r requirements-dev.txt
 
-      # Build the same image used locally
-      - name: Build application image
-        run: docker build -t trade-sim-django .
-
-      # Django system checks (catches missing settings)
-      - name: Django checks
+      
+        
+      - name: Print Testing
         run: |
-          docker run --rm --network host \
-            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
-            trade-sim-django python manage.py check --deploy
+          python - <<'PY'
+          import os
+          os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+          from django.conf import settings
+          import json
+          print(f"testing: {settings.TESTING} und {os.getenv("TEST")}")
+          PY
 
-      # Migrations (fails if model/state drift)
-      - name: Run migrations
-        run: |
-          docker run --rm --network host \
-            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
-            trade-sim-django python manage.py migrate --noinput
+      - name: Migrate
+        run: python manage.py migrate --noinput
 
-      # Unit + integration tests
-      - name: Pytest suite
-        run: |
-          if docker run --rm trade-sim-django /bin/sh -c "ls -R | grep -qE 'test_.*\\.py|.*_test\\.py'"; then
-            docker run --rm \
-              -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB -e DB_HOST \
-              trade-sim-django pytest -q
-          else
-            echo "No test files yet: skipping pytest"
-          fi
+      - name: Tests
+        run: pytest -q

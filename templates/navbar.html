@@ -1,0 +1,65 @@
+{% load static %}
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container-fluid">
+
+    <!-- LOGO -->
+    <a class="navbar-brand" href="/">Trade Simulator</a>
+
+    <!-- MOBILE TOGGLE -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+            aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- COLLAPSABLE AREA -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+      <!-- TODO: ADD REAL NAVBAR LINKS -->
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" href="#">EXAMPLE_1</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">EXAMPLE_2</a>
+        </li>
+      </ul>
+
+      <!-- ------------- USER DROPDOWN ------------- -->
+      <ul class="navbar-nav">
+        <li class="nav-item dropdown">
+
+          <!-- User icon button -->
+          <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person-circle"></i>
+            {% if request.user.is_authenticated %}
+              <span class="ms-1">{{ request.user.username }}</span>
+            {% endif %}
+          </a>
+
+          <!-- Menu -->
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+            {% if request.user.is_authenticated %}
+              <li><a class="dropdown-item" href="{% url 'dashboard' %}">Dashboard</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <!-- Logout via POST for safety -->
+              <li>
+                <form method="post" action="/accounts/logout/">
+                  {% csrf_token %}
+                  <button class="dropdown-item" type="submit">Logout</button>
+                </form>
+              </li>
+            {% else %}
+              <li><a class="dropdown-item" href="{% url 'login' %}">Login</a></li>
+              <li><a class="dropdown-item" href="{% url 'register' %}">Register</a></li>
+            {% endif %}
+          </ul>
+
+        </li>
+      </ul>
+      <!-- ----------- /USER DROPDOWN ------------ -->
+
+    </div>
+  </div>
+</nav>
