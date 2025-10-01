@@ -23,7 +23,7 @@ from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/', include('accounts.urls')),
-    path('dashboard/', include('dashboard.urls')),
+    path('accounts/', include('apps.accounts.urls')),
+    path('dashboard/', include('apps.dashboard.urls')),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home_redirect'),
 ]

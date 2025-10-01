@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required
-from  accounts.models import Profile
+from apps.accounts.models import Profile
 
 @login_required
 def dashboard_view(request):
