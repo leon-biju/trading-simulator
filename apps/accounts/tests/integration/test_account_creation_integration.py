@@ -1,5 +1,5 @@
 import pytest
-from accounts.forms import SignUpForm, LoginForm
+from apps.accounts.forms import SignUpForm, LoginForm
 from django.contrib.auth import get_user_model
 
 

@@ -1,6 +1,6 @@
 import pytest
 
-from accounts.forms import SignUpForm
+from apps.accounts.forms import SignUpForm
 
 
 #1. Test email normalisation
