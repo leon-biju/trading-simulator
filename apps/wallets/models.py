@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 
 class Wallet(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True)
     balance = models.DecimalField(max_digits=20, decimal_places=2, default=settings.STARTING_BALANCE)
     currency = models.CharField(max_length=10, default='GBP')
     created_at = models.DateTimeField(auto_now_add=True)
