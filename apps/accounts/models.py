@@ -8,7 +8,8 @@ class CustomUser(AbstractUser):
 
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True)
-    cash_balance_gbp = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("100000.00"))
+    display_name = models.CharField(max_length=100, blank=True)
+    preferences_json = models.JSONField(default=dict, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import os
 
-TESTING = os.getenv("TEST").lower() == "true"
+TESTING = os.getenv("TEST", "false").lower() == "true"
 
 if not TESTING:
     from dotenv import load_dotenv
@@ -167,3 +167,8 @@ EMAIL_PORT      = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS   = os.getenv("DJANGO_EMAIL_USE_TLS", "true").lower() == "true"
+
+
+
+# Application specific settings
+STARTING_BALANCE = 100_000.00 #gbp for now
