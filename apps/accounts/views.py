@@ -1,9 +1,10 @@
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from .forms import SignUpForm, LoginForm
 
 
-def register_view(request):
+def register_view(request: HttpRequest) -> HttpResponse:
     # User shouldn't be logged in to access the register page
     if request.user.is_authenticated:
         return redirect("/dashboard/")
@@ -22,7 +23,7 @@ def register_view(request):
     return render(request, "accounts/register.html", {"form": form})
 
 
-def login_view(request):
+def login_view(request: HttpRequest) -> HttpResponse:
     # User shouldn't be logged in to access the login page
     if request.user.is_authenticated:
         return redirect("/dashboard/")
@@ -45,7 +46,7 @@ def login_view(request):
     return render(request, "accounts/login.html", {"form": form})
 
 
-def logout_view(request):
+def logout_view(request: HttpRequest) -> HttpResponse:
     # User should be logged in to access logout
     if not request.user.is_authenticated:
         return redirect("/accounts/login/")
