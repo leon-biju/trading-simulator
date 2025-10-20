@@ -12,7 +12,7 @@ class Wallet(models.Model):
         return f"Wallet of {self.user.username} - Balance: {self.balance} {self.currency}"
 
 
-class CashTransaction(models.Model):
+class Transaction(models.Model):
     class Source(models.TextChoices):
         DEPOSIT = 'DEPOSIT'
         WITHDRAWAL = 'WITHDRAWAL'
