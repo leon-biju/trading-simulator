@@ -13,6 +13,9 @@ def create_transaction(
         description: str,
         ) -> Tuple[Optional[Transaction], Optional[str]]:
     # Easy error handling for any issues like insufficient funds
+
+    if amount == 0:
+        return (None, "ZERO_AMOUNT_TRANSACTION")
     try:
         with transaction.atomic():
             # Prevent race conditions by locking this wallet record
@@ -26,6 +29,7 @@ def create_transaction(
             new_transaction = Transaction.objects.create(
                 wallet=wallet,
                 amount=amount,
+                currency=wallet.currency,
                 balance_after=round_to_two_dp(new_balance),
                 source=source,
                 description=description
