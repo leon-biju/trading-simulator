@@ -7,4 +7,5 @@ from django.conf import settings
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_wallet(sender, instance, created, **kwargs):
     if created:
-        Wallet.objects.create(user=instance)
+        Wallet.objects.create(user=instance, balance=settings.STARTING_BALANCE)
+        # Only new users get a wallet created loaded with 100,000 gbp
