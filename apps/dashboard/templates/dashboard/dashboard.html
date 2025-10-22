@@ -6,11 +6,24 @@
 
 {% block content %}
 <h2>Dashboard</h2>
-<div class="card mb-4">
-  <div class="card-body">
-    <h5 class="card-title">Welcome {{ profile.user.username }}.</h5>
-    <p class="card-text">Current Balance: <strong>£{{ wallet.balance|intcomma }}</strong></p>
+<h5 class="card-title mb-4">Welcome, {{ profile.user.username }}.</h5>
+
+<div class="row">
+  {% for wallet in wallets %}
+  <div class="col-md-4 mb-4">
+    <div class="card">
+      <div class="card-header">
+        {{ wallet.get_currency_display }} Wallet
+      </div>
+      <div class="card-body">
+        <p class="card-text">Balance: <strong>{{ wallet.symbol }}{{ wallet.balance|intcomma }}</strong></p>
+      </div>
+    </div>
   </div>
+  {% empty %}
+  <div class="col">
+    <p>You don't have any wallets yet. Please contact an admin</p>
+  </div>
+  {% endfor %}
 </div>
-</form>
 {% endblock %}
