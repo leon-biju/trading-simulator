@@ -1,10 +1,11 @@
 from django.conf import settings
 from django.db import models
+from .constants import CURRENCY_SYMBOLS
 
 class Currency(models.TextChoices):
-    GBP = 'GBP'
-    USD = 'USD'
-    EUR = 'EUR'
+    GBP = 'GBP', 'GBP'
+    USD = 'USD', 'USD'
+    EUR = 'EUR', 'EUR'
     # Additional currencies can be added here later
 
 class Wallet(models.Model):
@@ -21,6 +22,10 @@ class Wallet(models.Model):
             models.UniqueConstraint(fields=['user', 'currency'], name='unique_user_currency_wallet')
         ]
 
+    @property
+    def symbol(self) -> str:
+        return CURRENCY_SYMBOLS.get(self.currency, self.currency)
+    
     def __str__(self):
         return f"Wallet of {self.user.username} - Balance: {self.balance} {self.currency}"
 
