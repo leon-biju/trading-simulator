@@ -29,7 +29,6 @@ def create_transaction(
             new_transaction = Transaction.objects.create(
                 wallet=wallet,
                 amount=amount,
-                currency=wallet.currency,
                 balance_after=round_to_two_dp(new_balance),
                 source=source,
                 description=description
