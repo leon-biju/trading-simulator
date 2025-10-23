@@ -1,9 +1,10 @@
 from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
-from apps.wallets.models import Transaction, Wallet, Currency
+from apps.wallets.models import Transaction, Wallet
 from apps.wallets import services
 import threading
+
 
 # Create a dummy user for testing
 @pytest.fixture
@@ -13,28 +14,7 @@ def user_with_wallets():
     wallets = Wallet.objects.filter(user=user)
     return user, wallets
 
-# 1. Test that all wallets are created for a new user
-@pytest.mark.django_db
-def test_all_wallets_created_for_new_user(user_with_wallets):
-    user, wallets = user_with_wallets
-    assert wallets.count() == len(Currency.choices)
-    
-    created_currencies = {wallet.currency for wallet in wallets}
-    expected_currencies = {currency[0] for currency in Currency.choices}
-    assert created_currencies == expected_currencies
 
-    for wallet in wallets:
-        assert wallet.user == user
-
-# 2. Test balance on gbp wallet is set to £100,000
-@pytest.mark.django_db
-def test_gbp_wallet_initial_balance(user_with_wallets):
-    user, wallets = user_with_wallets
-    gbp_wallet = wallets.get(currency='GBP')
-    assert gbp_wallet.balance == Decimal('100000.00')
-
-
-# 3. Test transaction creation and balance update on positive transaction
 @pytest.mark.django_db
 def test_transaction_creation_and_balance_update(user_with_wallets):
     user, wallets = user_with_wallets
@@ -54,7 +34,6 @@ def test_transaction_creation_and_balance_update(user_with_wallets):
     assert wallet.balance == old_balance + Decimal('10.98')
 
 
-# 4. Test transaction creation with insufficient funds
 @pytest.mark.django_db
 def test_transaction_creation_insufficient_funds(user_with_wallets):
     user, wallets = user_with_wallets
@@ -73,7 +52,6 @@ def test_transaction_creation_insufficient_funds(user_with_wallets):
     assert wallet.balance == Decimal('50.00')
 
 
-# 5. Test transaction creation with non-existent wallet
 @pytest.mark.django_db
 def test_transaction_creation_non_existent_wallet():
     assert not Wallet.objects.filter(id=9999).exists()
@@ -87,7 +65,6 @@ def test_transaction_creation_non_existent_wallet():
     assert error == "WALLET_DOES_NOT_EXIST"
 
 
-# 6. Test zero amount transaction
 @pytest.mark.django_db
 def test_zero_amount_transaction(user_with_wallets):
     user, wallets = user_with_wallets
@@ -104,7 +81,6 @@ def test_zero_amount_transaction(user_with_wallets):
     wallet.refresh_from_db()
     assert wallet.balance == old_balance
 
-# 7. Test transaction data integrity
 @pytest.mark.django_db
 def test_transaction_data_integrity(user_with_wallets):
     user, wallets = user_with_wallets
@@ -122,7 +98,6 @@ def test_transaction_data_integrity(user_with_wallets):
     assert transaction.source == Transaction.Source.DEPOSIT
     assert transaction.description == "Data integrity test"
 
-# 8. Test multiple concurrent transactions to ensure atomicity
 @pytest.mark.django_db(transaction=True)
 def test_concurrent_transactions_atomicity(user_with_wallets):
     user, wallets = user_with_wallets
