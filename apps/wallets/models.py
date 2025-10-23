@@ -39,7 +39,6 @@ class Transaction(models.Model):
 
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions')
     amount = models.DecimalField(max_digits=20, decimal_places=2) # Positive for deposits/buys, negative for withdrawals/sells
-    currency = models.CharField(max_length=10, choices=Currency.choices, default=Currency.GBP)
     balance_after = models.DecimalField(max_digits=20, decimal_places=2)
     source = models.CharField(max_length=10, choices=Source.choices)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
