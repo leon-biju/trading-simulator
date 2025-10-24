@@ -49,3 +49,17 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.wallet.user.username}:  {self.amount} {self.currency} ({self.source}) on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+    
+
+
+# Transfer between wallets of same user but different currencies
+class Fx_Transfer(models.Model):
+    from_wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='fx_transfers_from')
+    to_wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='fx_transfers_to')
+    from_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    to_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    exchange_rate = models.DecimalField(max_digits=20, decimal_places=6)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"FX Transfer: [{self.from_wallet.currency}] to [{self.to_wallet.currency}] - {self.from_wallet.symbol}{self.amount} at {self.exchange_rate} on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
