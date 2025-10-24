@@ -68,8 +68,8 @@ def test_fx_transfer_success(user_with_wallets):
 
 @pytest.mark.django_db
 def test_fx_transfer_insufficient_funds(user_with_wallets):
-    transactions_count = Transaction
     user, wallets = user_with_wallets
+    initial_transactions_count = Transaction.objects.filter(wallet__user=user).count()
     gbp_wallet = wallets.get(currency='GBP')
     usd_wallet = wallets.get(currency='USD')
 
@@ -84,3 +84,6 @@ def test_fx_transfer_insufficient_funds(user_with_wallets):
 
     assert fx_transfer is None
     assert error == "INSUFFICIENT_FUNDS_IN_FROM_WALLET"
+    
+    # Verify no new transactions were created
+    assert Transaction.objects.filter(wallet__user=user).count() == initial_transactions_count
