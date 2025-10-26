@@ -62,4 +62,4 @@ class Fx_Transfer(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"FX Transfer: [{self.from_wallet.currency}] to [{self.to_wallet.currency}] - {self.from_wallet.symbol}{self.amount} at {self.exchange_rate} on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"FX Transfer: [{self.from_wallet.currency}] to [{self.to_wallet.currency}] - {self.from_wallet.symbol}{self.to_amount} at {self.exchange_rate} on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
