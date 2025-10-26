@@ -18,7 +18,7 @@ def create_transaction(
         amount: Decimal, 
         source: Transaction.Source, 
         description: str,
-        ) -> Tuple[Optional[Transaction], Optional[str]]:
+    ) -> Tuple[Optional[Transaction], Optional[str]]:
     # Easy error handling for any issues like insufficient funds
 
     if amount == 0:
@@ -56,26 +56,24 @@ def perform_fx_transfer(
         user_id: int,
         from_wallet_currency: str,
         to_wallet_currency: str,
-        from_amount: Decimal,
+        from_amount: Optional[Decimal] = None,
+        to_amount: Optional[Decimal] = None,
     ) -> Tuple[Optional[Fx_Transfer], Optional[str]]:
     # Transfer funds between two wallets of the same user but different currencies
-
+    # Specify either from_amount OR to_amount, not both
     if from_wallet_currency == to_wallet_currency:
         return (None, "SAME_WALLET_TRANSFER")
 
     if from_wallet_currency not in Currency.values or to_wallet_currency not in Currency.values:
         return (None, "UNSUPPORTED_CURRENCY")
 
+    if (from_amount is None and to_amount is None) or (from_amount is not None and to_amount is not None):
+        return (None, "SPECIFY_EITHER_FROM_OR_TO_AMOUNT")
+
     try:
         with transaction.atomic():
             from_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency=from_wallet_currency)
             to_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency=to_wallet_currency)
-
-            if from_amount <= 0:
-                return (None, "INVALID_FROM_AMOUNT")
-
-            if from_wallet.balance < from_amount:
-                return (None, "INSUFFICIENT_FUNDS_IN_FROM_WALLET")
 
             # Get dummy FX rates
             # USE REAL FX RATES IN PROD
@@ -86,13 +84,25 @@ def perform_fx_transfer(
                 return (None, "UNSUPPORTED_CURRENCY_FOR_FX")
 
             exchange_rate = to_rate / from_rate
-            to_amount = round_to_two_dp(from_amount * exchange_rate)
+
+            # Calculate the missing amount based on which one was provided
+            if from_amount is not None:
+                if from_amount <= 0:
+                    return (None, "INVALID_FROM_AMOUNT")
+                to_amount = round_to_two_dp(from_amount * exchange_rate)
+            else:
+                if to_amount <= 0:
+                    return (None, "INVALID_TO_AMOUNT")
+                from_amount = round_to_two_dp(to_amount / exchange_rate)
+
+            if from_wallet.balance < from_amount:
+                return (None, "INSUFFICIENT_FUNDS_IN_FROM_WALLET")
 
             _, from_error = create_transaction(
                 wallet_id=from_wallet.id,
                 amount=-from_amount,
                 source=Transaction.Source.SELL,
-                description=f"FX Transfer to {to_wallet.currency} wallet"
+                description=f"FX Transfer of {to_wallet.symbol}{to_amount} to {to_wallet.currency} wallet"
             )
             if from_error:
                 return (None, from_error)
@@ -101,7 +111,7 @@ def perform_fx_transfer(
                 wallet_id=to_wallet.id,
                 amount=to_amount,
                 source=Transaction.Source.BUY,
-                description=f"FX Transfer from {from_wallet.currency} wallet"
+                description=f"FX Transfer of {from_wallet.symbol}{from_amount} from {from_wallet.currency} wallet"
             )
             if to_error:
                 return (None, to_error)

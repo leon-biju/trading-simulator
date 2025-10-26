@@ -13,7 +13,9 @@
   <div class="col-md-4 mb-4">
     <div class="card">
       <div class="card-header">
-        {{ wallet.get_currency_display }} Wallet
+        <a href="{% url 'wallets:wallet_detail' currency=wallet.currency %}">
+          {{ wallet.get_currency_display }} Wallet
+        </a>
       </div>
       <div class="card-body">
         <p class="card-text">Balance: <strong>{{ wallet.symbol }}{{ wallet.balance|intcomma }}</strong></p>
