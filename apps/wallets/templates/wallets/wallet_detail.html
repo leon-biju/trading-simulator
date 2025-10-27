@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load humanize %}
+{% load static %}
 
 {% block title %}{{ wallet.get_currency_display }} Wallet{% endblock %}
 
@@ -98,9 +99,8 @@
 </div>
 </div>
 </div>
-
-{% load static %}
-{% block extra_js %}
-<script src="{% static 'js/fx_calculator.js' %}"></script>
 {% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'wallets/js/fx_calculator.js' %}"></script>
 {% endblock %}
