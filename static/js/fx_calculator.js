@@ -18,6 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const fromWalletSelect = document.getElementById('id_from_wallet_currency');
     const convertedAmountSpan = document.getElementById('converted-amount');
 
+    function formatNumberWithCommas(number) {
+        return number.toLocaleString('en-GB', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
     function updateConvertedAmount() {
         const toAmount = parseFloat(toAmountInput.value);
         const fromCurrency = fromWalletSelect.value;
@@ -38,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fromAmount = (toAmount / toRate) * fromRate;
         const fromSymbol = currencySymbols[fromCurrency] || fromCurrency;
 
-        convertedAmountSpan.textContent = `${fromSymbol}${fromAmount.toFixed(2)}`;
+        convertedAmountSpan.textContent = `${fromSymbol}${formatNumberWithCommas(fromAmount)}`;
     }
 
     toAmountInput.addEventListener('keyup', updateConvertedAmount);
