@@ -123,8 +123,8 @@ def perform_fx_transfer(
             _, from_error = create_transaction(
                 wallet_id=from_wallet.id,
                 amount=-from_amount,
-                source=Transaction.Source.SELL,
-                description=f"FX Transfer of {to_wallet.symbol}{to_amount:.2f} to {to_wallet.currency} wallet"
+                source=Transaction.Source.FX_TRANSFER,
+                description=f"FX Transfer of {to_wallet.symbol}{to_amount:.2f} ({from_wallet.symbol}{from_amount:.2f}) to {to_wallet.currency} wallet"
             )
             if from_error:
                 return (None, from_error)
@@ -132,8 +132,8 @@ def perform_fx_transfer(
             _, to_error = create_transaction(
                 wallet_id=to_wallet.id,
                 amount=to_amount,
-                source=Transaction.Source.BUY,
-                description=f"FX Transfer of {from_wallet.symbol}{from_amount:.2f} from {from_wallet.currency} wallet"
+                source=Transaction.Source.FX_TRANSFER,
+                description=f"FX Transfer of {to_wallet.symbol}{to_amount:.2f} ({from_wallet.symbol}{from_amount:.2f}) from {from_wallet.currency} wallet"
             )
             if to_error:
                 return (None, to_error)

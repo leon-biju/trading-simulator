@@ -36,11 +36,12 @@ class Transaction(models.Model):
         WITHDRAWAL = 'WITHDRAWAL'
         BUY = 'BUY'
         SELL = 'SELL'
+        FX_TRANSFER = 'FX_TRANSFER', 'FX_TRANSFER'
 
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions')
     amount = models.DecimalField(max_digits=20, decimal_places=2) # Positive for deposits/buys, negative for withdrawals/sells
     balance_after = models.DecimalField(max_digits=20, decimal_places=2)
-    source = models.CharField(max_length=10, choices=Source.choices)
+    source = models.CharField(max_length=16, choices=Source.choices)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
     description = models.TextField(blank=True)
 
