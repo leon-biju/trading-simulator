@@ -1,9 +1,24 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from .models import Wallet
 from .forms import AddFundsForm
 from .services import perform_fx_transfer, DUMMY_FX_RATES
 import json
+
+ERROR_MESSAGES = {
+    'ZERO_AMOUNT_TRANSACTION': 'Transaction amount cannot be zero.',
+    'INSUFFICIENT_FUNDS': 'Insufficient funds in your wallet.',
+    'INSUFFICIENT_FUNDS_IN_FROM_WALLET': 'Insufficient funds in the source wallet for this transfer.',
+    'WALLET_DOES_NOT_EXIST': 'The specified wallet does not exist.',
+    'SAME_WALLET_TRANSFER': 'Cannot transfer funds to the same wallet.',
+    'UNSUPPORTED_CURRENCY': 'One or more currencies are not supported.',
+    'UNSUPPORTED_CURRENCY_FOR_FX': 'Exchange rate not available for the selected currencies.',
+    'SPECIFY_EITHER_FROM_OR_TO_AMOUNT': 'Invalid transfer parameters. Please try again.',
+    'INVALID_FROM_AMOUNT': 'The transfer amount must be greater than zero.',
+    'INVALID_TO_AMOUNT': 'The transfer amount must be greater than zero.',
+}
+
 
 @login_required
 def wallet_detail(request, currency):
@@ -25,12 +40,18 @@ def wallet_detail(request, currency):
             )
 
             if error:
-                # TODO: Handle error display on frontend
-                print(f"ERROR for user {request.user.id}: {error}")
-                pass
+                error_message = ERROR_MESSAGES.get(error, 'An unknown error occurred.')
+                messages.error(request, error_message)
+            else:
+                messages.success(request, f'Successfully added {wallet.symbol}{to_amount} to your {wallet.currency} wallet.')
+
             return redirect('wallets:wallet_detail', currency=wallet.currency)
-    else:
+        else:
+            messages.error(request, 'There was an error with your submission. Please check the form and try again.')
+    else: # GET requests
         form = AddFundsForm()
+
+
 
     serializable_fx_rates = {k: str(v) for k, v in DUMMY_FX_RATES.items()}
 

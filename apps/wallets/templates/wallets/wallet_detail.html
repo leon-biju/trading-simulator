@@ -7,6 +7,15 @@
 <div class="container">
     <h2 class="mb-4">{{ wallet.get_currency_display }} Wallet</h2>
 
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <div class="card mb-4">
         <div class="card-header">
             Wallet Details
