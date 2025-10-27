@@ -52,6 +52,39 @@ def create_transaction(
         return (None, f"UNEXPECTED_ERROR: {str(e)}")
     
 
+def get_fx_conversion(
+    from_currency: str,
+    to_currency: str,
+    from_amount: Optional[Decimal] = None,
+    to_amount: Optional[Decimal] = None,
+) -> Tuple[Optional[Decimal], Optional[Decimal], Optional[str]]:
+    # Returns (from_amount, to_amount, error)
+    if from_currency not in Currency.values or to_currency not in Currency.values:
+        return (None, None, "UNSUPPORTED_CURRENCY")
+
+    if (from_amount is None and to_amount is None) or (from_amount is not None and to_amount is not None):
+        return (None, None, "SPECIFY_EITHER_FROM_OR_TO_AMOUNT")
+
+    from_rate = DUMMY_FX_RATES.get(from_currency)
+    to_rate = DUMMY_FX_RATES.get(to_currency)
+
+    if not from_rate or not to_rate:
+        return (None, None, "UNSUPPORTED_CURRENCY_FOR_FX")
+
+    exchange_rate = to_rate / from_rate
+
+    if from_amount is not None:
+        if from_amount <= 0:
+            return (None, None, "INVALID_FROM_AMOUNT")
+        calculated_to_amount = round_to_two_dp(from_amount * exchange_rate)
+        return (from_amount, calculated_to_amount, None)
+    else: # to_amount is not None
+        if to_amount <= 0:
+            return (None, None, "INVALID_TO_AMOUNT")
+        calculated_from_amount = round_to_two_dp(to_amount / exchange_rate)
+        return (calculated_from_amount, to_amount, None)
+
+
 def perform_fx_transfer(
         user_id: int,
         from_wallet_currency: str,
@@ -64,39 +97,28 @@ def perform_fx_transfer(
     if from_wallet_currency == to_wallet_currency:
         return (None, "SAME_WALLET_TRANSFER")
 
-    if from_wallet_currency not in Currency.values or to_wallet_currency not in Currency.values:
-        return (None, "UNSUPPORTED_CURRENCY")
+    from_amount, to_amount, error = get_fx_conversion(
+        from_currency=from_wallet_currency,
+        to_currency=to_wallet_currency,
+        from_amount=from_amount,
+        to_amount=to_amount
+    )
 
-    if (from_amount is None and to_amount is None) or (from_amount is not None and to_amount is not None):
-        return (None, "SPECIFY_EITHER_FROM_OR_TO_AMOUNT")
+    if error:
+        return (None, error)
 
     try:
         with transaction.atomic():
             from_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency=from_wallet_currency)
             to_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency=to_wallet_currency)
 
-            # Get dummy FX rates
-            # USE REAL FX RATES IN PROD
-            from_rate = DUMMY_FX_RATES.get(from_wallet.currency)
-            to_rate = DUMMY_FX_RATES.get(to_wallet.currency)
-
-            if not from_rate or not to_rate:
-                return (None, "UNSUPPORTED_CURRENCY_FOR_FX")
-
-            exchange_rate = to_rate / from_rate
-
-            # Calculate the missing amount based on which one was provided
-            if from_amount is not None:
-                if from_amount <= 0:
-                    return (None, "INVALID_FROM_AMOUNT")
-                to_amount = round_to_two_dp(from_amount * exchange_rate)
-            else:
-                if to_amount <= 0:
-                    return (None, "INVALID_TO_AMOUNT")
-                from_amount = round_to_two_dp(to_amount / exchange_rate)
-
             if from_wallet.balance < from_amount:
                 return (None, "INSUFFICIENT_FUNDS_IN_FROM_WALLET")
+
+            # Get dummy FX rates for exchange rate calculation
+            from_rate = DUMMY_FX_RATES.get(from_wallet.currency)
+            to_rate = DUMMY_FX_RATES.get(to_wallet.currency)
+            exchange_rate = to_rate / from_rate
 
             _, from_error = create_transaction(
                 wallet_id=from_wallet.id,
