@@ -1,8 +1,13 @@
 {% extends "base.html" %}
 
 {% load humanize %}
+{% load static %}
 
 {% block title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'dashboard/css/dashboard.css' %}">
+{% endblock %}
 
 {% block content %}
 <h2>Dashboard</h2>
@@ -11,11 +16,9 @@
 <div class="row">
   {% for wallet in wallets %}
   <div class="col-md-4 mb-4">
-    <div class="card">
+    <div class="card card-hover wallet-card" id="{{ wallet.currency }}">
       <div class="card-header">
-        <a href="{% url 'wallets:wallet_detail' currency=wallet.currency %}">
-          {{ wallet.get_currency_display }} Wallet
-        </a>
+        {{ wallet.get_currency_display }} Wallet
       </div>
       <div class="card-body">
         <p class="card-text">Balance: <strong>{{ wallet.symbol }}{{ wallet.balance|intcomma }}</strong></p>
@@ -28,4 +31,8 @@
   </div>
   {% endfor %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/js/dashboard.js' %}"></script>
 {% endblock %}
