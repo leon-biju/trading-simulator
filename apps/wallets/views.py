@@ -51,9 +51,10 @@ def wallet_detail(request, currency):
     else: # GET requests
         form = AddFundsForm()
 
+    base_rate = DUMMY_FX_RATES.get(wallet.currency, 1)
+    exchange_rates = {curr: (rate / base_rate) for curr, rate in DUMMY_FX_RATES.items()}
 
-
-    serializable_fx_rates = {k: str(v) for k, v in DUMMY_FX_RATES.items()}
+    serializable_fx_rates = {k: str(v) for k, v in exchange_rates.items()}
 
     context = {
         'wallet': wallet,
