@@ -43,7 +43,7 @@ def wallet_detail(request, currency):
                 error_message = ERROR_MESSAGES.get(error, 'An unknown error occurred.')
                 messages.error(request, error_message)
             else:
-                messages.success(request, f'Successfully added {wallet.symbol}{to_amount} to your {wallet.currency} wallet.')
+                messages.success(request, f'Successfully added {wallet.symbol}{to_amount:,.2f} to your {wallet.currency} wallet.')
 
             return redirect('wallets:wallet_detail', currency=wallet.currency)
         else:
