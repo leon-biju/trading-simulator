@@ -57,8 +57,8 @@ def test_fx_transfer_success(user_with_wallets):
     assert fx_transfer.exchange_rate == exchange_rate
 
     # Check transactions created
-    gbp_transactions = gbp_wallet.transactions.filter(source='SELL')
-    usd_transactions = usd_wallet.transactions.filter(source='BUY')
+    gbp_transactions = gbp_wallet.transactions.filter(source='FX_TRANSFER')
+    usd_transactions = usd_wallet.transactions.filter(source='FX_TRANSFER')
 
     assert gbp_transactions.count() == 1
     assert usd_transactions.count() == 1
