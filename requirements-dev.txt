@@ -4,6 +4,7 @@ crispy-bootstrap5==2025.6
 Django==5.2.4
 django-crispy-forms==2.4
 django-htmx==1.23.2
+django-mathfilters==1.0.0
 factory_boy==3.3.3
 Faker==37.4.0
 iniconfig==2.1.0

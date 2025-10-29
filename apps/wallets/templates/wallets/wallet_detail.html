@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% load static %}
+{% load mathfilters %}
 
 {% block title %}{{ wallet.get_currency_display }} Wallet{% endblock %}
 
@@ -47,7 +48,7 @@
             </select>
         </div>
         <div class="form-group">
-            <label for="id_to_amount">Amount to Transfer (in {{ wallet.get_currency_display }})</label>
+            <label for="id_to_amount">Amount to Add ({{ wallet.get_currency_display }})</label>
             {{ wallet.symbol }}
             <input 
                 type="number" 
@@ -89,7 +90,11 @@
             <tr>
                 <td>{{ tx.timestamp|date:"Y-m-d H:i" }}</td>
                 <td>{{ tx.get_source_display }}</td>
-                <td>{{ wallet.symbol }}{{ tx.amount|intcomma }}</td>
+                {% if tx.amount < 0 %}
+                    <td class="text-danger">-{{ wallet.symbol }}{{ tx.amount|abs|intcomma }}</td>
+                {% else %}
+                    <td class="text-success">{{ wallet.symbol }}{{ tx.amount|intcomma }}</td>
+                {% endif %}
                 <td>{{ wallet.symbol }}{{ tx.balance_after|intcomma }}</td>
                 <td>{{ tx.description }}</td>
             </tr>
