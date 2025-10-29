@@ -49,20 +49,22 @@
         </div>
         <div class="form-group">
             <label for="id_to_amount">Amount to Add ({{ wallet.get_currency_display }})</label>
-            {{ wallet.symbol }}
-            <input 
-                type="number" 
-                name="to_amount" 
-                id="id_to_amount" 
-                step="0.01" 
-                class="form-control" 
-                required
-            >
+            <div class="input-group">
+                <span class="input-group-text">{{ wallet.symbol }}</span>
+                <input 
+                    type="number" 
+                    name="to_amount" 
+                    id="id_to_amount" 
+                    step="0.01" 
+                    class="form-control" 
+                    required
+                >
+            </div>
             <small class="form-text text-muted">
-                You will be charged: <span class="fx-from-symbol">—</span><span id="converted-amount">0.00</span>
+                You will be charged: <span id="fx-from-symbol">—</span><span id="converted-amount">0.00</span>
             </small>
             <small class="form-text text-muted float-end" id="exchange-rate" aria-live="polite">
-                Exchange rate: {{ wallet.symbol }}1 ≈ <span class="fx-from-symbol">—</span><span id="fx-rate">—</span>
+                Exchange rate: 1 {{ wallet.currency}} = <span id="fx-rate">—</span><span id="fx-from-currency">—</span>
             </small>
         </div>
         <button type="submit" class="btn btn-primary mt-3">Transfer</button>
@@ -81,8 +83,8 @@
                 <th>Timestamp</th>
                 <th>Source</th>
                 <th>Amount</th>
-                <th>Balance After</th>
                 <th>Description</th>
+                <th>Balance After</th>
             </tr>
         </thead>
         <tbody>
@@ -95,8 +97,8 @@
                 {% else %}
                     <td class="text-success">{{ wallet.symbol }}{{ tx.amount|intcomma }}</td>
                 {% endif %}
-                <td>{{ wallet.symbol }}{{ tx.balance_after|intcomma }}</td>
                 <td>{{ tx.description }}</td>
+                <td>{{ wallet.symbol }}{{ tx.balance_after|intcomma }}</td>
             </tr>
             {% empty %}
             <tr>
@@ -112,4 +114,5 @@
 
 {% block extra_js %}
 <script src="{% static 'wallets/js/fx_calculator.js' %}"></script>
+<script src="{% static 'wallets/js/input_validation.js' %}"></script>
 {% endblock %}

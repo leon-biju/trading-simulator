@@ -13,21 +13,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fxRates = JSON.parse(fxForm.dataset.fxRates);
 
-    const fromSymbolSpans = document.getElementsByClassName('fx-from-symbol');
+    const fromSymbolSpan = document.getElementById('fx-from-symbol');
     const fxRateSpan = document.getElementById('fx-rate');
+    const fromCurrencySpan = document.getElementById('fx-from-currency');
 
 
     function updateExchangeRateDisplay() {
         const fromCurrency = document.getElementById('id_from_wallet_currency').value;
-        const fromSymbol = currencySymbols[fromCurrency] || fromCurrency;
+        fromCurrencySpan.textContent = fromCurrency;
 
-        Array.from(fromSymbolSpans).forEach(span => {
-            span.textContent = fromSymbol;
-        });
+        const fromSymbol = currencySymbols[fromCurrency] || fromCurrency;
+        fromSymbolSpan.textContent = fromSymbol;
 
         const exchangeRate = parseFloat(fxRates[fromCurrency]);
         fxRateSpan.textContent = (Math.round(exchangeRate * 100) / 100).toFixed(4);
-
     }
 
     
@@ -65,10 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     toAmountInput.addEventListener('keyup', updateConvertedAmount);
-    fromWalletSelect.addEventListener('change', updateConvertedAmount);
-    fromWalletSelect.addEventListener('change', updateExchangeRateDisplay);
+    fromWalletSelect.addEventListener('change', () => {
+        updateConvertedAmount();
+        updateExchangeRateDisplay();
+    });
 
-    // Initial calculation on page load if there's a value
+    // Initial calculation on page load
     updateConvertedAmount();
     updateExchangeRateDisplay();
 });
