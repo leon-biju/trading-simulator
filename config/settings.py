@@ -55,7 +55,8 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.market',
     'apps.trading',
-    'apps.wallets'
+    'apps.wallets',
+    'mathfilters',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

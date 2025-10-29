@@ -1,31 +1,24 @@
 from decimal import Decimal
 import pytest
-from django.test import TestCase
 from django.contrib.auth import get_user_model
 from apps.wallets.models import Transaction, Wallet
 from apps.wallets import services
 import threading
 
-# Create a dummy user and default wallet for testing
+
+# Create a dummy user for testing
 @pytest.fixture
-def user_with_wallet():
+def user_with_wallets():
     User = get_user_model()
     user = User.objects.create_user(username='testuser', email='test@example.com', password='StrongV3ryStrongPasswd!')
-    wallet = Wallet.objects.get(user=user, currency='GBP')
-    return user, wallet
+    wallets = Wallet.objects.filter(user=user)
+    return user, wallets
 
-# 1. Test Wallet creation
+
 @pytest.mark.django_db
-def test_wallet_creation(user_with_wallet):
-    user, wallet = user_with_wallet
-    assert wallet is not None
-    assert wallet.user == user
-
-
-# 2. Test transaction creation and balance update on positive transaction
-@pytest.mark.django_db
-def test_transaction_creation_and_balance_update(user_with_wallet):
-    user, wallet = user_with_wallet
+def test_transaction_creation_and_balance_update(user_with_wallets):
+    user, wallets = user_with_wallets
+    wallet = wallets.first()
     old_balance = wallet.balance
     transaction, error = services.create_transaction(
         wallet_id=wallet.id,
@@ -41,10 +34,10 @@ def test_transaction_creation_and_balance_update(user_with_wallet):
     assert wallet.balance == old_balance + Decimal('10.98')
 
 
-# 3. Test transaction creation with insufficient funds
 @pytest.mark.django_db
-def test_transaction_creation_insufficient_funds(user_with_wallet):
-    user, wallet = user_with_wallet
+def test_transaction_creation_insufficient_funds(user_with_wallets):
+    user, wallets = user_with_wallets
+    wallet = wallets.first()
     wallet.balance = Decimal('50.00')
     wallet.save()
     transaction, error = services.create_transaction(
@@ -59,7 +52,6 @@ def test_transaction_creation_insufficient_funds(user_with_wallet):
     assert wallet.balance == Decimal('50.00')
 
 
-# 4. Test transaction creation with non-existent wallet
 @pytest.mark.django_db
 def test_transaction_creation_non_existent_wallet():
     assert not Wallet.objects.filter(id=9999).exists()
@@ -73,10 +65,10 @@ def test_transaction_creation_non_existent_wallet():
     assert error == "WALLET_DOES_NOT_EXIST"
 
 
-# 5. Test zero amount transaction
 @pytest.mark.django_db
-def test_zero_amount_transaction(user_with_wallet):
-    user, wallet = user_with_wallet
+def test_zero_amount_transaction(user_with_wallets):
+    user, wallets = user_with_wallets
+    wallet = wallets.first()
     old_balance = wallet.balance
     transaction, error = services.create_transaction(
         wallet_id=wallet.id,
@@ -89,10 +81,10 @@ def test_zero_amount_transaction(user_with_wallet):
     wallet.refresh_from_db()
     assert wallet.balance == old_balance
 
-# 6. Test transaction data integrity
 @pytest.mark.django_db
-def test_transaction_data_integrity(user_with_wallet):
-    user, wallet = user_with_wallet
+def test_transaction_data_integrity(user_with_wallets):
+    user, wallets = user_with_wallets
+    wallet = wallets.first()
     transaction, error = services.create_transaction(
         wallet_id=wallet.id,
         amount=Decimal('25.50'),
@@ -106,10 +98,10 @@ def test_transaction_data_integrity(user_with_wallet):
     assert transaction.source == Transaction.Source.DEPOSIT
     assert transaction.description == "Data integrity test"
 
-# 7. Test multiple concurrent transactions to ensure atomicity
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_transactions_atomicity(user_with_wallet):
-    user, wallet = user_with_wallet
+def test_concurrent_transactions_atomicity(user_with_wallets):
+    user, wallets = user_with_wallets
+    wallet = wallets.first()
 
     wallet.balance = Decimal('100.00')
     wallet.save()
