@@ -8,7 +8,5 @@ from apps.wallets.models import Wallet
 @login_required
 def dashboard_view(request: HttpRequest) -> HttpResponse:
     profile = Profile.objects.get(user=request.user)
-    wallets = Wallet.objects.filter(user=request.user)
-    for wallet in wallets:
-        print(f"User: {profile.user.username}, Cash Balance: {wallet.balance}")
+    wallets = Wallet.objects.filter(user=request.user).order_by('-updated_at')
     return render(request, "dashboard/dashboard.html", {"profile": profile, "wallets": wallets})
