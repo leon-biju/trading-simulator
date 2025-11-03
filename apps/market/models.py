@@ -26,13 +26,13 @@ class Instrument(models.Model):
 
 
 class PriceBar(models.Model):
-    instrument = models.ForeignKey(Instrument, on_delete=models.CASCADE)
-    period_start = models.DateTimeField()
-    open = models.DecimalField(max_digits=18, decimal_places=6)
-    high = models.DecimalField(max_digits=18, decimal_places=6)
-    low = models.DecimalField(max_digits=18, decimal_places=6)
-    close = models.DecimalField(max_digits=18, decimal_places=6)
-    volume = models.BigIntegerField()
+    instrument = models.ForeignKey(Instrument, on_delete=models.CASCADE) # e.g. AAPL, BTCUSD
+    period_start = models.DateTimeField() # Start time of the period
+    open = models.DecimalField(max_digits=18, decimal_places=6) # Opening price
+    high = models.DecimalField(max_digits=18, decimal_places=6) # Highest price
+    low = models.DecimalField(max_digits=18, decimal_places=6) # Lowest price
+    close = models.DecimalField(max_digits=18, decimal_places=6) # Closing price
+    volume = models.BigIntegerField() # Volume traded during the period
 
     class Meta:
         unique_together = [['instrument', 'period_start']]
@@ -40,21 +40,22 @@ class PriceBar(models.Model):
 
 
 class Quote(models.Model):
-    instrument = models.OneToOneField(Instrument, on_delete=models.CASCADE)
-    last_price = models.DecimalField(max_digits=18, decimal_places=6)
-    bid = models.DecimalField(max_digits=18, decimal_places=6, null=True)
-    ask = models.DecimalField(max_digits=18, decimal_places=6, null=True)
-    timestamp = models.DateTimeField(db_index=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    instrument = models.OneToOneField(Instrument, on_delete=models.CASCADE) # e.g. AAPL, BTCUSD
+    last_price = models.DecimalField(max_digits=18, decimal_places=6) # Last traded price
+    bid = models.DecimalField(max_digits=18, decimal_places=6, null=True) # Current highest bid price
+    ask = models.DecimalField(max_digits=18, decimal_places=6, null=True) # Current lowest ask price
+    timestamp = models.DateTimeField(db_index=True) # Timestamp of the quote
+    updated_at = models.DateTimeField(auto_now=True) # Last updated time
 
 class FxRate(models.Model):
-    base_currency = models.CharField(max_length=3)
-    quote_currency = models.CharField(max_length=3)
-    rate = models.DecimalField(max_digits=18, decimal_places=8)
-    timestamp = models.DateTimeField(db_index=True)
+    base_currency = models.CharField(max_length=3) # e.g. USD, EUR
+    quote_currency = models.CharField(max_length=3) # e.g. JPY, GBP
+    rate = models.DecimalField(max_digits=18, decimal_places=8) # Exchange rate 
+    timestamp = models.DateTimeField(db_index=True) # Time of the rate quote
 
     class Meta:
-        indexes = [models.Index(fields=['base_currency', 'quote_currency', '-timestamp'])]
         unique_together = [['base_currency', 'quote_currency', 'timestamp']]
+        indexes = [models.Index(fields=['base_currency', 'quote_currency', '-timestamp'])]
+
     def __str__(self):
         return f"1 {self.base_currency} = {self.rate} {self.quote_currency} as of {self.timestamp}"
