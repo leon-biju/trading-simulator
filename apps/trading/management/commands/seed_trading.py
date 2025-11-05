@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from decimal import Decimal
-from trading.models import CommissionRule
+from apps.trading.models import CommissionRule
 
 class Command(BaseCommand):
     help = 'Seed trading configuration data'

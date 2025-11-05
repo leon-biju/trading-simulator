@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from decimal import Decimal
-from market.models import Exchange, Instrument, Quote, PriceBar, FxRate
+from apps.market.models import Exchange, Instrument, Quote, PriceBar, FxRate
 from datetime import timedelta
 
 # seed market data to help development
@@ -40,7 +40,7 @@ class Command(BaseCommand):
         
         instruments = {}
         for ticker, name, ccy, exch, price, tick, lot in instruments_data:
-            
+
             # Create instrument
             inst, created = Instrument.objects.get_or_create(
                 ticker=ticker,
