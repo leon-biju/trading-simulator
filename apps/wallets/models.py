@@ -49,7 +49,7 @@ class Transaction(models.Model):
         ordering = ['-timestamp']
 
     def __str__(self):
-        return f"{self.wallet.user.username}:  {self.amount} {self.currency} ({self.source}) on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"{self.wallet.user.username}:  {self.amount} {self.wallet.currency} ({self.source}) on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
     
 
 
