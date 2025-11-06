@@ -74,7 +74,7 @@ class Position(models.Model):
     class Meta:
         unique_together = [['portfolio', 'instrument']]
         constraints = [
-            models.CheckConstraint(check=models.Q(quantity__gte=0), name='no_short_positions')
+            models.CheckConstraint(condition=models.Q(quantity__gte=0), name='quantity_non_negative')
         ]
 
 
