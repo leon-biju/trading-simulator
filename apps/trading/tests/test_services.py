@@ -42,6 +42,7 @@ def basic_setup(db):
         name='Test Rule',
         rate_bps=Decimal('10.00'),
         min_fee=Decimal('1.00'),
+        max_fee=Decimal('1000.00'),
         currency='GBP',
         active=True
     )
@@ -59,12 +60,17 @@ def test_commission_calculation(basic_setup):
     price = Decimal('10.00')
     quantity = 100
 
-    # Small trade
+    # Small trade should give min fee
     commission = commisions.calculate(price, quantity, 'GBP')
     # 100 * 10 = 1000, 10bps of 1000 = 1.00, but min is 1.00
     assert commission == Decimal('1.00')
     
-    # Larger trade
+    # Larger trade should calculate normally
     commission = commisions.calculate(Decimal('100.00'), 1000, 'GBP')
     # 100 * 1000 = 100,000, 10bps of 100,000 = 100.00
     assert commission == Decimal('100.00')
+
+    # Very large trade should not exceed max fee
+    commission = commisions.calculate(Decimal('10000.00'), 20000, 'GBP')
+    # 10,000 * 20,000 = 200,000,000, 10bps of 200,000,000 = 20,000.00, but max is 1000.00
+    assert commission == Decimal('1000.00')

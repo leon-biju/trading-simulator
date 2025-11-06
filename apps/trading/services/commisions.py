@@ -19,4 +19,7 @@ def calculate(price, quantity, currency) -> Decimal:
     if commission < rule.min_fee:
         commission = rule.min_fee
 
+    if rule.max_fee and commission > rule.max_fee:
+        commission = rule.max_fee
+
     return commission
