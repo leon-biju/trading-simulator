@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 import pytest
 from decimal import Decimal
-from apps.trading.models import Wallet, CommissionRule
+from apps.wallets.models import Wallet
+from apps.trading.models import CommissionRule
 from apps.market.models import Instrument, Quote
 
 from apps.trading.services import commisions
