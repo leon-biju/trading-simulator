@@ -14,6 +14,6 @@ class AssetAdmin(admin.ModelAdmin):
 
 @admin.register(PriceHistory)
 class PriceHistoryAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'timestamp', 'open', 'high', 'low', 'close', 'volume')
+    list_display = ('asset', 'timestamp', 'price')
     list_filter = ('asset',)
     search_fields = ('asset__name', 'asset__symbol')

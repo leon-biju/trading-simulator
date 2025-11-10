@@ -35,16 +35,13 @@ class Asset(models.Model):
 
 class PriceHistory(models.Model):
     """
-    Stores OHLCV data for an asset.
+    Stores timestamped price data for assets.
     """
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='price_history')
     timestamp = models.DateTimeField(auto_now_add=True)
-    open = models.DecimalField(max_digits=19, decimal_places=4)
-    high = models.DecimalField(max_digits=19, decimal_places=4)
-    low = models.DecimalField(max_digits=19, decimal_places=4)
-    close = models.DecimalField(max_digits=19, decimal_places=4)
-    volume = models.BigIntegerField()
+    price = models.DecimalField(max_digits=19, decimal_places=4)
 
     class Meta:
-        unique_together = ('asset', 'timestamp')
+        unique_together = ['asset', 'timestamp']
+        get_latest_by = 'timestamp'
         ordering = ['-timestamp']
