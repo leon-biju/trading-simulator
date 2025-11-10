@@ -173,3 +173,4 @@ EMAIL_USE_TLS   = os.getenv("DJANGO_EMAIL_USE_TLS", "true").lower() == "true"
 
 # Application specific settings
 STARTING_BALANCE = 100_000.00 #gbp for now
+MARKET_DATA_MODE = os.getenv("MARKET_DATA_MODE", "simulation")  # live or simulation
