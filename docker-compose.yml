@@ -5,11 +5,15 @@ services:
     volumes: [ "pgdata:/var/lib/postgresql/data" ]
     ports: [ "5432:5432" ]
 
-  api:
+  redis:
+    image: "redis:7-alpine"
+    ports: [ "6379:6379" ]
+
+  web:
     build: .
     env_file: .env
     ports: [ "8000:8000" ]
-    depends_on: [ db ]
+    depends_on: [ db, redis ]
     volumes:
       - .:/code 
 
