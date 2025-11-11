@@ -36,20 +36,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: '3.12' }
+        with: { python-version: '3.13' }
       - run: pip install -r requirements-dev.txt
-
-      
-        
-      - name: Print Testing
-        run: |
-          python - <<'PY'
-          import os
-          os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-          from django.conf import settings
-          import json
-          print(f"testing: {settings.TESTING} und {os.getenv("TEST")}")
-          PY
 
       - name: Migrate
         run: python manage.py migrate --noinput
