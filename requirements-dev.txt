@@ -20,6 +20,7 @@ Faker==37.4.0
 iniconfig==2.1.0
 kombu==5.5.4
 packaging==25.0
+pip-autoremove==0.10.0
 pluggy==1.6.0
 prompt_toolkit==3.0.52
 psycopg==3.2.9
@@ -31,8 +32,8 @@ pytest-django==4.11.1
 python-crontab==3.3.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
-pytz==2025.2
 redis==7.0.1
+setuptools==80.9.0
 six==1.17.0
 sqlparse==0.5.3
 typing_extensions==4.15.0
