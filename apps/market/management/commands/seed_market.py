@@ -1,84 +1,128 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from decimal import Decimal
-from apps.market.models import Exchange, Asset, PriceHistory
-from datetime import timedelta
+from apps.market.models import Exchange, Stock, Currency, CurrencyPair, PriceHistory
+from datetime import time, timedelta
+import random
 
-# seed market data to help development
 class Command(BaseCommand):
     help = 'Seed market data for development'
 
     def handle(self, *args, **kwargs):
         self.stdout.write('Seeding market data...')
-        
-        # create exchanges
+
+        # Clean up existing data to prevent duplicates on re-runs
+        PriceHistory.objects.all().delete()
+        CurrencyPair.objects.all().delete()
+        Stock.objects.all().delete()
+        Currency.objects.all().delete()
+        Exchange.objects.all().delete()
+        self.stdout.write('  Cleared existing market data.')
+
+        # 1. Create Currencies
+        currencies = {
+            'USD': Currency.objects.create(code='USD', name='United States Dollar'),
+            'GBP': Currency.objects.create(code='GBP', name='British Pound Sterling'),
+            'EUR': Currency.objects.create(code='EUR', name='Euro'),
+        }
+        self.stdout.write(f'  Created {len(currencies)} currencies.')
+
+        # 2. Create Exchanges
         lse, _ = Exchange.objects.get_or_create(
             code='LSE',
-            defaults={'name': 'London Stock Exchange', 'country': 'UK', 'timezone': 'Europe/London'}
+            defaults={
+                'name': 'London Stock Exchange', 
+                'timezone': 'Europe/London',
+                'open_time': time(8, 0),
+                'close_time': time(16, 30)
+            }
         )
         nyse, _ = Exchange.objects.get_or_create(
             code='NYSE',
-            defaults={'name': 'New York Stock Exchange', 'country': 'USA', 'timezone': 'America/New_York'}
+            defaults={
+                'name': 'New York Stock Exchange', 
+                'timezone': 'America/New_York',
+                'open_time': time(9, 30),
+                'close_time': time(16, 0)
+            }
         )
         nasdaq, _ = Exchange.objects.get_or_create(
             code='NASDAQ',
-            defaults={'name': 'NASDAQ', 'country': 'USA', 'timezone': 'America/New_York'}
+            defaults={
+                'name': 'NASDAQ', 
+                'timezone': 'America/New_York',
+                'open_time': time(9, 30),
+                'close_time': time(16, 0)
+            }
         )
-        
-        # create assets and price history
+        self.stdout.write('  Created 3 exchanges.')
 
-        assets_data = [
-            ('VOD.L', 'Vodafone Group plc', 'GBP', lse, '86.48'),
-            ('BP.L', 'BP plc', 'GBP', lse, '485.0'),
-            ('HSBA.L', 'HSBC Holdings plc', 'GBP', lse, '642.0'),
-            ('AAPL', 'Apple Inc', 'USD', nasdaq, '185.50'),
-            ('MSFT', 'Microsoft Corporation', 'USD', nasdaq, '398.75'),
-            ('GOOGL', 'Alphabet Inc', 'USD', nasdaq, '142.30'),
-            ('SPY', 'SPDR S&P 500 ETF', 'USD', nyse, '478.25'),
-            ('QQQ', 'Invesco QQQ Trust', 'USD', nasdaq, '412.50'),
+        # 3. Create Stocks and their Price History
+        stocks_data = [
+            ('VOD.L', 'Vodafone Group plc', currencies['GBP'], lse, '86.48'),
+            ('BP.L', 'BP plc', currencies['GBP'], lse, '485.0'),
+            ('HSBA.L', 'HSBC Holdings plc', currencies['GBP'], lse, '642.0'),
+            ('AAPL', 'Apple Inc', currencies['USD'], nasdaq, '185.50'),
+            ('MSFT', 'Microsoft Corporation', currencies['USD'], nasdaq, '398.75'),
+            ('GOOGL', 'Alphabet Inc', currencies['USD'], nasdaq, '142.30'),
+            ('SPY', 'SPDR S&P 500 ETF', currencies['USD'], nyse, '478.25'),
+            ('QQQ', 'Invesco QQQ Trust', currencies['USD'], nasdaq, '412.50'),
         ]
         
-        assets = {}
-        for symbol, name, ccy, exch, price in assets_data:
-
-            # Create asset
-            asset, created = Asset.objects.get_or_create(
+        for symbol, name, currency, exchange, price in stocks_data:
+            stock = Stock.objects.create(
                 symbol=symbol,
-                defaults={
-                    'name': name,
-                    'asset_type': 'STOCK',
-                    'currency': ccy,
-                    'exchange': exch,
-                    'is_active': True
-                }
+                name=name,
+                currency=currency,
+                exchange=exchange,
+                is_active=True
             )
-            assets[symbol] = asset
+            self.stdout.write(f'    Created stock: {symbol}')
             
-            # Create some historical price bars (last 30 days)
-            base_price = Decimal(price)
-            for days_ago in range(30, 0, -1):
-                date = timezone.now() - timedelta(days=days_ago)
-                
-                # Simulate some price movement
-                variance = Decimal(str((hash(f"{symbol}{days_ago}") % 100) / 1000))  # -0.05 to +0.05
-                open_price = base_price * (1 + variance - Decimal('0.025'))
-                close_price = base_price * (1 + variance + Decimal('0.025'))
-                high_price = max(open_price, close_price) * Decimal('1.01')
-                low_price = min(open_price, close_price) * Decimal('0.99')
-                
-                PriceHistory.objects.get_or_create(
-                    asset=asset,
-                    timestamp=date.replace(hour=9, minute=0, second=0, microsecond=0),
-                    defaults={
-                        'open': open_price.quantize(Decimal('0.01')),
-                        'high': high_price.quantize(Decimal('0.01')),
-                        'low': low_price.quantize(Decimal('0.01')),
-                        'close': close_price.quantize(Decimal('0.01')),
-                        'volume': 1000000 + (days_ago * 10000)
-                    }
-                )
-            
-            if created:
-                self.stdout.write(f'  Created asset: {symbol}')
+            # Create price history for the stock
+            self._create_price_history(stock, Decimal(price))
+
+        self.stdout.write(f'  Created {len(stocks_data)} stocks with price history.')
+
+        # 4. Create Currency Pairs and their Price History (FX Rates)
+        currency_pairs_data = [
+            (currencies['EUR'], currencies['USD'], '1.08'),
+            (currencies['GBP'], currencies['USD'], '1.25'),
+            (currencies['EUR'], currencies['GBP'], '0.86'),
+        ]
+
+        for base_currency, quote_currency, price in currency_pairs_data:
+            pair = CurrencyPair.objects.create(
+                base_currency=base_currency,
+                quote_currency=quote_currency,
+                is_active=True
+            )
+            self.stdout.write(f'    Created currency pair: {pair.symbol}')
+
+            # Create price history for the currency pair
+            self._create_price_history(pair, Decimal(price))
         
+        self.stdout.write(f'  Created {len(currency_pairs_data)} currency pairs with FX rates.')
         self.stdout.write(self.style.SUCCESS('Market data seeded successfully!'))
+
+    def _create_price_history(self, asset, base_price):
+        """Helper to create 30 days of simulated price history for an asset."""
+        price_history_batch = []
+        for days_ago in range(30, 0, -1):
+            timestamp = timezone.now() - timedelta(days=days_ago)
+            
+            # Simulate some price movement
+            variance = Decimal(random.uniform(-0.05, 0.05))
+            price = base_price * (1 + variance)
+            
+            price_history_batch.append(
+                PriceHistory(
+                    asset=asset,
+                    timestamp=timestamp,
+                    price=price.quantize(Decimal('0.0001')),
+                    source='SIMULATION'
+                )
+            )
+        
+        PriceHistory.objects.bulk_create(price_history_batch)
+        self.stdout.write(f'      Generated 30 days of price history for {asset.symbol}')
