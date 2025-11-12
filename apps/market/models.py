@@ -8,7 +8,7 @@ class Exchange(models.Model):
     """
     name = models.CharField(max_length=100, unique=True)
     code = models.CharField(max_length=10, unique=True) # e.g., 'NYSE', 'NASDAQ'
-    timezone = models.CharField(max_length=50, choices=[(tz, tz) for tz in available_timezones()]) # e.g., 'America/New_York'
+    timezone = models.CharField(max_length=50, choices=[(tz, tz) for tz in sorted(available_timezones())]) # e.g., 'America/New_York'
     
     open_time = models.TimeField()  # Daily opening time
     close_time = models.TimeField() # Daily closing time
@@ -87,7 +87,7 @@ class CurrencyPair(Asset):
         if not self.symbol:
             self.symbol = f"{self.base_currency.code}{self.quote_currency.code}"
         if not self.name:
-            self.name = f"{self.base_currency.name}/{self.quote_currency.name}"
+            self.name = f"{self.base_currency.code}/{self.quote_currency.code}"
 
         self.currency = self.quote_currency 
         super().save(*args, **kwargs)
