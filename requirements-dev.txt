@@ -31,6 +31,7 @@ pytest-django==4.11.1
 python-crontab==3.3.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
+pytz==2025.2
 redis==7.0.1
 six==1.17.0
 sqlparse==0.5.3
