@@ -4,31 +4,29 @@ from zoneinfo import ZoneInfo, available_timezones
 
 class Exchange(models.Model):
     """
-    Represents a financial exchange where assets are traded.
+    Represents a financial exchange where stocks are traded.
     """
     name = models.CharField(max_length=100, unique=True)
     code = models.CharField(max_length=10, unique=True) # e.g., 'NYSE', 'NASDAQ'
     timezone = models.CharField(max_length=50, choices=[(tz, tz) for tz in sorted(available_timezones())]) # e.g., 'America/New_York'
     
-    open_time = models.TimeField()  # Daily opening time
-    close_time = models.TimeField() # Daily closing time
+    open_time = models.TimeField()
+    close_time = models.TimeField()
 
     def is_currently_open(self):
-        """
-        Check if the exchange is open now.
-        """
 
-        # Get the current time in UTC
         utc_now = timezone.now()
         
         # Convert the current time to the exchange's local timezone
         try:
             if self.timezone not in available_timezones():
-                return False  #Invalid treat as closed
+                # Invalid timezone
+                return False  
             exchange_tz = ZoneInfo(self.timezone)
             local_time_now = utc_now.astimezone(exchange_tz)
         except Exception:
-            return False  # If timezone conversion fails, treat as closed
+            # If timezone conversion fails, assume closed
+            return False
         
         # Check if today is a weekday and the time is within trading hours
         # TODO: Add holiday checks
@@ -53,11 +51,13 @@ class Asset(models.Model):
     
     is_active = models.BooleanField(default=True) # To enable/disable trading for an asset
 
+    def get_latest_price(self):
+
+        latest_price_entry = self.price_history.order_by('-timestamp').first()
+        return latest_price_entry.price if latest_price_entry else None
+
     
 class Stock(Asset):
-    """
-    Represents a stock asset.
-    """
     exchange = models.ForeignKey(Exchange, on_delete=models.CASCADE, related_name='assets')
 
     def __str__(self):
@@ -65,9 +65,6 @@ class Stock(Asset):
 
 
 class Currency(models.Model):
-    """
-    Represents a currency.
-    """
     code = models.CharField(max_length=3, unique=True)  # e.g., 'USD', 'EUR'
     name = models.CharField(max_length=50)              # e.g., 'United States Dollar'
 
@@ -76,9 +73,6 @@ class Currency(models.Model):
 
 
 class CurrencyPair(Asset):
-    """
-    Represents a currency pair asset (e.g., EUR/USD).
-    """
     base_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, related_name='base_currency_pairs')  # e.g., 'EUR'
     quote_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, related_name='quote_currency_pairs') # e.g., 'USD'
 
