@@ -172,12 +172,6 @@ EMAIL_USE_TLS   = os.getenv("DJANGO_EMAIL_USE_TLS", "true").lower() == "true"
 
 
 
-# Application specific settings
-STARTING_BALANCE = 100_000.00 #gbp for now
-MARKET_DATA_MODE = os.getenv("MARKET_DATA_MODE", "simulation")  # live or simulation
-
-
-
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", 'redis://redis:6379/0')
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", 'redis://redis:6379/0')
@@ -192,5 +186,8 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.market.tasks.update_market_data',
         'schedule': 15.0,  # Run every 15 seconds
     },
-
 }
+
+# Application specific settings
+STARTING_BALANCE = 100_000.00 #gbp for now
+MARKET_DATA_MODE = os.getenv("MARKET_DATA_MODE", "simulation")  # live or simulation
