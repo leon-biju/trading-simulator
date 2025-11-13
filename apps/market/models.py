@@ -19,9 +19,6 @@ class Exchange(models.Model):
         
         # Convert the current time to the exchange's local timezone
         try:
-            if self.timezone not in available_timezones():
-                # Invalid timezone
-                return False  
             exchange_tz = ZoneInfo(self.timezone)
             local_time_now = utc_now.astimezone(exchange_tz)
         except Exception:
@@ -40,51 +37,58 @@ class Exchange(models.Model):
         return f"{self.name} ({self.code})"
 
 
+class Currency(models.Model):
+    code = models.CharField(max_length=3, unique=True)  # e.g., 'USD', 'EUR'
+    name = models.CharField(max_length=50)              # e.g., 'United States Dollar'
+    is_base = models.BooleanField(default=False)
+    
+    def save(self, *args, **kwargs):
+        if self.is_base:
+            Currency.objects.filter(is_base=True).exclude(id=self.id).update(is_base=False)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.code
+    
+    class Meta:
+        verbose_name_plural = "currencies"
+
+
 class Asset(models.Model):
     """
-    Represents a tradable asset, like a stock or currency pair.
+    Represents a tradable asset, like a stock or a currency.
     """
-    
+    ASSET_TYPE_CHOICES = [
+        ('STOCK', 'Stock'),
+        ('CURRENCY', 'Currency'),
+    ]
+
+    asset_type = models.CharField(max_length=10, choices=ASSET_TYPE_CHOICES)
     symbol = models.CharField(max_length=10, unique=True, db_index=True)
     name = models.CharField(max_length=100)
-    currency = models.ForeignKey('Currency', on_delete=models.PROTECT) # The currency the asset is priced in
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT) # The currency the asset is priced in.
     
     is_active = models.BooleanField(default=True) # To enable/disable trading for an asset
 
     def get_latest_price(self):
-
-        latest_price_entry = self.price_history.order_by('-timestamp').first()
-        return latest_price_entry.price if latest_price_entry else None
+        try:
+            latest_price_entry = self.price_history.latest()
+            return latest_price_entry.price
+        except PriceHistory.DoesNotExist:
+            return None
 
     
 class Stock(Asset):
-    exchange = models.ForeignKey(Exchange, on_delete=models.CASCADE, related_name='assets')
+    exchange = models.ForeignKey(Exchange, on_delete=models.CASCADE, related_name='stocks')
 
     def __str__(self):
         return f"{self.name} ({self.symbol}) on {self.exchange.code}"
 
 
-class Currency(models.Model):
-    code = models.CharField(max_length=3, unique=True)  # e.g., 'USD', 'EUR'
-    name = models.CharField(max_length=50)              # e.g., 'United States Dollar'
+class CurrencyAsset(Asset):
 
     def __str__(self):
-        return f"{self.name} ({self.code})"
-
-
-class CurrencyPair(Asset):
-    base_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, related_name='base_currency_pairs')  # e.g., 'EUR'
-    quote_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, related_name='quote_currency_pairs') # e.g., 'USD'
-
-    def save(self, *args, **kwargs):
-        # Auto-generate symbol and name if not provided
-        if not self.symbol:
-            self.symbol = f"{self.base_currency.code}{self.quote_currency.code}"
-        if not self.name:
-            self.name = f"{self.base_currency.code}/{self.quote_currency.code}"
-
-        self.currency = self.quote_currency 
-        super().save(*args, **kwargs)
+        return f"{self.name} ({self.symbol})"
 
 
 class PriceHistory(models.Model):
