@@ -1,0 +1,50 @@
+from decimal import Decimal
+import random
+from math import exp, sqrt 
+from apps.market.models import PriceHistory
+
+# --- Simulation Parameters ---
+# Annual drift (expected return). e.g., 8%
+MU = 0.08 
+# Annual volatility. e.g., 20%
+SIGMA = 0.20 
+# The time step (one minute expressed in years). 1 year = 365.25 * 24 * 60 * 60 seconds
+# We use this to scale our annual parameters down to the task's frequency.
+TIME_STEP_IN_YEARS = 60 / (365.25 * 24 * 60 * 60)
+
+class SimulatedMarket:
+
+    def update_stock_prices(self, stocks):
+        # Simulate price updates for the given stocks
+
+        new_stocks_prices_list = []
+
+        for stock in stocks:
+            try:
+                last_price = stock.get_latest_price()
+            except Exception:
+                last_price = Decimal(random.uniform(50.0, 250.0))
+
+             # --- Geometric Brownian Motion Calculation ---
+            drift = (MU - 0.5 * SIGMA**2) * TIME_STEP_IN_YEARS
+            shock = SIGMA * sqrt(TIME_STEP_IN_YEARS) * random.gauss(0, 1)
+
+            price_change_factor = exp(drift + shock)
+
+            new_price = Decimal(last_price * Decimal(price_change_factor)).quantize(Decimal('0.0001'))
+
+            new_stocks_prices_list.append(
+                PriceHistory(
+                    asset=stock,
+                    price=new_price,
+                    source='SIMULATION'
+                )
+            )
+
+        if new_stocks_prices_list:
+            PriceHistory.objects.bulk_create(new_stocks_prices_list)
+    def update_currency_pair_prices(self, currency_pairs):
+        # Simulate price updates for the given currency pairs
+        for currency_pair in currency_pairs:
+            # Logic to simulate price change
+            pass
