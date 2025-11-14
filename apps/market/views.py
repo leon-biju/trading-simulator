@@ -1,11 +1,11 @@
 from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from .models import Stock, Exchange, CurrencyAsset
 
 # Create your views here.
 
-@user_passes_test(lambda u: u.is_staff)
+@login_required
 def stock_performance_view(request, exchange_code, asset_symbol):
     exchange = get_object_or_404(Exchange, code=exchange_code)
     stock = get_object_or_404(Stock, exchange=exchange, symbol=asset_symbol)
@@ -14,7 +14,7 @@ def stock_performance_view(request, exchange_code, asset_symbol):
     }
     return render(request, 'market/asset_performance.html', context)
 
-@user_passes_test(lambda u: u.is_staff)
+@login_required
 def currency_asset_performance_view(request, asset_symbol):
     currency_asset = get_object_or_404(CurrencyAsset, symbol=asset_symbol)
     context = {
@@ -23,9 +23,7 @@ def currency_asset_performance_view(request, asset_symbol):
     return render(request, 'market/asset_performance.html', context)
 
 
-
-
-@user_passes_test(lambda u: u.is_staff)
+@login_required
 def stock_performance_chart_data_view(request, exchange_code, asset_symbol):
     exchange = get_object_or_404(Exchange, code=exchange_code)
     stock = get_object_or_404(Stock, exchange=exchange, symbol=asset_symbol)
@@ -40,7 +38,7 @@ def stock_performance_chart_data_view(request, exchange_code, asset_symbol):
         'currency_code': stock.currency.code,
     })
 
-@user_passes_test(lambda u: u.is_staff)
+@login_required
 def currency_asset_performance_chart_data_view(request, asset_symbol):
     currency_asset = get_object_or_404(CurrencyAsset, symbol=asset_symbol)
     price_history = currency_asset.price_history.order_by('timestamp')
