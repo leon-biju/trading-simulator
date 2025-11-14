@@ -101,7 +101,7 @@ class PriceHistory(models.Model):
     ]
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='price_history')
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(default=timezone.now)
     price = models.DecimalField(max_digits=19, decimal_places=4)
     source = models.CharField(max_length=10, choices=SOURCE_CHOICES)
 
