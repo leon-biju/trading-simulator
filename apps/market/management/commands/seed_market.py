@@ -1,128 +1,259 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from decimal import Decimal
-from apps.market.models import Exchange, Stock, Currency, CurrencyPair, PriceHistory
 from datetime import time, timedelta
 import random
 
+from apps.market.models import Exchange, Currency, PriceHistory, Asset
+from apps.market.services import create_stock_asset, create_currency_asset
+
+
 class Command(BaseCommand):
-    help = 'Seed market data for development'
+    """
+    Seeds the database with market data for development purposes.
+    This includes exchanges, currencies, assets (stocks and currency pairs),
+    and optionally, historical price data.
+    """
+
+    help = "Seed market data for development"
 
     def handle(self, *args, **kwargs):
-        self.stdout.write('Seeding market data...')
+        """Main entry point for the management command."""
+        self.stdout.write(self.style.SUCCESS("Seeding market data..."))
 
-        # Clean up existing data to prevent duplicates on re-runs
+        self.clear_data()
+        currencies = self.create_currencies()
+        exchanges = self.create_exchanges()
+
+        # --- Seed Stocks ---
+        generate_stocks_history = self._confirm_generation("stocks")
+        self.seed_assets(
+            asset_type="stock",
+            currencies=currencies,
+            exchanges=exchanges,
+            generate_history=generate_stocks_history,
+        )
+
+        # --- Seed Currency Assets (FX Rates) ---
+        generate_fx_history = self._confirm_generation("FX rates")
+        self.seed_assets(
+            asset_type="currency",
+            generate_history=generate_fx_history,
+        )
+
+        self.stdout.write(self.style.SUCCESS("✅ Market data seeded successfully!"))
+
+    def clear_data(self):
+        """Clears existing market data from the database."""
+        self.stdout.write("  🗑️  Clearing existing market data...")
         PriceHistory.objects.all().delete()
-        CurrencyPair.objects.all().delete()
-        Stock.objects.all().delete()
+        Asset.objects.all().delete()
         Currency.objects.all().delete()
         Exchange.objects.all().delete()
-        self.stdout.write('  Cleared existing market data.')
+        self.stdout.write("  ✅  Cleared existing market data.")
 
-        # 1. Create Currencies
+    def create_currencies(self):
+        """Creates and saves currency objects."""
+        self.stdout.write("     Creating currencies...")
         currencies = {
-            'USD': Currency.objects.create(code='USD', name='United States Dollar'),
-            'GBP': Currency.objects.create(code='GBP', name='British Pound Sterling'),
-            'EUR': Currency.objects.create(code='EUR', name='Euro'),
+            "GBP": Currency.objects.create(
+                code="GBP", name="British Pound Sterling", is_base=True
+            ),
+            "USD": Currency.objects.create(code="USD", name="United States Dollar"),
+            "EUR": Currency.objects.create(code="EUR", name="Euro"),
         }
-        self.stdout.write(f'  Created {len(currencies)} currencies.')
+        self.stdout.write(f"  ✅  Created {len(currencies)} currencies.")
+        return currencies
 
-        # 2. Create Exchanges
-        lse, _ = Exchange.objects.get_or_create(
-            code='LSE',
-            defaults={
-                'name': 'London Stock Exchange', 
-                'timezone': 'Europe/London',
-                'open_time': time(8, 0),
-                'close_time': time(16, 30)
-            }
-        )
-        nyse, _ = Exchange.objects.get_or_create(
-            code='NYSE',
-            defaults={
-                'name': 'New York Stock Exchange', 
-                'timezone': 'America/New_York',
-                'open_time': time(9, 30),
-                'close_time': time(16, 0)
-            }
-        )
-        nasdaq, _ = Exchange.objects.get_or_create(
-            code='NASDAQ',
-            defaults={
-                'name': 'NASDAQ', 
-                'timezone': 'America/New_York',
-                'open_time': time(9, 30),
-                'close_time': time(16, 0)
-            }
-        )
-        self.stdout.write('  Created 3 exchanges.')
-
-        # 3. Create Stocks and their Price History
-        stocks_data = [
-            ('VOD.L', 'Vodafone Group plc', currencies['GBP'], lse, '86.48'),
-            ('BP.L', 'BP plc', currencies['GBP'], lse, '485.0'),
-            ('HSBA.L', 'HSBC Holdings plc', currencies['GBP'], lse, '642.0'),
-            ('AAPL', 'Apple Inc', currencies['USD'], nasdaq, '185.50'),
-            ('MSFT', 'Microsoft Corporation', currencies['USD'], nasdaq, '398.75'),
-            ('GOOGL', 'Alphabet Inc', currencies['USD'], nasdaq, '142.30'),
-            ('SPY', 'SPDR S&P 500 ETF', currencies['USD'], nyse, '478.25'),
-            ('QQQ', 'Invesco QQQ Trust', currencies['USD'], nasdaq, '412.50'),
+    def create_exchanges(self):
+        """Creates and saves exchange objects."""
+        self.stdout.write("     Creating exchanges...")
+        exchanges_data = [
+            {
+                "code": "LSE",
+                "name": "London Stock Exchange",
+                "timezone": "Europe/London",
+                "open_time": time(8, 0),
+                "close_time": time(16, 30),
+            },
+            {
+                "code": "NYSE",
+                "name": "New York Stock Exchange",
+                "timezone": "America/New_York",
+                "open_time": time(9, 30),
+                "close_time": time(16, 0),
+            },
+            {
+                "code": "NASDAQ",
+                "name": "NASDAQ",
+                "timezone": "America/New_York",
+                "open_time": time(9, 30),
+                "close_time": time(16, 0),
+            },
         ]
-        
-        for symbol, name, currency, exchange, price in stocks_data:
-            stock = Stock.objects.create(
-                symbol=symbol,
-                name=name,
-                currency=currency,
-                exchange=exchange,
-                is_active=True
-            )
-            self.stdout.write(f'    Created stock: {symbol}')
-            
-            # Create price history for the stock
-            self._create_price_history(stock, Decimal(price))
+        exchanges = {
+            data["code"]: Exchange.objects.create(**data) for data in exchanges_data
+        }
+        self.stdout.write(f"  ✅  Created {len(exchanges)} exchanges.")
+        return exchanges
 
-        self.stdout.write(f'  Created {len(stocks_data)} stocks with price history.')
+    def seed_assets(self, asset_type, currencies=None, exchanges=None, generate_history=False):
+        """
+        Seeds assets of a given type (stock or currency) and their price history.
+        """
+        self.stdout.write(f"     Seeding {asset_type} assets...")
 
-        # 4. Create Currency Pairs and their Price History (FX Rates)
-        currency_pairs_data = [
-            (currencies['EUR'], currencies['USD'], '1.08'),
-            (currencies['GBP'], currencies['USD'], '1.25'),
-            (currencies['EUR'], currencies['GBP'], '0.86'),
+        if asset_type == "stock":
+            asset_data = self._get_stocks_data(currencies, exchanges)
+            creator_func = create_stock_asset
+        elif asset_type == "currency":
+            asset_data = self._get_currency_assets_data()
+            creator_func = create_currency_asset
+        else:
+            self.stdout.write(self.style.ERROR(f"Unknown asset type: {asset_type}"))
+            return
+
+        for data in asset_data:
+            price = data.pop("price")
+            asset = creator_func(**data)
+            self.stdout.write(f"    Created {asset_type} asset: {asset.symbol}")
+
+            if generate_history:
+                self._create_price_history(asset, Decimal(price))
+            else:
+                PriceHistory.objects.create(
+                    asset=asset,
+                    timestamp=timezone.now(),
+                    price=Decimal(price).quantize(Decimal("0.0001")),
+                    source="SEEDING",
+                )
+                self.stdout.write(
+                    f"      Created initial price entry for {asset.symbol}"
+                )
+
+        self.stdout.write(
+            f"  ✅  Created {len(asset_data)} {asset_type} assets."
+        )
+
+    def _get_stocks_data(self, currencies, exchanges):
+        """Returns a list of dictionaries for stock assets."""
+        return [
+            {
+                "symbol": "VOD.L",
+                "name": "Vodafone Group plc",
+                "currency": currencies["GBP"],
+                "exchange": exchanges["LSE"],
+                "price": "86.48",
+            },
+            {
+                "symbol": "BP.L",
+                "name": "BP plc",
+                "currency": currencies["GBP"],
+                "exchange": exchanges["LSE"],
+                "price": "485.0",
+            },
+            {
+                "symbol": "HSBA.L",
+                "name": "HSBC Holdings plc",
+                "currency": currencies["GBP"],
+                "exchange": exchanges["LSE"],
+                "price": "642.0",
+            },
+            {
+                "symbol": "AAPL",
+                "name": "Apple Inc",
+                "currency": currencies["USD"],
+                "exchange": exchanges["NASDAQ"],
+                "price": "185.50",
+            },
+            {
+                "symbol": "MSFT",
+                "name": "Microsoft Corporation",
+                "currency": currencies["USD"],
+                "exchange": exchanges["NASDAQ"],
+                "price": "398.75",
+            },
+            {
+                "symbol": "GOOGL",
+                "name": "Alphabet Inc",
+                "currency": currencies["USD"],
+                "exchange": exchanges["NASDAQ"],
+                "price": "142.30",
+            },
+            {
+                "symbol": "SPY",
+                "name": "SPDR S&P 500 ETF",
+                "currency": currencies["USD"],
+                "exchange": exchanges["NYSE"],
+                "price": "478.25",
+            },
+            {
+                "symbol": "QQQ",
+                "name": "Invesco QQQ Trust",
+                "currency": currencies["USD"],
+                "exchange": exchanges["NASDAQ"],
+                "price": "412.50",
+            },
         ]
 
-        for base_currency, quote_currency, price in currency_pairs_data:
-            pair = CurrencyPair.objects.create(
-                base_currency=base_currency,
-                quote_currency=quote_currency,
-                is_active=True
-            )
-            self.stdout.write(f'    Created currency pair: {pair.symbol}')
+    def _get_currency_assets_data(self):
+        """Returns a list of dictionaries for currency assets."""
+        return [
+            {"symbol": "USD", "name": "US Dollar", "price": "1.25"},
+            {"symbol": "EUR", "name": "Euro", "price": "0.86"},
+            {"symbol": "GBP", "name": "British Pound Sterling", "price": "1.00"},
+        ]
 
-            # Create price history for the currency pair
-            self._create_price_history(pair, Decimal(price))
-        
-        self.stdout.write(f'  Created {len(currency_pairs_data)} currency pairs with FX rates.')
-        self.stdout.write(self.style.SUCCESS('Market data seeded successfully!'))
+    def _confirm_generation(self, data_type):
+        """
+        Asks the user for confirmation to generate historical data.
+        """
+        try:
+            user_input = input(
+                f"     Generate 30 days of historical price data for {data_type}? (y/N): "
+            )
+            confirmed = user_input.lower() == "y"
+            if not confirmed:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"  Skipping generation of historical price data for {data_type}."
+                    )
+                )
+            return confirmed
+        except EOFError:
+            # Non-interactive environment
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  Non-interactive mode detected. Skipping historical data for {data_type}."
+                )
+            )
+            return False
 
     def _create_price_history(self, asset, base_price):
-        """Helper to create 30 days of simulated price history for an asset."""
+        """
+        Creates 30 days of simulated price history for an asset.
+        """
         price_history_batch = []
         for days_ago in range(30, 0, -1):
             timestamp = timezone.now() - timedelta(days=days_ago)
-            
-            # Simulate some price movement
-            variance = Decimal(random.uniform(-0.05, 0.05))
-            price = base_price * (1 + variance)
-            
+
+            # Simulate price movement, keeping GBP stable against itself
+            if asset.symbol == "GBP":
+                price = base_price
+            else:
+                variance = Decimal(random.uniform(-0.05, 0.05))
+                price = base_price * (1 + variance)
+
             price_history_batch.append(
                 PriceHistory(
                     asset=asset,
                     timestamp=timestamp,
-                    price=price.quantize(Decimal('0.0001')),
-                    source='SIMULATION'
+                    price=price.quantize(Decimal("0.0001")),
+                    source="SIMULATION",
                 )
             )
-        
+
         PriceHistory.objects.bulk_create(price_history_batch)
-        self.stdout.write(f'      Generated 30 days of price history for {asset.symbol}')
+        self.stdout.write(
+            f"      Generated 30 days of price history for {asset.symbol}"
+        )
