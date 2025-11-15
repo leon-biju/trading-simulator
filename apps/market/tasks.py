@@ -3,7 +3,7 @@ from django.conf import settings
 from celery import shared_task
 import logging
 
-from apps.market.models import CurrencyPair, Stock, Exchange
+from apps.market.models import CurrencyAsset, Stock, Exchange
 
 from .simulation import SimulatedMarket
 logger = logging.getLogger(__name__)
@@ -21,21 +21,21 @@ def update_market_data():
     if not stocks_to_update.exists():
         logger.info("No active stocks found for currently open exchanges. Skipping update.")
     
-    # 2. Second, do currency pairs
+    # 2. Second, do currency assets
 
-    currency_pairs_to_update = CurrencyPair.objects.filter(is_active=True)
+    currency_assets_to_update = CurrencyAsset.objects.filter(is_active=True)
 
-    if not currency_pairs_to_update.exists():
-        logger.info("No active currency pairs found. Skipping update.")
+    if not currency_assets_to_update.exists():
+        logger.info("No active currency assets found. Skipping update.")
     
-    #TODO: Check not weekends/holidays for currency pairs
+    #TODO: Check not weekends/holidays for currency assets
 
     if settings.MARKET_DATA_MODE == 'SIMULATION':
         # update stocks
         SimulatedMarket.update_stock_prices(stocks_to_update)
 
 
-        # update currency pairs
+        # update currency assets
 
 
         pass
@@ -43,7 +43,7 @@ def update_market_data():
         # update stocks
 
 
-        # update currency pairs
+        # update currency assets
 
         
         pass
