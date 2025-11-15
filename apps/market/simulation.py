@@ -20,10 +20,11 @@ class SimulatedMarket:
         new_stocks_prices_list = []
 
         for stock in stocks:
-            try:
-                last_price = stock.get_latest_price()
-            except Exception:
-                last_price = Decimal(random.uniform(50.0, 250.0))
+            last_price = stock.get_latest_price()
+            if last_price is None:
+                # If no prior price exists, assign a random starting price between 50 and 250
+                last_price = Decimal(random.uniform(50.0, 250.0)).quantize(Decimal('0.0001'))
+
 
              # --- Geometric Brownian Motion Calculation ---
             drift = (MU - 0.5 * SIGMA**2) * TIME_STEP_IN_YEARS
