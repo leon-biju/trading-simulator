@@ -9,7 +9,7 @@ from config.constants import MARKET_UPDATE_INTERVAL_SECONDS
 MU = 0.08 
 # Annual volatility. e.g., 20%
 SIGMA = 0.20 
-# The time step (one minute expressed in years). 1 year = 365.25 * 24 * 60 * 60 seconds
+# The time step (expressed in years). 1 year = 365.25 * 24 * 60 * 60 seconds
 # We use this to scale our annual parameters down to the task's frequency.
 TIME_STEP_IN_YEARS = MARKET_UPDATE_INTERVAL_SECONDS / (365.25 * 24 * 60 * 60)
 
@@ -45,8 +45,8 @@ def update_stock_prices(stocks):
     if new_stocks_prices_list:
         PriceHistory.objects.bulk_create(new_stocks_prices_list)
 
-def update_currency_pair_prices(currency_pairs):
-    # Simulate price updates for the given currency pairs
-    for currency_pair in currency_pairs:
+def update_currency_prices(currencies):
+    # Simulate price updates for the given currency
+    for currency in currencies:
         # Logic to simulate price change
         pass
