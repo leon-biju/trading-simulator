@@ -2,6 +2,7 @@ from decimal import Decimal
 import random
 from math import exp, sqrt 
 from apps.market.models import PriceHistory
+from config.constants import MARKET_UPDATE_INTERVAL_SECONDS
 
 # --- Simulation Parameters ---
 # Annual drift (expected return). e.g., 8%
@@ -10,7 +11,7 @@ MU = 0.08
 SIGMA = 0.20 
 # The time step (one minute expressed in years). 1 year = 365.25 * 24 * 60 * 60 seconds
 # We use this to scale our annual parameters down to the task's frequency.
-TIME_STEP_IN_YEARS = 60 / (365.25 * 24 * 60 * 60)
+TIME_STEP_IN_YEARS = MARKET_UPDATE_INTERVAL_SECONDS / (365.25 * 24 * 60 * 60)
 
 
 def update_stock_prices(stocks):
