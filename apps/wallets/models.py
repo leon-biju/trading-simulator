@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from .constants import CURRENCY_SYMBOLS
+from config.constants import CURRENCY_SYMBOLS
 
 class Currency(models.TextChoices):
     GBP = 'GBP', 'GBP'

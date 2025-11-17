@@ -180,14 +180,13 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+from config.constants import MARKET_UPDATE_INTERVAL_SECONDS
+
+
 # Celery Beat Schedule
 CELERY_BEAT_SCHEDULE = {
     'update-market-every-15-seconds': {
         'task': 'apps.market.tasks.update_market_data',
-        'schedule': 15.0,  # Run every 15 seconds
+        'schedule': MARKET_UPDATE_INTERVAL_SECONDS
     },
 }
-
-# Application specific settings
-STARTING_BALANCE = 100_000.00 #gbp for now
-MARKET_DATA_MODE = os.getenv("MARKET_DATA_MODE", "simulation")  # live or simulation
