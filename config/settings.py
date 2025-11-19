@@ -185,7 +185,7 @@ from config.constants import MARKET_UPDATE_INTERVAL_SECONDS
 
 # Celery Beat Schedule
 CELERY_BEAT_SCHEDULE = {
-    'update-market-every-15-seconds': {
+    f'update-market-every-{MARKET_UPDATE_INTERVAL_SECONDS}-seconds': {
         'task': 'apps.market.tasks.update_market_data',
         'schedule': MARKET_UPDATE_INTERVAL_SECONDS
     },
