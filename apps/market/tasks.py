@@ -1,11 +1,10 @@
-from config.celery import app as celery_app
-from django.conf import settings
 from celery import shared_task
 import logging
 
 from apps.market.models import CurrencyAsset, Stock, Exchange
+from config.constants import MARKET_DATA_MODE
 
-from .simulation import SimulatedMarket
+from .simulation import update_stock_prices_simulation, update_currency_prices_simulation
 logger = logging.getLogger(__name__)
 
 @shared_task
@@ -30,16 +29,16 @@ def update_market_data():
     
     #TODO: Check not weekends/holidays for currency assets
 
-    if settings.MARKET_DATA_MODE == 'SIMULATION':
+    if MARKET_DATA_MODE == 'SIMULATION':
         # update stocks
-        SimulatedMarket.update_stock_prices(stocks_to_update)
+        update_stock_prices_simulation(stocks_to_update)
 
 
         # update currency assets
-
+        update_currency_prices_simulation(currency_assets_to_update)
 
         pass
-    elif settings.MARKET_DATA_MODE == 'LIVE':
+    elif MARKET_DATA_MODE == 'LIVE':
         # update stocks
 
 
@@ -48,4 +47,4 @@ def update_market_data():
         
         pass
 
-    return f"Updated prices for {len(stocks_to_update)} stocks."
+    return f"Updated prices for {len(stocks_to_update)} stocks. Updated prices for {len(currency_assets_to_update)} currency assets."

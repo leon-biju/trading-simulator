@@ -14,7 +14,7 @@ SIGMA = 0.20
 TIME_STEP_IN_YEARS = MARKET_UPDATE_INTERVAL_SECONDS / (365.25 * 24 * 60 * 60)
 
 
-def update_stock_prices(stocks):
+def update_stock_prices_simulation(stocks):
     # Simulate price updates for the given stocks
 
     new_stocks_prices_list = []
@@ -45,7 +45,7 @@ def update_stock_prices(stocks):
     if new_stocks_prices_list:
         PriceHistory.objects.bulk_create(new_stocks_prices_list)
 
-def update_currency_prices(currencies):
+def update_currency_prices_simulation(currencies):
     # Simulate price updates for the given currency
     for currency in currencies:
         # Logic to simulate price change
