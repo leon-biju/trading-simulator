@@ -3,9 +3,11 @@ from django.utils import timezone
 from decimal import Decimal
 from datetime import time, timedelta
 import random
+from math import exp, sqrt
 
-from apps.market.models import Exchange, Currency, PriceHistory, Asset
+from apps.market.models import DailyPriceHistory, Exchange, Currency, PriceHistory, Asset
 from apps.market.services import create_stock_asset, create_currency_asset
+from config.constants import SIMULATION_MU, SIMULATION_SIGMA, SIMULATION_INITIAL_PRICE_RANGE
 
 
 class Command(BaseCommand):
@@ -41,16 +43,17 @@ class Command(BaseCommand):
             generate_history=generate_fx_history,
         )
 
-        self.stdout.write(self.style.SUCCESS("✅ Market data seeded successfully!"))
+        self.stdout.write(self.style.SUCCESS("Market data seeded successfully! ✅ "))
 
     def clear_data(self):
         """Clears existing market data from the database."""
-        self.stdout.write("  🗑️  Clearing existing market data...")
+        self.stdout.write("Clearing existing market data...")
         PriceHistory.objects.all().delete()
+        DailyPriceHistory.objects.all().delete()
         Asset.objects.all().delete()
         Currency.objects.all().delete()
         Exchange.objects.all().delete()
-        self.stdout.write("  ✅  Cleared existing market data.")
+        self.stdout.write("Cleared existing market data. ✅ ")
 
     def create_currencies(self):
         """Creates and saves currency objects."""
@@ -62,7 +65,7 @@ class Command(BaseCommand):
             "USD": Currency.objects.create(code="USD", name="United States Dollar"),
             "EUR": Currency.objects.create(code="EUR", name="Euro"),
         }
-        self.stdout.write(f"  ✅  Created {len(currencies)} currencies.")
+        self.stdout.write(f"Created {len(currencies)} currencies. ✅ ")
         return currencies
 
     def create_exchanges(self):
@@ -94,7 +97,7 @@ class Command(BaseCommand):
         exchanges = {
             data["code"]: Exchange.objects.create(**data) for data in exchanges_data
         }
-        self.stdout.write(f"  ✅  Created {len(exchanges)} exchanges.")
+        self.stdout.write(f"Created {len(exchanges)} exchanges. ✅ ")
         return exchanges
 
     def seed_assets(self, asset_type, currencies=None, exchanges=None, generate_history=False):
@@ -132,7 +135,7 @@ class Command(BaseCommand):
                 )
 
         self.stdout.write(
-            f"  ✅  Created {len(asset_data)} {asset_type} assets."
+            f"Created {len(asset_data)} {asset_type} assets. ✅ "
         )
 
     def _get_stocks_data(self, currencies, exchanges):
@@ -231,29 +234,81 @@ class Command(BaseCommand):
 
     def _create_price_history(self, asset, base_price):
         """
-        Creates 30 days of simulated price history for an asset.
+        Creates 30 days of simulated price history for an asset using
+        Geometric Brownian Motion, matching the simulation logic in simulation.py.
         """
-        price_history_batch = []
-        for days_ago in range(30, 0, -1):
-            timestamp = timezone.now() - timedelta(days=days_ago)
+        TIME_STEP_IN_YEARS = 1 / 252  # Assuming 252 trading days in a year
 
-            # Simulate price movement, keeping GBP stable against itself
+        price_history_batch = []
+        current_price = base_price
+        
+        for days_ago in range(30, 0, -1):
+            day = timezone.now().date() - timedelta(days=days_ago)
+            if day.isoweekday() > 5:
+                # Skip weekends
+                continue
+
+            # Simulate price movement using Geometric Brownian Motion
             if asset.symbol == "GBP":
-                price = base_price
+                # Keep GBP stable against itself (base currency)
+                open_price = base_price
+                close_price = base_price
+                high_price = base_price
+                low_price = base_price
+                volume = 0 # who the hell trades GBP against GBP
             else:
-                variance = Decimal(random.uniform(-0.05, 0.05))
-                price = base_price * (1 + variance)
+                drift = (SIMULATION_MU - 0.5 * SIMULATION_SIGMA**2) * TIME_STEP_IN_YEARS
+                shock = SIMULATION_SIGMA * sqrt(TIME_STEP_IN_YEARS) * random.gauss(0, 1)
+                price_change_factor = exp(drift + shock)
+                
+                # Opening price is the previous day's close
+                open_price = current_price
+                
+                # Simulate intraday volatility for high/low
+                intraday_volatility = SIMULATION_SIGMA * sqrt(TIME_STEP_IN_YEARS / 24)  # Reduced for intraday
+                
+                # Generate high and low based on open price with intraday movements
+                high_factor = exp(abs(random.gauss(0, intraday_volatility)))
+                low_factor = exp(-abs(random.gauss(0, intraday_volatility)))
+                
+                high_price = open_price * Decimal(high_factor)
+                low_price = open_price * Decimal(low_factor)
+                
+                # Close price is the result of the daily GBM step
+                close_price = open_price * Decimal(price_change_factor)
+                
+                # Ensure high is highest and low is lowest
+                high_price = max(high_price, close_price, open_price)
+                low_price = min(low_price, close_price, open_price)
+                
+                # Update current price for next iteration
+                current_price = close_price
+                
+                # Simulate volume: higher for stocks, lower for currencies
+                if asset.asset_type == "STOCK":
+                    # Volume between 1M and 50M shares, with some randomness
+                    base_volume = random.randint(1_000_000, 50_000_000)
+                    # Add volume spike on volatile days
+                    volatility_multiplier = 1 + abs(drift + shock) * 5
+                    volume = int(base_volume * volatility_multiplier)
+                else:  # CURRENCY
+                    # FX markets have much higher volume
+                    volume = random.randint(100_000_000, 500_000_000)
 
             price_history_batch.append(
-                PriceHistory(
+                DailyPriceHistory(
                     asset=asset,
-                    timestamp=timestamp,
-                    price=price.quantize(Decimal("0.0001")),
+                    date=day,
+                    open_price=open_price.quantize(Decimal("0.0001")),
+                    high_price=high_price.quantize(Decimal("0.0001")),
+                    low_price=low_price.quantize(Decimal("0.0001")),
+                    close_price=close_price.quantize(Decimal("0.0001")),
+                    volume=volume,
                     source="SIMULATION",
                 )
             )
 
-        PriceHistory.objects.bulk_create(price_history_batch)
+        DailyPriceHistory.objects.bulk_create(price_history_batch)
         self.stdout.write(
             f"      Generated 30 days of price history for {asset.symbol}"
         )

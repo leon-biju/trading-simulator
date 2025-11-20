@@ -19,7 +19,7 @@ def update_stock_prices_simulation(stocks):
         last_price = stock.get_latest_price()
         if last_price is None:
             # If no prior price exists, assign a random starting price between 50 and 250
-            last_price = Decimal(random.uniform(50.0, 250.0)).quantize(Decimal('0.0001'))
+            last_price = Decimal(random.uniform(*SIMULATION_INITIAL_PRICE_RANGE)).quantize(Decimal('0.0001'))
 
 
             # --- Geometric Brownian Motion Calculation ---
