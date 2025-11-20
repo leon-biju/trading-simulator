@@ -2,17 +2,13 @@ from decimal import Decimal
 import random
 from math import exp, sqrt 
 from apps.market.models import PriceHistory
-from config.constants import MARKET_UPDATE_INTERVAL_SECONDS
+from config.constants import (
+    MARKET_UPDATE_INTERVAL_SECONDS, 
+    SIMULATION_SIGMA, 
+    SIMULATION_MU,
+    SIMULATION_INITIAL_PRICE_RANGE)
 
-# --- Simulation Parameters ---
-# Annual drift (expected return). e.g., 8%
-MU = 0.08 
-# Annual volatility. e.g., 20%
-SIGMA = 0.20 
-# The time step (expressed in years). 1 year = 365.25 * 24 * 60 * 60 seconds
-# We use this to scale our annual parameters down to the task's frequency.
-TIME_STEP_IN_YEARS = MARKET_UPDATE_INTERVAL_SECONDS / (365.25 * 24 * 60 * 60)
-
+TIME_STEP_IN_YEARS = MARKET_UPDATE_INTERVAL_SECONDS / (365 * 24 * 60 * 60)
 
 def update_stock_prices_simulation(stocks):
     # Simulate price updates for the given stocks
@@ -27,8 +23,8 @@ def update_stock_prices_simulation(stocks):
 
 
             # --- Geometric Brownian Motion Calculation ---
-        drift = (MU - 0.5 * SIGMA**2) * TIME_STEP_IN_YEARS
-        shock = SIGMA * sqrt(TIME_STEP_IN_YEARS) * random.gauss(0, 1)
+        drift = (SIMULATION_MU - 0.5 * SIMULATION_SIGMA**2) * TIME_STEP_IN_YEARS
+        shock = SIMULATION_SIGMA * sqrt(TIME_STEP_IN_YEARS) * random.gauss(0, 1)
 
         price_change_factor = exp(drift + shock)
 

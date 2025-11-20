@@ -22,3 +22,10 @@ MARKET_DATA_MODE = os.getenv("MARKET_DATA_MODE", "SIMULATION").upper()  # live o
 
 
 MARKET_UPDATE_INTERVAL_SECONDS = 60  # Interval for market data updates
+
+# SImulation parameters
+SIMULATION_INITIAL_PRICE_RANGE = (50.0, 250.0)  # Initial price range
+SIMULATION_MU = 0.08  # Annual Drift coefficient
+SIMULATION_SIGMA = 0.20  # Annual Volatility coefficient
+
+
