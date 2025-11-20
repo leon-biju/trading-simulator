@@ -112,3 +112,24 @@ class PriceHistory(models.Model):
         indexes = [
             models.Index(fields=['asset', 'timestamp', 'source']),
         ]
+
+class DailyPriceHistory(models.Model):
+    """
+    Stores daily aggregated price data for assets.
+    """
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='daily_price_history')
+    date = models.DateField()
+    open_price = models.DecimalField(max_digits=19, decimal_places=4)
+    high_price = models.DecimalField(max_digits=19, decimal_places=4)
+    low_price = models.DecimalField(max_digits=19, decimal_places=4)
+    close_price = models.DecimalField(max_digits=19, decimal_places=4)
+    volume = models.BigIntegerField()
+    source = models.CharField(max_length=10, choices=PriceHistory.SOURCE_CHOICES)
+
+    class Meta:
+        unique_together = ['asset', 'date']
+        get_latest_by = 'date'
+        ordering = ['-date']
+        indexes = [
+            models.Index(fields=['asset', 'date', 'source']),
+        ]
