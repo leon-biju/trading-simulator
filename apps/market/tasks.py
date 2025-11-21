@@ -4,8 +4,8 @@ import logging
 from apps.market.models import CurrencyAsset, Stock, Exchange
 from config.constants import MARKET_DATA_MODE
 
-from .services import update_stock_prices_simulation
-from .api_access import get_currency_layer_data
+from .services import update_stock_prices_simulation, update_currency_prices
+from .api_access import get_currency_layer_api_data
 
 @shared_task
 def update_stock_data():
@@ -40,7 +40,12 @@ def update_currency_data():
     if not currencies.exists():
         return "No active currencies found. Skipping update."
     
-    json_data = get_currency_layer_data()
+    json_data = get_currency_layer_api_data()
+
+    if json_data is None:
+        return "Currency data fetch failed."
     
-    #TODO: Check if weekend or market closed for currencies
+    status = update_currency_prices(json_data)
+
+    return status
 

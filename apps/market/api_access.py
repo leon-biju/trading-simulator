@@ -2,7 +2,7 @@ import os
 import requests
 from apps.market.models import CurrencyAsset, Currency
 
-def get_currency_layer_data() -> dict | None:
+def get_currency_layer_api_data() -> dict | None:
 
     """Fetches live currency exchange rates from Currency Layer API."""
 
