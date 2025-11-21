@@ -1,6 +1,6 @@
 from decimal import Decimal
 import pytest
-from apps.market.simulation import SimulatedMarket
+from apps.market.services import update_stock_prices_simulation
 from apps.market.models import PriceHistory
 from apps.market.tests.factories import StockFactory, PriceHistoryFactory
 
@@ -16,8 +16,7 @@ class TestSimulatedMarket:
         initial_price = Decimal('100.00')
         PriceHistoryFactory(asset=stock, price=initial_price)
 
-        simulator = SimulatedMarket()
-        simulator.update_stock_prices([stock])
+        update_stock_prices_simulation([stock])
 
         assert PriceHistory.objects.filter(asset=stock).count() == 2
         
@@ -31,8 +30,7 @@ class TestSimulatedMarket:
         """
         stock = StockFactory()
 
-        simulator = SimulatedMarket()
-        simulator.update_stock_prices([stock])
+        update_stock_prices_simulation([stock])
 
         assert PriceHistory.objects.filter(asset=stock).count() == 1
         
@@ -49,8 +47,7 @@ class TestSimulatedMarket:
         PriceHistoryFactory(asset=stock1, price=Decimal('150.00'))
         PriceHistoryFactory(asset=stock2, price=Decimal('200.00'))
 
-        simulator = SimulatedMarket()
-        simulator.update_stock_prices([stock1, stock2])
+        update_stock_prices_simulation([stock1, stock2])
 
         assert PriceHistory.objects.filter(asset=stock1).count() == 2
         assert PriceHistory.objects.filter(asset=stock2).count() == 2
@@ -65,7 +62,6 @@ class TestSimulatedMarket:
         """
         Test that the simulation handles an empty list of stocks gracefully.
         """
-        simulator = SimulatedMarket()
-        simulator.update_stock_prices([])
+        update_stock_prices_simulation([])
 
         assert PriceHistory.objects.count() == 0
