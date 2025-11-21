@@ -3,12 +3,12 @@ import random
 from math import exp, sqrt 
 from apps.market.models import PriceHistory
 from config.constants import (
-    MARKET_UPDATE_INTERVAL_SECONDS, 
+    STOCKS_UPDATE_INTERVAL_SECONDS, 
     SIMULATION_SIGMA, 
     SIMULATION_MU,
     SIMULATION_INITIAL_PRICE_RANGE)
 
-TIME_STEP_IN_YEARS = MARKET_UPDATE_INTERVAL_SECONDS / (365 * 24 * 60 * 60)
+TIME_STEP_IN_YEARS = STOCKS_UPDATE_INTERVAL_SECONDS / (365 * 24 * 60 * 60)
 
 def update_stock_prices_simulation(stocks):
     # Simulate price updates for the given stocks

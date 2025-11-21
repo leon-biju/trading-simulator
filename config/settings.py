@@ -180,13 +180,13 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
-from config.constants import MARKET_UPDATE_INTERVAL_SECONDS
+from config.constants import STOCKS_UPDATE_INTERVAL_SECONDS
 
 
 # Celery Beat Schedule
 CELERY_BEAT_SCHEDULE = {
-    f'update-market-every-{MARKET_UPDATE_INTERVAL_SECONDS}-seconds': {
-        'task': 'apps.market.tasks.update_market_data',
-        'schedule': MARKET_UPDATE_INTERVAL_SECONDS
+    f'update-market-every-{STOCKS_UPDATE_INTERVAL_SECONDS}-seconds': {
+        'task': 'apps.market.tasks.update_stock_data',
+        'schedule': STOCKS_UPDATE_INTERVAL_SECONDS
     },
 }
