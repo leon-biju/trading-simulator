@@ -3,9 +3,7 @@ import datetime
 from decimal import Decimal
 from math import exp, sqrt
 from django.db import transaction
-from django.utils import timezone
 from .models import Currency, Stock, CurrencyAsset, Exchange, PriceHistory
-from .api_access import get_currency_layer_data
 from config.constants import (
     SIMULATION_INITIAL_PRICE_RANGE,
     SIMULATION_MU,
