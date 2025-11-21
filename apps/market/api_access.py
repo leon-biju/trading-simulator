@@ -2,8 +2,8 @@ import os
 import requests
 from apps.market.models import CurrencyAsset, Currency
 
-def get_currency_layer_data():
-    
+def get_currency_layer_data() -> dict | None:
+
     """Fetches live currency exchange rates from Currency Layer API."""
 
     base_url = "http://api.currencylayer.com/live"
