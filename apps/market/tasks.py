@@ -4,8 +4,8 @@ import logging
 from apps.market.models import CurrencyAsset, Stock, Exchange
 from config.constants import MARKET_DATA_MODE
 
-from .simulated_data import update_stock_prices_simulation, update_currency_prices_simulation
-logger = logging.getLogger(__name__)
+from .services import update_stock_prices_simulation
+from .api_access import get_currency_layer_data
 
 @shared_task
 def update_stock_data():
@@ -30,3 +30,17 @@ def update_stock_data():
         return "Live stock price update not implemented yet."
 
     
+@shared_task
+def update_currency_data():
+    """
+    Updates currency asset prices. Live
+    """
+    currencies = CurrencyAsset.objects.filter(is_active=True)
+
+    if not currencies.exists():
+        return "No active currencies found. Skipping update."
+    
+    json_data = get_currency_layer_data()
+    
+    #TODO: Check if weekend or market closed for currencies
+
