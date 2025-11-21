@@ -16,53 +16,14 @@
          hx-get="{% if stock %}{% url 'stock_performance_chart_data' stock.exchange.code stock.symbol %}{% else %}{% url 'currency_asset_performance_chart_data' currency_asset.symbol %}{% endif %}"
          hx-trigger="load"
          hx-swap="none">
-        <div id="asset-chart-container">
-            <canvas id="assetChart"></canvas>
-        </div>
+        <div id="assetChart"></div>
     </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
-<script>
-    document.body.addEventListener('htmx:afterRequest', function(evt) {
-        if (evt.detail.target.id === 'chart-loader' && evt.detail.successful) {
-            const data = JSON.parse(evt.detail.xhr.responseText);
-            const ctx = document.getElementById('assetChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.timestamps,
-                    datasets: [{
-                        label: 'Price (' + data.currency_code + ')',
-                        data: data.prices,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Timestamp'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Price'
-                            },
-                            beginAtZero: false
-                        }
-                    }
-                }
-            });
-        }
-    });
-</script>
+<script src="{% static 'market/js/asset_performance.js' %}"></script>
 {% endblock %}

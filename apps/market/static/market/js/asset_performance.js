@@ -1,40 +1,60 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const canvas = document.getElementById('assetChart');
-    if (canvas) {
-        const timestamps = JSON.parse(canvas.dataset.timestamps);
-        const prices = JSON.parse(canvas.dataset.prices);
-        const currencyCode = canvas.dataset.currencyCode;
-
-        const ctx = canvas.getContext('2d');
-        const assetChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: timestamps,
-                datasets: [{
-                    label: `Price (${currencyCode})`,
-                    data: prices,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderWidth: 1
-                }]
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.target.id === 'chart-loader' && evt.detail.successful) {
+        const data = JSON.parse(evt.detail.xhr.responseText);
+        console.log('Chart data received:', data);
+        
+        // Transform data for ApexCharts candlestick format
+        const seriesData = data.candlestick_data.map(item => ({
+            x: new Date(item.x),
+            y: [item.o, item.h, item.l, item.c]
+        }));
+        
+        const options = {
+            series: [{
+                name: 'Price',
+                data: seriesData
+            }],
+            chart: {
+                type: 'candlestick',
+                height: 500,
+                toolbar: {
+                    show: true
+                }
             },
-            options: {
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Timestamp'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Price'
-                        },
-                        beginAtZero: false
+            title: {
+                text: 'Asset Performance',
+                align: 'left'
+            },
+            xaxis: {
+                type: 'datetime',
+                title: {
+                    text: 'Date'
+                }
+            },
+            yaxis: {
+                title: {
+                    text: 'Price (' + data.currency_code + ')'
+                },
+                tooltip: {
+                    enabled: true
+                }
+            },
+            plotOptions: {
+                candlestick: {
+                    colors: {
+                        upward: '#00B746',
+                        downward: '#EF403C'
                     }
                 }
+            },
+            tooltip: {
+                enabled: true
             }
-        });
+        };
+        
+        const chart = new ApexCharts(document.querySelector("#assetChart"), options);
+        chart.render();
+        
+        console.log('Candlestick chart rendered successfully');
     }
 });

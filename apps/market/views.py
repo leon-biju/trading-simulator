@@ -27,27 +27,45 @@ def currency_asset_performance_view(request, asset_symbol):
 def stock_performance_chart_data_view(request, exchange_code, asset_symbol):
     exchange = get_object_or_404(Exchange, code=exchange_code)
     stock = get_object_or_404(Stock, exchange=exchange, symbol=asset_symbol)
-    price_history = stock.price_history.order_by('timestamp')
+    daily_price_history = stock.daily_price_history.order_by('date')
 
-    timestamps = [p.timestamp.strftime('%Y-%m-%d %H:%M:%S') for p in price_history]
-    prices = [float(p.price) for p in price_history]
+    dates = [p.date.strftime('%Y-%m-%d') for p in daily_price_history]
+    candlestick_data = [
+        {
+            'x': p.date.strftime('%Y-%m-%d'),
+            'o': float(p.open_price),
+            'h': float(p.high_price),
+            'l': float(p.low_price),
+            'c': float(p.close_price),
+        }
+        for p in daily_price_history
+    ]
 
     return JsonResponse({
-        'timestamps': timestamps,
-        'prices': prices,
+        'dates': dates,
+        'candlestick_data': candlestick_data,
         'currency_code': stock.currency.code,
     })
 
 @login_required
 def currency_asset_performance_chart_data_view(request, asset_symbol):
     currency_asset = get_object_or_404(CurrencyAsset, symbol=asset_symbol)
-    price_history = currency_asset.price_history.order_by('timestamp')
+    daily_price_history = currency_asset.daily_price_history.order_by('date')
 
-    timestamps = [p.timestamp.strftime('%Y-%m-%d %H:%M:%S') for p in price_history]
-    prices = [float(p.price) for p in price_history]
+    dates = [p.date.strftime('%Y-%m-%d') for p in daily_price_history]
+    candlestick_data = [
+        {
+            'x': p.date.strftime('%Y-%m-%d'),
+            'o': float(p.open_price),
+            'h': float(p.high_price),
+            'l': float(p.low_price),
+            'c': float(p.close_price),
+        }
+        for p in daily_price_history
+    ]
 
     return JsonResponse({
-        'timestamps': timestamps,
-        'prices': prices,
+        'dates': dates,
+        'candlestick_data': candlestick_data,
         'currency_code': currency_asset.currency.code,
     })
