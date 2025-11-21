@@ -1,8 +1,9 @@
 import random
-import os
+import datetime
 from decimal import Decimal
 from math import exp, sqrt
 from django.db import transaction
+from django.utils import timezone
 from .models import Currency, Stock, CurrencyAsset, Exchange, PriceHistory
 from .api_access import get_currency_layer_data
 from config.constants import (
@@ -40,7 +41,8 @@ def create_currency_asset(symbol: str, name: str) -> CurrencyAsset:
     return currency_asset
 
 
-def update_stock_prices_simulation(stocks):
+@transaction.atomic
+def update_stock_prices_simulation(stocks: list[Stock]):
     # Simulate price updates for the given stocks
 
     new_stocks_prices_list = []
@@ -70,14 +72,33 @@ def update_stock_prices_simulation(stocks):
     if new_stocks_prices_list:
         PriceHistory.objects.bulk_create(new_stocks_prices_list)
 
+@transaction.atomic
+def update_currency_prices(currency_update_dict: dict) -> str:
 
-def update_currency_prices_live(currencies):
-    # Simulate price updates for the given currency
-    key = os.getenv('CURRENCY_LAYER_API_KEY')
-    if not key:
-        return "API key for Currency Layer not found."
-    data_dict = get_currency_layer_data(key, [c.code for c in currencies])
+    quotes = currency_update_dict.get('quotes', {})
+    if not quotes:
+        return "No currency quotes found in the data."
 
-    if not data_dict or not data_dict.get('success'):
-        return "Failed to fetch live currency data."
-    
+    new_currency_prices_list = []
+
+    base_currency_code = Currency.objects.get(is_base=True).code
+    timestamp = currency_update_dict.get('timestamp')
+
+    for currency_asset in CurrencyAsset.objects.filter(is_active=True):
+        quote_key = f"{base_currency_code}{currency_asset.symbol}"
+        if quote_key in quotes:
+            new_price = Decimal(quotes[quote_key]).quantize(Decimal('0.0001'))
+
+            new_currency_prices_list.append(
+                PriceHistory(
+                    asset=currency_asset,
+                    timestamp=datetime.datetime.fromtimestamp(int(timestamp), tz=datetime.timezone.utc),
+                    price=new_price,
+                    source='LIVE'
+                )
+            )
+
+    if new_currency_prices_list:
+        PriceHistory.objects.bulk_create(new_currency_prices_list)
+
+    return f"Updated prices for {len(new_currency_prices_list)} currency assets."
