@@ -3,11 +3,11 @@
 {% load static %}
 {% load mathfilters %}
 
-{% block title %}{{ wallet.get_currency_display }} Wallet{% endblock %}
+{% block title %}{{ wallet.currency.code }} Wallet{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h2 class="mb-4">{{ wallet.get_currency_display }} Wallet</h2>
+    <h2 class="mb-4">{{ wallet.currency.code }} Wallet</h2>
 
     {% if messages %}
         {% for message in messages %}
@@ -36,19 +36,19 @@
         method="post" 
         id="fx-form"
         data-fx-rates="{{ fx_rates }}"
-        data-to-currency="{{ wallet.currency }}"
+        data-to-currency="{{ wallet.currency.code }}"
     >
         {% csrf_token %}
         <div class="form-group">
             <label for="id_from_wallet_currency">From Wallet</label>
             <select name="from_wallet_currency" id="id_from_wallet_currency" class="form-control">
                 {% for w in user_other_wallets %}
-                    <option value="{{ w.currency }}">{{ w.get_currency_display }}</option>
+                    <option value="{{ w.currency.code }}">{{ w.currency.code }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="form-group">
-            <label for="id_to_amount">Amount to Add ({{ wallet.get_currency_display }})</label>
+            <label for="id_to_amount">Amount to Add ({{ wallet.currency.code }})</label>
             <div class="input-group">
                 <span class="input-group-text">{{ wallet.symbol }}</span>
                 <input 
@@ -64,7 +64,7 @@
                 You will be charged: <span id="fx-from-symbol">—</span><span id="converted-amount">0.00</span>
             </small>
             <small class="form-text text-muted float-end" id="exchange-rate" aria-live="polite">
-                Exchange rate: 1 {{ wallet.currency}} = <span id="fx-rate">—</span><span id="fx-from-currency">—</span>
+                Exchange rate: 1 {{ wallet.currency.code }} = <span id="fx-rate">—</span><span id="fx-from-currency">—</span>
             </small>
         </div>
         <button type="submit" class="btn btn-primary mt-3">Transfer</button>

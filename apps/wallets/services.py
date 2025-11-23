@@ -1,14 +1,13 @@
 from typing import Optional, Tuple
-from .models import Fx_Transfer, Transaction, Wallet, Currency
+
+from .models import Fx_Transfer, Transaction, Wallet
+
+from apps.market.models import Currency, CurrencyAsset
+from apps.market.services import get_fx_rate, get_fx_conversion
 from django.db import transaction
 from decimal import Decimal, ROUND_HALF_UP
 
-#TODO: Will use market FX rates later
-DUMMY_FX_RATES = {
-    'GBP': Decimal('1.00'),
-    'USD': Decimal('1.25'),
-    'EUR': Decimal('1.15'),
-}
+
 
 def round_to_two_dp(value: Decimal) -> Decimal:
     return value.quantize(Decimal('1.00'), rounding=ROUND_HALF_UP)
@@ -52,54 +51,21 @@ def create_transaction(
         return (None, f"UNEXPECTED_ERROR: {str(e)}")
     
 
-def get_fx_conversion(
-    from_currency: str,
-    to_currency: str,
-    from_amount: Optional[Decimal] = None,
-    to_amount: Optional[Decimal] = None,
-) -> Tuple[Optional[Decimal], Optional[Decimal], Optional[str]]:
-    # Returns (from_amount, to_amount, error)
-    if from_currency not in Currency.values or to_currency not in Currency.values:
-        return (None, None, "UNSUPPORTED_CURRENCY")
-
-    if (from_amount is None and to_amount is None) or (from_amount is not None and to_amount is not None):
-        return (None, None, "SPECIFY_EITHER_FROM_OR_TO_AMOUNT")
-
-    from_rate = DUMMY_FX_RATES.get(from_currency)
-    to_rate = DUMMY_FX_RATES.get(to_currency)
-
-    if not from_rate or not to_rate:
-        return (None, None, "UNSUPPORTED_CURRENCY_FOR_FX")
-
-    exchange_rate = to_rate / from_rate
-
-    if from_amount is not None:
-        if from_amount <= 0:
-            return (None, None, "INVALID_FROM_AMOUNT")
-        calculated_to_amount = round_to_two_dp(from_amount * exchange_rate)
-        return (from_amount, calculated_to_amount, None)
-    else: # to_amount is not None
-        if to_amount <= 0:
-            return (None, None, "INVALID_TO_AMOUNT")
-        calculated_from_amount = round_to_two_dp(to_amount / exchange_rate)
-        return (calculated_from_amount, to_amount, None)
-
-
 def perform_fx_transfer(
         user_id: int,
-        from_wallet_currency: str,
-        to_wallet_currency: str,
+        from_wallet_currency_code: str,
+        to_wallet_currency_code: str,
         from_amount: Optional[Decimal] = None,
         to_amount: Optional[Decimal] = None,
     ) -> Tuple[Optional[Fx_Transfer], Optional[str]]:
     # Transfer funds between two wallets of the same user but different currencies
     # Specify either from_amount OR to_amount, not both
-    if from_wallet_currency == to_wallet_currency:
+    if from_wallet_currency_code == to_wallet_currency_code:
         return (None, "SAME_WALLET_TRANSFER")
 
     from_amount, to_amount, error = get_fx_conversion(
-        from_currency=from_wallet_currency,
-        to_currency=to_wallet_currency,
+        from_currency_code=from_wallet_currency_code,
+        to_currency_code=to_wallet_currency_code,
         from_amount=from_amount,
         to_amount=to_amount
     )
@@ -107,24 +73,24 @@ def perform_fx_transfer(
     if error:
         return (None, error)
 
+    
     try:
         with transaction.atomic():
-            from_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency=from_wallet_currency)
-            to_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency=to_wallet_currency)
-
+            from_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency__code=from_wallet_currency_code)
+            to_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency__code=to_wallet_currency_code)
             if from_wallet.balance < from_amount:
                 return (None, "INSUFFICIENT_FUNDS_IN_FROM_WALLET")
 
-            # Get dummy FX rates for exchange rate calculation
-            from_rate = DUMMY_FX_RATES.get(from_wallet.currency)
-            to_rate = DUMMY_FX_RATES.get(to_wallet.currency)
+            # Get FX rates for exchange rate calculation
+            from_rate = get_fx_rate(from_wallet_currency_code, from_wallet_currency_code)
+            to_rate = get_fx_rate(to_wallet_currency_code, to_wallet_currency_code)
             exchange_rate = to_rate / from_rate
 
             _, from_error = create_transaction(
                 wallet_id=from_wallet.id,
                 amount=-from_amount,
                 source=Transaction.Source.FX_TRANSFER,
-                description=f"{from_wallet.currency} {from_amount:,.2f} → {to_wallet.currency} {to_amount:,.2f} @ 1 {from_wallet.currency} = {round_to_two_dp(exchange_rate):,.4f} {to_wallet.currency}"
+                description=f"{from_wallet.currency.code} {from_amount:,.2f} → {to_wallet.currency.code} {to_amount:,.2f} @ 1 {from_wallet.currency.code} = {round_to_two_dp(exchange_rate):,.4f} {to_wallet.currency.code}"
             )
             if from_error:
                 return (None, from_error)
@@ -133,7 +99,7 @@ def perform_fx_transfer(
                 wallet_id=to_wallet.id,
                 amount=to_amount,
                 source=Transaction.Source.FX_TRANSFER,
-                description=f"{from_wallet.currency} {from_amount:,.2f} → {to_wallet.currency} {to_amount:,.2f} @ 1 {to_wallet.currency} = {round_to_two_dp(1/exchange_rate):,.4f} {from_wallet.currency}"
+                description=f"{from_wallet.currency.code} {from_amount:,.2f} → {to_wallet.currency.code} {to_amount:,.2f} @ 1 {to_wallet.currency.code} = {round_to_two_dp(1/exchange_rate):,.4f} {from_wallet.currency.code}"
             )
             if to_error:
                 return (None, to_error)

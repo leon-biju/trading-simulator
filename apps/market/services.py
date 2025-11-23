@@ -1,8 +1,11 @@
 import random
 import datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from math import exp, sqrt
+from typing import Optional, Tuple
 from django.db import transaction
+from django.shortcuts import get_object_or_404
+
 from .models import Currency, Stock, CurrencyAsset, Exchange, PriceHistory
 from config.constants import (
     SIMULATION_INITIAL_PRICE_RANGE,
@@ -12,6 +15,10 @@ from config.constants import (
 )
 
 TIME_STEP_IN_YEARS = STOCKS_UPDATE_INTERVAL_SECONDS / (365 * 24 * 60 * 60)
+
+def round_to_two_dp(value: Decimal) -> Decimal:
+    return value.quantize(Decimal('1.00'), rounding=ROUND_HALF_UP)
+
 
 @transaction.atomic
 def create_stock_asset(symbol: str, name: str, exchange: Exchange, currency: Currency) -> Stock:
@@ -96,7 +103,64 @@ def update_currency_prices(currency_update_dict: dict) -> str:
                 )
             )
 
+    #also add a price history for the base currency at price 1.0
+    base_currency_asset = CurrencyAsset.objects.get(symbol=base_currency_code)
+    new_currency_prices_list.append(
+        PriceHistory(
+            asset=base_currency_asset,
+            timestamp=datetime.datetime.fromtimestamp(int(timestamp), tz=datetime.timezone.utc),
+            price=Decimal('1.0000'),
+            source='LIVE'
+        )
+    )
+
     if new_currency_prices_list:
         PriceHistory.objects.bulk_create(new_currency_prices_list)
 
     return f"Updated prices for {len(new_currency_prices_list)} currency assets."
+
+
+def get_fx_rate(from_currency_code: str, to_currency_code: str) -> Decimal | None:
+    # Get the latest FX rate between two currencies
+    try:
+        from_currencyasset = CurrencyAsset.objects.get(symbol=from_currency_code)
+        to_currencyasset = CurrencyAsset.objects.get(symbol=to_currency_code)
+    except CurrencyAsset.DoesNotExist:
+        return None
+
+    from_rate = from_currencyasset.get_latest_price()
+    to_rate = to_currencyasset.get_latest_price()
+
+    if from_rate is None or to_rate is None:
+        return None
+
+    exchange_rate = Decimal(to_rate / from_rate)
+    return exchange_rate
+
+def get_fx_conversion(
+    from_currency_code: str,
+    to_currency_code: str,
+    from_amount: Optional[Decimal] = None,
+    to_amount: Optional[Decimal] = None,
+) -> Tuple[Optional[Decimal], Optional[Decimal], Optional[str]]:
+    # Returns (from_amount, to_amount, error)
+
+    if (from_amount is None and to_amount is None) or (from_amount is not None and to_amount is not None):
+        return (None, None, "SPECIFY_EITHER_FROM_OR_TO_AMOUNT")
+
+
+
+    exchange_rate = get_fx_rate(from_currency_code, to_currency_code)
+    if exchange_rate is None:
+        return (None, None, "UNSUPPORTED_CURRENCY_FOR_FX")
+
+    if from_amount is not None:
+        if from_amount <= 0:
+            return (None, None, "INVALID_FROM_AMOUNT")
+        calculated_to_amount = round_to_two_dp(from_amount * exchange_rate)
+        return (from_amount, calculated_to_amount, None)
+    else: # to_amount is not None
+        if to_amount <= 0:
+            return (None, None, "INVALID_TO_AMOUNT")
+        calculated_from_amount = round_to_two_dp(to_amount / exchange_rate)
+        return (calculated_from_amount, to_amount, None)
