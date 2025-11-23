@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 from zoneinfo import ZoneInfo, available_timezones
@@ -13,7 +14,7 @@ class Exchange(models.Model):
     open_time = models.TimeField()
     close_time = models.TimeField()
 
-    def is_currently_open(self):
+    def is_currently_open(self) -> bool:
 
         utc_now = timezone.now()
         
@@ -37,6 +38,7 @@ class Exchange(models.Model):
         return f"{self.name} ({self.code})"
 
 
+#TODO: Add a symbol to represent currency symbols once other migrations done
 class Currency(models.Model):
     code = models.CharField(max_length=3, unique=True)  # e.g., 'USD', 'EUR'
     name = models.CharField(max_length=50)              # e.g., 'United States Dollar'
@@ -64,13 +66,14 @@ class Asset(models.Model):
     ]
 
     asset_type = models.CharField(max_length=10, choices=ASSET_TYPE_CHOICES)
+    #TODO: Rename to 'ticker' once other migrations are done
     symbol = models.CharField(max_length=10, unique=True, db_index=True)
     name = models.CharField(max_length=100)
-    currency = models.ForeignKey(Currency, on_delete=models.PROTECT) # The currency the asset is priced in.
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT) # The currency the asset is priced in. for currency assets it's the base currency
     
     is_active = models.BooleanField(default=True) # To enable/disable trading for an asset
 
-    def get_latest_price(self):
+    def get_latest_price(self) -> Decimal | None:
         try:
             latest_price_entry = self.price_history.latest()
             return latest_price_entry.price
