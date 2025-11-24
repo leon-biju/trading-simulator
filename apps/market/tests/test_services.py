@@ -38,16 +38,16 @@ class TestAssetCreationServices:
         base_currency = market_data['currencies']['GBP']
 
         currency_asset = create_currency_asset(
-            symbol="EUR",
-            name="Euro",
+            symbol="XYZ",
+            name="Fictional Currency",
         )
 
         assert isinstance(currency_asset, CurrencyAsset)
-        assert currency_asset.symbol == "EUR"
-        assert currency_asset.name == "Euro"
+        assert currency_asset.symbol == "XYZ"
+        assert currency_asset.name == "Fictional Currency"
         assert currency_asset.currency == base_currency
         assert currency_asset.asset_type == "CURRENCY"
-        assert CurrencyAsset.objects.count() == 1
+        assert CurrencyAsset.objects.filter(symbol="XYZ").count() == 1
 
     def test_create_currency_asset_raises_error_if_no_base_currency(self, db):
         """
