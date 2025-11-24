@@ -3,7 +3,6 @@ from apps.accounts.forms import SignUpForm, LoginForm
 from django.contrib.auth import get_user_model
 
 
-
 # 1. Reject weak passwords
 @pytest.mark.parametrize(
     "password, expected", [
@@ -16,8 +15,7 @@ from django.contrib.auth import get_user_model
         ("StrongV3ryStrongPasswd!", True),
     ]
 )
-@pytest.mark.django_db
-def test_weak_password_reject(password, expected):
+def test_weak_password_reject(password, expected, market_data):
     form = SignUpForm(data={
         "username": "testuser",
         "email": "testuser@example.com",
@@ -36,8 +34,7 @@ def test_weak_password_reject(password, expected):
         ("MatchedPasswd!223", "MatchedPasswd!223", True),
     ]
 )
-@pytest.mark.django_db
-def test_password_confirmation(password1, password2, expected):
+def test_password_confirmation(password1, password2, expected, market_data):
     form = SignUpForm(data={
         "username": "testuser",
         "email": "testuser@example.com",
@@ -49,8 +46,7 @@ def test_password_confirmation(password1, password2, expected):
 
 
 # 3. Cannot create an account with an existing username
-@pytest.mark.django_db
-def test_cannot_create_account_with_existing_username():
+def test_cannot_create_account_with_existing_username(market_data):
     User = get_user_model()
 
     # Create initial user
@@ -69,8 +65,7 @@ def test_cannot_create_account_with_existing_username():
 
 
 # 4. Cannot create an account with an existing email
-@pytest.mark.django_db
-def test_cannot_create_account_with_existing_email():
+def test_cannot_create_account_with_existing_email(market_data):
     User = get_user_model()
 
     # Create initial user
@@ -89,8 +84,7 @@ def test_cannot_create_account_with_existing_email():
 
 
 # 5. Passwords are stored hashed NOT plaintext
-@pytest.mark.django_db
-def test_password_is_hashed():
+def test_password_is_hashed(market_data):
     raw_password = "StrongV3ryStrongPasswd!"
     form = SignUpForm(data={
         "username": "test_user_hashed",
