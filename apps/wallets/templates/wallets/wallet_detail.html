@@ -65,6 +65,8 @@
             </small>
             <small class="form-text text-muted float-end" id="exchange-rate" aria-live="polite">
                 Exchange rate: 1 {{ wallet.currency.code }} = <span id="fx-rate">—</span><span id="fx-from-currency">—</span>
+                <br>
+                <small class="text-muted">Last updated: {{ fx_last_updated|date:"Y-m-d H:i" }}</small>
             </small>
         </div>
         <button type="submit" class="btn btn-primary mt-3">Transfer</button>

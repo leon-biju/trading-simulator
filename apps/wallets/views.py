@@ -2,6 +2,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from decimal import Decimal
+
+from apps.market.models import PriceHistory
 from .models import Wallet
 from .forms import AddFundsForm
 from apps.market.services import  get_fx_rate
@@ -59,12 +61,15 @@ def wallet_detail(request, currency_code):
 
     serializable_fx_rates = {k: str(v) for k, v in exchange_rates.items()}
 
+    fx_rate_update_timestamp = PriceHistory.objects.filter(asset__symbol=wallet.currency.code).order_by('-timestamp').first().timestamp
+    
     context = {
         'wallet': wallet,
         'transactions': transactions,
         'user_other_wallets': user_other_wallets,
         'form': form,
         'fx_rates': json.dumps(serializable_fx_rates),
+        'fx_last_updated': fx_rate_update_timestamp,
     }
 
     return render(request, 'wallets/wallet_detail.html', context)
