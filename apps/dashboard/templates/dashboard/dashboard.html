@@ -18,7 +18,7 @@
   <div class="col-md-4 mb-4">
     <div class="card card-hover wallet-card" id="{{ wallet.currency }}">
       <div class="card-header">
-        {{ wallet.get_currency_display }} Wallet
+        {{ wallet.currency.code }} Wallet
       </div>
       <div class="card-body">
         <p class="card-text">Balance: <strong>{{ wallet.symbol }}{{ wallet.balance|intcomma }}</strong></p>

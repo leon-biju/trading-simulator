@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'apps.market',
     'apps.trading',
     'apps.wallets',
+    'django_celery_beat',
     'mathfilters',
 ]
 
@@ -171,5 +172,26 @@ EMAIL_USE_TLS   = os.getenv("DJANGO_EMAIL_USE_TLS", "true").lower() == "true"
 
 
 
-# Application specific settings
-STARTING_BALANCE = 100_000.00 #gbp for now
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", 'redis://redis:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+from config.constants import STOCKS_UPDATE_INTERVAL_SECONDS, FX_RATES_UPDATE_INTERVAL_SECONDS
+
+
+# Celery Beat Schedule
+CELERY_BEAT_SCHEDULE = {
+    f'update-market-every-{STOCKS_UPDATE_INTERVAL_SECONDS}-seconds': {
+        'task': 'apps.market.tasks.update_stock_data',
+        'schedule': STOCKS_UPDATE_INTERVAL_SECONDS
+    },
+    f'update-fx-rates-every-{FX_RATES_UPDATE_INTERVAL_SECONDS}-seconds': {
+        'task': 'apps.market.tasks.update_fx_rates',
+        'schedule': FX_RATES_UPDATE_INTERVAL_SECONDS
+    },
+
+}

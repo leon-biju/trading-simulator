@@ -1,9 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from decimal import Decimal
+
+from apps.market.models import PriceHistory
 from .models import Wallet
 from .forms import AddFundsForm
-from .services import perform_fx_transfer, DUMMY_FX_RATES
+from apps.market.services import  get_fx_rate
+from apps.wallets.services import perform_fx_transfer
 import json
 
 ERROR_MESSAGES = {
@@ -21,8 +25,8 @@ ERROR_MESSAGES = {
 
 
 @login_required
-def wallet_detail(request, currency):
-    wallet = get_object_or_404(Wallet, currency=currency, user=request.user)
+def wallet_detail(request, currency_code):
+    wallet = get_object_or_404(Wallet, currency__code=currency_code, user=request.user)
     transactions = wallet.transactions.all()
     user_other_wallets = Wallet.objects.filter(user=request.user).exclude(id=wallet.id)
 
@@ -34,8 +38,8 @@ def wallet_detail(request, currency):
             
             _, error = perform_fx_transfer(
                 user_id=request.user.id,
-                from_wallet_currency=from_wallet_currency,
-                to_wallet_currency=wallet.currency,
+                from_wallet_currency_code=from_wallet_currency,
+                to_wallet_currency_code=wallet.currency.code,
                 to_amount=to_amount
             )
 
@@ -43,24 +47,29 @@ def wallet_detail(request, currency):
                 error_message = ERROR_MESSAGES.get(error, 'An unknown error occurred.')
                 messages.error(request, error_message)
             else:
-                messages.success(request, f'Successfully added {wallet.symbol}{to_amount:,.2f} to your {wallet.currency} wallet.')
+                messages.success(request, f'Successfully added {wallet.symbol}{to_amount:,.2f} to your {wallet.currency.code} wallet.')
 
-            return redirect('wallets:wallet_detail', currency=wallet.currency)
+            return redirect('wallets:wallet_detail', currency_code=wallet.currency.code)
         else:
             messages.error(request, 'There was an error with your submission. Please check the form and try again.')
     else: # GET requests
         form = AddFundsForm()
 
-    base_rate = DUMMY_FX_RATES.get(wallet.currency, 1)
-    exchange_rates = {curr: (rate / base_rate) for curr, rate in DUMMY_FX_RATES.items()}
+
+    currency_codes = [wallet.currency.code for wallet in user_other_wallets] + [wallet.currency.code]
+    exchange_rates = {curr: get_fx_rate(wallet.currency.code, curr) for curr in currency_codes}
 
     serializable_fx_rates = {k: str(v) for k, v in exchange_rates.items()}
 
+    fx_rate_update_timestamp = PriceHistory.objects.filter(asset__symbol=wallet.currency.code).order_by('-timestamp').first().timestamp
+    
     context = {
         'wallet': wallet,
         'transactions': transactions,
         'user_other_wallets': user_other_wallets,
         'form': form,
         'fx_rates': json.dumps(serializable_fx_rates),
+        'fx_last_updated': fx_rate_update_timestamp,
     }
+
     return render(request, 'wallets/wallet_detail.html', context)

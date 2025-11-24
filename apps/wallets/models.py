@@ -1,18 +1,14 @@
 from django.conf import settings
 from django.db import models
-from .constants import CURRENCY_SYMBOLS
+from config.constants import CURRENCY_SYMBOLS
+from apps.market.models import Currency
 
-class Currency(models.TextChoices):
-    GBP = 'GBP', 'GBP'
-    USD = 'USD', 'USD'
-    EUR = 'EUR', 'EUR'
-    # Additional currencies can be added here later
 
 class Wallet(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
 
-    currency = models.CharField(max_length=10, choices=Currency.choices, default=Currency.GBP)
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -24,10 +20,10 @@ class Wallet(models.Model):
 
     @property
     def symbol(self) -> str:
-        return CURRENCY_SYMBOLS.get(self.currency, self.currency)
+        return CURRENCY_SYMBOLS.get(self.currency.code, self.currency.code)
     
     def __str__(self):
-        return f"Wallet of {self.user.username} - Balance: {self.balance} {self.currency}"
+        return f"Wallet of {self.user.username} - Balance: {self.balance} {self.currency.code}"
 
 
 class Transaction(models.Model):
@@ -49,7 +45,7 @@ class Transaction(models.Model):
         ordering = ['-timestamp']
 
     def __str__(self):
-        return f"{self.wallet.user.username}:  {self.amount} {self.currency} ({self.source}) on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"{self.wallet.user.username}:  {self.amount} {self.wallet.currency} ({self.source}) on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
     
 
 

@@ -5,13 +5,36 @@ services:
     volumes: [ "pgdata:/var/lib/postgresql/data" ]
     ports: [ "5432:5432" ]
 
-  api:
+  redis:
+    image: "redis:7-alpine"
+    ports: [ "6379:6379" ]
+
+  web:
     build: .
     env_file: .env
     ports: [ "8000:8000" ]
-    depends_on: [ db ]
+    depends_on: [ db, redis ]
     volumes:
       - .:/code 
+
+  celery_worker:
+    build: .
+    env_file: .env
+    depends_on: [ db, redis ]
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/code
+
+  celery_beat:
+    build: .
+    env_file: .env
+    depends_on: [ db, redis ]
+    
+    # important to remove old pid file to avoid startup issues
+    command: sh -c "rm -f ./celerybeat.pid &&
+             celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    volumes:
+      - .:/code
 
 volumes:
   pgdata:

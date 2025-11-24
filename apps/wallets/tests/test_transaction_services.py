@@ -8,7 +8,7 @@ import threading
 
 # Create a dummy user for testing
 @pytest.fixture
-def user_with_wallets():
+def user_with_wallets(market_data):
     User = get_user_model()
     user = User.objects.create_user(username='testuser', email='test@example.com', password='StrongV3ryStrongPasswd!')
     wallets = Wallet.objects.filter(user=user)
@@ -16,7 +16,7 @@ def user_with_wallets():
 
 
 @pytest.mark.django_db
-def test_transaction_creation_and_balance_update(user_with_wallets):
+def test_transaction_creation_and_balance_update(user_with_wallets, market_data):
     user, wallets = user_with_wallets
     wallet = wallets.first()
     old_balance = wallet.balance
@@ -35,7 +35,7 @@ def test_transaction_creation_and_balance_update(user_with_wallets):
 
 
 @pytest.mark.django_db
-def test_transaction_creation_insufficient_funds(user_with_wallets):
+def test_transaction_creation_insufficient_funds(user_with_wallets, market_data):
     user, wallets = user_with_wallets
     wallet = wallets.first()
     wallet.balance = Decimal('50.00')
@@ -66,7 +66,7 @@ def test_transaction_creation_non_existent_wallet():
 
 
 @pytest.mark.django_db
-def test_zero_amount_transaction(user_with_wallets):
+def test_zero_amount_transaction(user_with_wallets, market_data):
     user, wallets = user_with_wallets
     wallet = wallets.first()
     old_balance = wallet.balance
@@ -82,7 +82,7 @@ def test_zero_amount_transaction(user_with_wallets):
     assert wallet.balance == old_balance
 
 @pytest.mark.django_db
-def test_transaction_data_integrity(user_with_wallets):
+def test_transaction_data_integrity(user_with_wallets, market_data):
     user, wallets = user_with_wallets
     wallet = wallets.first()
     transaction, error = services.create_transaction(
@@ -99,7 +99,7 @@ def test_transaction_data_integrity(user_with_wallets):
     assert transaction.description == "Data integrity test"
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_transactions_atomicity(user_with_wallets):
+def test_concurrent_transactions_atomicity(user_with_wallets, market_data):
     user, wallets = user_with_wallets
     wallet = wallets.first()
 

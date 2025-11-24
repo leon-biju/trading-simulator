@@ -26,5 +26,6 @@ urlpatterns = [
     path('accounts/', include('apps.accounts.urls')),
     path('dashboard/', include('apps.dashboard.urls')),
     path('wallets/', include('apps.wallets.urls')),
+    path('market/', include('apps.market.urls')),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home_redirect'),
 ]
