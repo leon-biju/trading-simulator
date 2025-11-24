@@ -5,11 +5,9 @@ from apps.market.models import Currency, Stock, CurrencyAsset
 from apps.market.services import create_stock_asset, create_currency_asset
 from apps.market.tests.factories import ExchangeFactory, CurrencyFactory
 
-pytestmark = pytest.mark.django_db
-
 
 class TestAssetCreationServices:
-    def test_create_stock_asset(self):
+    def test_create_stock_asset(self, db):
         """
         Test that `create_stock_asset` service function correctly creates a Stock.
         """
@@ -31,14 +29,13 @@ class TestAssetCreationServices:
         assert stock.asset_type == "STOCK"
         assert Stock.objects.count() == 1
 
-    def test_create_currency_asset(self):
+    def test_create_currency_asset(self, market_data):
         """
         Test that `create_currency_asset` service function correctly creates a CurrencyAsset
         and assigns the base currency.
         """
-        # Ensure a base currency exists
-        base_currency = CurrencyFactory(is_base=True)
-        CurrencyFactory(is_base=False)  # Create another non-base currency
+        # Base currency already exists from market_data fixture
+        base_currency = market_data['currencies']['GBP']
 
         currency_asset = create_currency_asset(
             symbol="EUR",
@@ -52,7 +49,7 @@ class TestAssetCreationServices:
         assert currency_asset.asset_type == "CURRENCY"
         assert CurrencyAsset.objects.count() == 1
 
-    def test_create_currency_asset_raises_error_if_no_base_currency(self):
+    def test_create_currency_asset_raises_error_if_no_base_currency(self, db):
         """
         Test that `create_currency_asset` raises an exception if no base currency is defined.
         """

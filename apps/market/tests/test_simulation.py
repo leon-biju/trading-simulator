@@ -4,11 +4,10 @@ from apps.market.services import update_stock_prices_simulation
 from apps.market.models import PriceHistory
 from apps.market.tests.factories import StockFactory, PriceHistoryFactory
 
-pytestmark = pytest.mark.django_db
 
 class TestSimulatedMarket:
 
-    def test_update_stock_prices_with_existing_price(self):
+    def test_update_stock_prices_with_existing_price(self, db):
         """
         Test that stock prices are updated based on the last known price.
         """
@@ -24,7 +23,7 @@ class TestSimulatedMarket:
         assert latest_price_entry.price != initial_price
         assert latest_price_entry.source == 'SIMULATION'
 
-    def test_update_stock_prices_with_no_prior_price(self):
+    def test_update_stock_prices_with_no_prior_price(self, db):
         """
         Test that a new random price is generated if no history exists.
         """
@@ -38,7 +37,7 @@ class TestSimulatedMarket:
         assert latest_price_entry.price > 0
         assert 50.0 <= latest_price_entry.price <= 250.0
 
-    def test_update_multiple_stock_prices(self):
+    def test_update_multiple_stock_prices(self, db):
         """
         Test that multiple stocks are updated correctly in one go.
         """
@@ -58,7 +57,7 @@ class TestSimulatedMarket:
         assert latest_price1 != Decimal('150.00')
         assert latest_price2 != Decimal('200.00')
 
-    def test_no_stocks_to_update(self):
+    def test_no_stocks_to_update(self, db):
         """
         Test that the simulation handles an empty list of stocks gracefully.
         """

@@ -7,15 +7,11 @@ from apps.market.services import update_currency_prices
 from apps.market.tests.factories import CurrencyFactory, CurrencyAssetFactory
 
 
-@pytest.mark.django_db
-def test_update_currency_prices_success():
+def test_update_currency_prices_success(market_data):
     """Test successful currency price update with valid API response."""
-    # Create base currency (GBP in this case)
-    base_currency = CurrencyFactory(code='GBP', name='British Pound', is_base=True)
-    
-    # Create currency assets (these are what get traded)
-    usd_asset = CurrencyAssetFactory(symbol='USD', name='US Dollar', currency=base_currency, is_active=True)
-    eur_asset = CurrencyAssetFactory(symbol='EUR', name='Euro', currency=base_currency, is_active=True)
+    # Use currency assets from market_data
+    usd_asset = market_data['currency_assets']['USD']
+    eur_asset = market_data['currency_assets']['EUR']
     
     dummy_api_response = {
         'success': True,
@@ -26,28 +22,29 @@ def test_update_currency_prices_success():
             'GBPEUR': 1.17,
         }
     }
+    expected_timestamp = datetime.datetime.fromtimestamp(1625247600, tz=datetime.timezone.utc)
 
     status = update_currency_prices(dummy_api_response)
 
-    assert status == "Updated prices for 2 currency assets."
-    assert PriceHistory.objects.count() == 2
+    assert status == "Updated prices for 3 currency assets."
+    #Only check recent entries
+    assert PriceHistory.objects.filter(timestamp=expected_timestamp).count() == 3
+
     
     # Verify USD price
-    usd_price = PriceHistory.objects.get(asset=usd_asset)
+    usd_price = PriceHistory.objects.get(asset=usd_asset, timestamp=expected_timestamp)
     assert usd_price.price == Decimal('1.3900')
     assert usd_price.source == 'LIVE'
-    expected_timestamp = datetime.datetime.fromtimestamp(1625247600, tz=datetime.timezone.utc)
     assert usd_price.timestamp == expected_timestamp
     
     # Verify EUR price
-    eur_price = PriceHistory.objects.get(asset=eur_asset)
+    eur_price = PriceHistory.objects.get(asset=eur_asset, timestamp=expected_timestamp)
     assert eur_price.price == Decimal('1.1700')
     assert eur_price.source == 'LIVE'
     assert eur_price.timestamp == expected_timestamp
 
 
-@pytest.mark.django_db
-def test_update_currency_prices_no_quotes():
+def test_update_currency_prices_no_quotes(db):
     """Test currency price update with empty quotes."""
 
     dummy_api_response = {
@@ -63,14 +60,13 @@ def test_update_currency_prices_no_quotes():
     assert PriceHistory.objects.count() == 0
 
 
-@pytest.mark.django_db
-def test_update_currency_prices_inactive_assets():
+def test_update_currency_prices_inactive_assets(market_data):
     """Test that inactive currency assets are not updated."""
-    base_currency = CurrencyFactory(code='GBP', name='British Pound', is_base=True)
-    
-    # Create active and inactive currency assets
-    active_asset = CurrencyAssetFactory(symbol='USD', name='US Dollar', currency=base_currency, is_active=True)
-    inactive_asset = CurrencyAssetFactory(symbol='EUR', name='Euro', currency=base_currency, is_active=False)
+    # Use existing assets and modify one to be inactive
+    active_asset = market_data['currency_assets']['USD']
+    inactive_asset = market_data['currency_assets']['EUR']
+    inactive_asset.is_active = False
+    inactive_asset.save()
     
     dummy_api_response = {
         'success': True,
@@ -81,24 +77,23 @@ def test_update_currency_prices_inactive_assets():
             'GBPEUR': 1.17,
         }
     }
-
+    expected_timestamp = datetime.datetime.fromtimestamp(1625247600, tz=datetime.timezone.utc)
     status = update_currency_prices(dummy_api_response)
 
-    # Only active asset should be updated
-    assert status == "Updated prices for 1 currency assets."
-    assert PriceHistory.objects.count() == 1
-    assert PriceHistory.objects.filter(asset=active_asset).exists()
-    assert not PriceHistory.objects.filter(asset=inactive_asset).exists()
+    # Only active asset + gbp should be updated
+    assert status == "Updated prices for 2 currency assets."
+    assert PriceHistory.objects.filter(timestamp=expected_timestamp).count() == 2
+    assert PriceHistory.objects.filter(asset=active_asset, timestamp=expected_timestamp).exists()
+    assert not PriceHistory.objects.filter(asset=inactive_asset, timestamp=expected_timestamp).exists()
 
 
-@pytest.mark.django_db
-def test_update_currency_prices_partial_quotes():
+def test_update_currency_prices_partial_quotes(market_data):
     """Test currency price update when only some assets have quotes."""
-    base_currency = CurrencyFactory(code='GBP', name='British Pound', is_base=True)
+    base_currency = market_data['currencies']['GBP']
     
-    # Create three currency assets
-    usd_asset = CurrencyAssetFactory(symbol='USD', name='US Dollar', currency=base_currency, is_active=True)
-    eur_asset = CurrencyAssetFactory(symbol='EUR', name='Euro', currency=base_currency, is_active=True)
+    # Use existing assets and create an additional one
+    usd_asset = market_data['currency_assets']['USD']
+    eur_asset = market_data['currency_assets']['EUR']
     jpy_asset = CurrencyAssetFactory(symbol='JPY', name='Japanese Yen', currency=base_currency, is_active=True)
     
     # API response only contains quotes for USD and EUR (not JPY)
@@ -111,12 +106,13 @@ def test_update_currency_prices_partial_quotes():
             'GBPEUR': 1.17,
         }
     }
+    expected_timestamp = datetime.datetime.fromtimestamp(1625247600, tz=datetime.timezone.utc)
 
     status = update_currency_prices(dummy_api_response)
 
     # Only USD and EUR should be updated
-    assert status == "Updated prices for 2 currency assets."
-    assert PriceHistory.objects.count() == 2
-    assert PriceHistory.objects.filter(asset=usd_asset).exists()
-    assert PriceHistory.objects.filter(asset=eur_asset).exists()
-    assert not PriceHistory.objects.filter(asset=jpy_asset).exists()
+    assert status == "Updated prices for 3 currency assets."
+    assert PriceHistory.objects.filter(timestamp=expected_timestamp).count() == 3
+    assert PriceHistory.objects.filter(asset=usd_asset, timestamp=expected_timestamp).exists()
+    assert PriceHistory.objects.filter(asset=eur_asset, timestamp=expected_timestamp).exists()
+    assert not PriceHistory.objects.filter(asset=jpy_asset, timestamp=expected_timestamp).exists()
