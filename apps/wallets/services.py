@@ -82,9 +82,10 @@ def perform_fx_transfer(
                 return (None, "INSUFFICIENT_FUNDS_IN_FROM_WALLET")
 
             # Get FX rates for exchange rate calculation
-            from_rate = get_fx_rate(from_wallet_currency_code, from_wallet_currency_code)
-            to_rate = get_fx_rate(to_wallet_currency_code, to_wallet_currency_code)
-            exchange_rate = to_rate / from_rate
+            exchange_rate = get_fx_rate(
+                from_currency_code=from_wallet_currency_code,
+                to_currency_code=to_wallet_currency_code
+            )
 
             _, from_error = create_transaction(
                 wallet_id=from_wallet.id,
