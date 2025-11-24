@@ -1,42 +1,42 @@
 import pytest
 from decimal import Decimal
 from django.contrib.auth import get_user_model
+from apps.market.models import Currency
 from apps.wallets.models import Fx_Transfer, Wallet, Transaction
-from apps.wallets import services
+from apps.wallets.services import perform_fx_transfer
 
-# These should always be used for testing FX transfers
-DUMMY_FX_RATES = {
-    'GBP': Decimal('1.0'),
-    'USD': Decimal('1.25'),
-    'EUR': Decimal('1.15'),
-}
 
-# Create a dummy user for testing
 @pytest.fixture
-def user_with_wallets():
+def user_with_wallets(market_data):
+    """Create a test user with wallets after market data is set up."""
     User = get_user_model()
-    user = User.objects.create_user(username='testuser', email='test@example.com', password='StrongV3ryStrongPasswd!')
+    user = User.objects.create_user(
+        username='testuser', 
+        email='test@example.com', 
+        password='StrongV3ryStrongPasswd!'
+    )
     wallets = Wallet.objects.filter(user=user)
     return user, wallets
 
 
-@pytest.mark.django_db
-def test_fx_transfer_success(user_with_wallets):
+def test_fx_transfer_success(user_with_wallets, market_data):
     user, wallets = user_with_wallets
-    gbp_wallet = wallets.get(currency='GBP')
-    usd_wallet = wallets.get(currency='USD')
+    gbp_cur = market_data['currencies']['GBP']
+    usd_cur = market_data['currencies']['USD']
+    gbp_wallet = wallets.get(currency=gbp_cur)
+    usd_wallet = wallets.get(currency=usd_cur)
 
     initial_gbp_balance = gbp_wallet.balance
     initial_usd_balance = usd_wallet.balance
 
     from_amount = Decimal('1000.00')
 
-    exchange_rate = DUMMY_FX_RATES['USD'] / DUMMY_FX_RATES['GBP']
+    exchange_rate = market_data['fx_rates']['USD'] / market_data['fx_rates']['GBP']
 
-    fx_transfer, error = services.perform_fx_transfer(
+    fx_transfer, error = perform_fx_transfer(
         user_id=user.id,
-        from_wallet_currency='GBP',
-        to_wallet_currency='USD',
+        from_wallet_currency_code='GBP',
+        to_wallet_currency_code='USD',
         from_amount=from_amount
     )
 
@@ -66,19 +66,21 @@ def test_fx_transfer_success(user_with_wallets):
     assert gbp_transactions.first().amount == -from_amount
     assert usd_transactions.first().amount == from_amount * exchange_rate
 
-@pytest.mark.django_db
-def test_fx_transfer_insufficient_funds(user_with_wallets):
+
+def test_fx_transfer_insufficient_funds(user_with_wallets, market_data):
     user, wallets = user_with_wallets
     initial_transactions_count = Transaction.objects.filter(wallet__user=user).count()
-    gbp_wallet = wallets.get(currency='GBP')
-    usd_wallet = wallets.get(currency='USD')
+    gbp_cur = market_data['currencies']['GBP']
+    usd_cur = market_data['currencies']['USD']
+    gbp_wallet = wallets.get(currency=gbp_cur)
+    usd_wallet = wallets.get(currency=usd_cur)
 
     from_amount = gbp_wallet.balance + Decimal('1000.00')  # More than available
 
-    fx_transfer, error = services.perform_fx_transfer(
+    fx_transfer, error = perform_fx_transfer(
         user_id=user.id,
-        from_wallet_currency='GBP',
-        to_wallet_currency='USD',
+        from_wallet_currency_code='GBP',
+        to_wallet_currency_code='USD',
         from_amount=from_amount
     )
 
