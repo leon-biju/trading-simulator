@@ -4,7 +4,6 @@ from decimal import Decimal
 
 from apps.market.models import Asset, Currency
 from apps.wallets.models import Transaction, Wallet
-from apps.wallets import models
 from config import settings
 
 class OrderType(models.TextChoices):
