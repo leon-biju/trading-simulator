@@ -78,46 +78,63 @@ def update_stock_prices_simulation(stocks: list[Stock]):
         PriceHistory.objects.bulk_create(new_stocks_prices_list)
 
 @transaction.atomic
-def update_currency_prices(currency_update_dict: dict) -> str:
-
+def update_currency_prices(currency_update_dict: dict) -> int:
     quotes = currency_update_dict.get('quotes', {})
     if not quotes:
-        return "No currency quotes found in the data."
-
-    new_currency_prices_list = []
-
-    base_currency_code = Currency.objects.get(is_base=True).code
+        raise ValueError("No currency quotes in payload")
+    
     timestamp = currency_update_dict.get('timestamp')
+    if timestamp is None:
+        raise ValueError("Missing timestamp in payload")
+    
+
+    base_currency = Currency.objects.get(is_base=True)
+    base_currency_code = base_currency.code
+
+    ts = datetime.datetime.fromtimestamp(
+        float(timestamp), tz=datetime.timezone.utc
+    )
+
+    new_currency_prices = []
 
     for currency_asset in CurrencyAsset.objects.filter(is_active=True):
         quote_key = f"{base_currency_code}{currency_asset.symbol}"
-        if quote_key in quotes:
-            new_price = Decimal(quotes[quote_key]).quantize(Decimal('0.0001'))
+        price_str = quotes.get(quote_key)
+        if price_str is None:
+            continue
 
-            new_currency_prices_list.append(
-                PriceHistory(
-                    asset=currency_asset,
-                    timestamp=datetime.datetime.fromtimestamp(int(timestamp), tz=datetime.timezone.utc),
-                    price=new_price,
-                    source='LIVE'
-                )
+        try:
+            price = Decimal(price_str).quantize(Decimal("0.0001"))
+        except Exception as e:
+            raise ValueError(f"Invalid price for {quote_key}: {price_str}") from e
+        
+        new_currency_prices.append(
+            PriceHistory(
+                asset=currency_asset,
+                timestamp=ts,
+                price=price,
+                source="LIVE",
             )
+        )
 
-    #also add a price history for the base currency at price 1.0
+
+    # also add a price history for the base currency at price 1.0
     base_currency_asset = CurrencyAsset.objects.get(symbol=base_currency_code)
-    new_currency_prices_list.append(
+    new_currency_prices.append(
         PriceHistory(
             asset=base_currency_asset,
-            timestamp=datetime.datetime.fromtimestamp(int(timestamp), tz=datetime.timezone.utc),
+            timestamp=ts,
             price=Decimal('1.0000'),
             source='LIVE'
         )
     )
 
-    if new_currency_prices_list:
-        PriceHistory.objects.bulk_create(new_currency_prices_list)
+    if not new_currency_prices:
+        raise ValueError("No prices created from payload")
+    
+    PriceHistory.objects.bulk_create(new_currency_prices)
 
-    return f"Updated prices for {len(new_currency_prices_list)} currency assets."
+    return len(new_currency_prices)
 
 
 def get_fx_rate(from_currency_code: str, to_currency_code: str) -> Decimal | None:
@@ -134,33 +151,30 @@ def get_fx_rate(from_currency_code: str, to_currency_code: str) -> Decimal | Non
     if from_rate is None or to_rate is None:
         return None
 
-    exchange_rate = Decimal(to_rate / from_rate)
+    exchange_rate = to_rate / from_rate
     return exchange_rate
 
 def get_fx_conversion(
     from_currency_code: str,
     to_currency_code: str,
+    *,
     from_amount: Optional[Decimal] = None,
     to_amount: Optional[Decimal] = None,
-) -> Tuple[Optional[Decimal], Optional[Decimal], Optional[str]]:
-    # Returns (from_amount, to_amount, error)
-
-    if (from_amount is None and to_amount is None) or (from_amount is not None and to_amount is not None):
-        return (None, None, "SPECIFY_EITHER_FROM_OR_TO_AMOUNT")
-
-
+) -> tuple[Decimal, Decimal]:
+    if (from_amount is None) == (to_amount is None):
+        raise ValueError("Specify exactly one of from_amount or to_amount")
 
     exchange_rate = get_fx_rate(from_currency_code, to_currency_code)
     if exchange_rate is None:
-        return (None, None, "UNSUPPORTED_CURRENCY_FOR_FX")
+        raise LookupError(f"Unsupported currency pair: {from_currency_code}{to_currency_code}")
 
     if from_amount is not None:
         if from_amount <= 0:
-            return (None, None, "INVALID_FROM_AMOUNT")
-        calculated_to_amount = round_to_two_dp(from_amount * exchange_rate)
-        return (from_amount, calculated_to_amount, None)
-    else: # to_amount is not None
-        if to_amount <= 0:
-            return (None, None, "INVALID_TO_AMOUNT")
-        calculated_from_amount = round_to_two_dp(to_amount / exchange_rate)
-        return (calculated_from_amount, to_amount, None)
+            raise ValueError("from_amount must be > 0")
+        return from_amount, round_to_two_dp(from_amount * exchange_rate)
+    
+    assert to_amount is not None
+
+    if to_amount <= 0:
+        raise ValueError("to_amount must be > 0")
+    return round_to_two_dp(to_amount / exchange_rate), to_amount
