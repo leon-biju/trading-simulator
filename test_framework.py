@@ -1,5 +1,5 @@
 from decimal import Decimal
-from apps.market.models import Currency, CurrencyAsset, PriceHistory
+from market.models import Currency, CurrencyAsset, PriceHistory
 
 
 def setup_currencies():

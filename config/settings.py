@@ -51,11 +51,11 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'crispy_forms',
     'crispy_bootstrap5',
-    'apps.accounts',
-    'apps.dashboard',
-    'apps.market',
-    'apps.trading',
-    'apps.wallets',
+    'accounts',
+    'dashboard',
+    'market',
+    'trading',
+    'wallets',
     'django_celery_beat',
     'mathfilters',
     'django_stubs_ext'
@@ -187,11 +187,11 @@ from config.constants import STOCKS_UPDATE_INTERVAL_SECONDS, FX_RATES_UPDATE_INT
 # Celery Beat Schedule
 CELERY_BEAT_SCHEDULE = {
     f'update-market-every-{STOCKS_UPDATE_INTERVAL_SECONDS}-seconds': {
-        'task': 'apps.market.tasks.update_stock_data',
+        'task': 'market.tasks.update_stock_data',
         'schedule': STOCKS_UPDATE_INTERVAL_SECONDS
     },
     f'update-fx-rates-every-{FX_RATES_UPDATE_INTERVAL_SECONDS}-seconds': {
-        'task': 'apps.market.tasks.update_fx_rates',
+        'task': 'market.tasks.update_fx_rates',
         'schedule': FX_RATES_UPDATE_INTERVAL_SECONDS
     },
 
