@@ -1,3 +1,4 @@
+# mypy: disable-error-code=type-arg
 from django.contrib import admin
 
 from wallets.models import Wallet

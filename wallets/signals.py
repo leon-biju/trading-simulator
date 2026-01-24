@@ -7,7 +7,7 @@ from market.models import Currency
 
 # Create a wallet for a new instance of User 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_wallets(sender, instance, created, **kwargs):
+def create_wallets(sender, instance, created, **kwargs): # type: ignore
     if created:
         Wallet.objects.bulk_create(
             [Wallet(user=instance, currency=currency, balance=0) for currency in Currency.objects.all()]

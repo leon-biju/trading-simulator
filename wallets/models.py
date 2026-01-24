@@ -22,7 +22,7 @@ class Wallet(models.Model):
     def symbol(self) -> str:
         return CURRENCY_SYMBOLS.get(self.currency.code) or self.currency.code
     
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Wallet of {self.user.username} - Balance: {self.balance} {self.currency.code}"
 
 
@@ -44,7 +44,7 @@ class Transaction(models.Model):
     class Meta:
         ordering = ['-timestamp']
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.wallet.user.username}:  {self.amount} {self.wallet.currency} ({self.source}) on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
     
 
@@ -58,5 +58,5 @@ class Fx_Transfer(models.Model):
     exchange_rate = models.DecimalField(max_digits=20, decimal_places=6)
     timestamp = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"FX Transfer: [{self.from_wallet.currency}] to [{self.to_wallet.currency}] - {self.from_wallet.symbol}{self.to_amount} at {self.exchange_rate} on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"

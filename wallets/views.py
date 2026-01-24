@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import HttpRequest, HttpResponse
 from decimal import Decimal
 
 from market.models import PriceHistory
@@ -25,25 +26,25 @@ ERROR_MESSAGES = {
 
 
 @login_required
-def wallet_detail(request, currency_code):
+def wallet_detail(request: HttpRequest, currency_code: str) -> HttpResponse:
     wallet = get_object_or_404(Wallet, currency__code=currency_code, user=request.user)
     transactions = wallet.transactions.all()
-    user_other_wallets = Wallet.objects.filter(user=request.user).exclude(id=wallet.id)
+    user_other_wallets = Wallet.objects.filter(user_id=request.user.id).exclude(id=wallet.id)
     if request.method == 'POST':
         form = AddFundsForm(request.POST)
         if form.is_valid():
             from_wallet_currency = form.cleaned_data['from_wallet_currency']
             to_amount = form.cleaned_data['to_amount']
             
-            _, error = perform_fx_transfer(
-                user_id=request.user.id,
-                from_wallet_currency_code=from_wallet_currency,
-                to_wallet_currency_code=wallet.currency.code,
-                to_amount=to_amount
-            )
-
-            if error:
-                error_message = ERROR_MESSAGES.get(error, 'An unknown error occurred.')
+            try:
+                fx_transfer = perform_fx_transfer(
+                    user_id=request.user.id, # type: ignore
+                    from_wallet_currency_code=from_wallet_currency,
+                    to_wallet_currency_code=wallet.currency.code,
+                    to_amount=to_amount
+                )
+            except ValueError as ve:
+                error_message = ERROR_MESSAGES.get(str(ve), 'An unknown error occurred.')
                 messages.error(request, error_message)
             else:
                 messages.success(request, f'Successfully added {wallet.symbol}{to_amount:,.2f} to your {wallet.currency.code} wallet.')
@@ -60,7 +61,12 @@ def wallet_detail(request, currency_code):
 
     serializable_fx_rates = {k: str(v) for k, v in exchange_rates.items()}
 
-    fx_rate_update_timestamp = PriceHistory.objects.filter(asset__symbol=wallet.currency.code).order_by('-timestamp').first().timestamp
+    latest_rate = PriceHistory.objects.filter(asset__symbol=wallet.currency.code).order_by('-timestamp').first()
+
+    if latest_rate is not None:
+        fx_rate_update_timestamp = latest_rate.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        fx_rate_update_timestamp = None
     
     context = {
         'wallet': wallet,
