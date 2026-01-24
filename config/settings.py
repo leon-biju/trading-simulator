@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'apps.wallets',
     'django_celery_beat',
     'mathfilters',
+    'django_stubs_ext'
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
