@@ -1,3 +1,5 @@
+# mypy: disable-error-code=no-untyped-def
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Profile

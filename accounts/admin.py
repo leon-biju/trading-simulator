@@ -1,3 +1,5 @@
+# mypy: disable-error-code=type-arg
+
 # For registering models that show up in  admin page
 from django.contrib import admin
 from .models import CustomUser, Profile

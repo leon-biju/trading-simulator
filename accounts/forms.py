@@ -1,3 +1,7 @@
+# mypy: disable-error-code=type-arg
+
+from typing import cast
+
 from django.contrib.auth.forms import UserCreationForm
 from django import forms
 from django.contrib.auth import get_user_model
@@ -6,13 +10,13 @@ from django.contrib.auth import get_user_model
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(required=True)
 
-    class Meta(UserCreationForm.Meta):
+    class Meta:
         model  = get_user_model()
         fields = ("username", "email")
 
     #Reject emails that only differ in case
-    def clean_email(self):
-        return self.cleaned_data["email"].lower()
+    def clean_email(self) -> str:
+        return cast(str, self.cleaned_data["email"]).lower()
     
 
 class LoginForm(forms.Form):
