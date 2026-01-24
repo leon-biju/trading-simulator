@@ -1,5 +1,6 @@
 import random
 import datetime
+from typing import Any
 from decimal import ROUND_HALF_UP, Decimal
 from math import exp, sqrt
 from collections.abc import Iterable
@@ -47,7 +48,7 @@ def create_currency_asset(symbol: str, name: str) -> CurrencyAsset:
 
 
 @transaction.atomic
-def update_stock_prices_simulation(stocks: Iterable[Stock]):
+def update_stock_prices_simulation(stocks: Iterable[Stock]) -> None:
     # Simulate price updates for the given stocks
 
     new_stocks_prices_list = []
@@ -78,7 +79,7 @@ def update_stock_prices_simulation(stocks: Iterable[Stock]):
         PriceHistory.objects.bulk_create(new_stocks_prices_list)
 
 @transaction.atomic
-def update_currency_prices(currency_update_dict: dict) -> int:
+def update_currency_prices(currency_update_dict: dict[str, Any]) -> int:
     quotes = currency_update_dict.get('quotes', {})
     if not quotes:
         raise ValueError("No currency quotes in payload")

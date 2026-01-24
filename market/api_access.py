@@ -1,8 +1,10 @@
 import os
+from typing import Any
+
 import requests
 from market.models import CurrencyAsset, Currency
 
-def get_currency_layer_api_data() -> dict | None:
+def get_currency_layer_api_data() -> dict[str, Any] | None:
 
     """Fetches live currency exchange rates from Currency Layer API."""
 
@@ -13,7 +15,7 @@ def get_currency_layer_api_data() -> dict | None:
         return None
     
     currencies = CurrencyAsset.objects.values_list('symbol', flat=True)
-    params = {
+    params: dict[str, str | int] = {
         'access_key': api_key,
         'currencies': ','.join(currencies),
         'source': Currency.objects.get(is_base=True).code,
@@ -25,7 +27,7 @@ def get_currency_layer_api_data() -> dict | None:
         print(f"Failed to fetch data from Currency Layer API. Status code: {response.status_code}")
         return None
     
-    data = response.json()
+    data: dict[str, Any] = response.json()
     if not data.get('success'):
         print(f"Currency Layer API error: {data.get('error')}")
         return None

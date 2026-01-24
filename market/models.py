@@ -34,7 +34,7 @@ class Exchange(models.Model):
         
         return is_weekday and is_trading_hours
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} ({self.code})"
 
 
@@ -44,12 +44,12 @@ class Currency(models.Model):
     name = models.CharField(max_length=50)              # e.g., 'United States Dollar'
     is_base = models.BooleanField(default=False)
     
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs): # type: ignore[no-untyped-def]
         if self.is_base:
             Currency.objects.filter(is_base=True).exclude(pk=self.pk).update(is_base=False)
         super().save(*args, **kwargs)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.code
     
     class Meta:
@@ -87,13 +87,13 @@ class Asset(models.Model):
 class Stock(Asset):
     exchange = models.ForeignKey(Exchange, on_delete=models.CASCADE, related_name='stocks')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} ({self.symbol}) on {self.exchange.code}"
 
 
 class CurrencyAsset(Asset):
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} ({self.symbol})"
 
 
@@ -139,7 +139,3 @@ class DailyPriceHistory(models.Model):
         indexes = [
             models.Index(fields=['asset', 'date', 'source']),
         ]
-
-
-def f(x: int) -> int:
-    return "not an int"

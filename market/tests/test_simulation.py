@@ -1,7 +1,11 @@
+# mypy: disable-error-code=assignment
+# mypy: disable-error-code=no-untyped-def
+# mypy: disable-error-code=no-untyped-call
+
 from decimal import Decimal
 import pytest
 from market.services import update_stock_prices_simulation
-from market.models import PriceHistory
+from market.models import PriceHistory, Stock
 from market.tests.factories import StockFactory, PriceHistoryFactory
 
 
@@ -11,7 +15,7 @@ class TestSimulatedMarket:
         """
         Test that stock prices are updated based on the last known price.
         """
-        stock = StockFactory()
+        stock: Stock = StockFactory()
         initial_price = Decimal('100.00')
         PriceHistoryFactory(asset=stock, price=initial_price)
 
@@ -27,7 +31,7 @@ class TestSimulatedMarket:
         """
         Test that a new random price is generated if no history exists.
         """
-        stock = StockFactory()
+        stock: Stock = StockFactory()
 
         update_stock_prices_simulation([stock])
 
@@ -41,8 +45,8 @@ class TestSimulatedMarket:
         """
         Test that multiple stocks are updated correctly in one go.
         """
-        stock1 = StockFactory()
-        stock2 = StockFactory()
+        stock1: Stock = StockFactory()
+        stock2: Stock = StockFactory()
         PriceHistoryFactory(asset=stock1, price=Decimal('150.00'))
         PriceHistoryFactory(asset=stock2, price=Decimal('200.00'))
 

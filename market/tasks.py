@@ -7,8 +7,8 @@ from config.constants import MARKET_DATA_MODE
 from .services import update_stock_prices_simulation, update_currency_prices
 from .api_access import get_currency_layer_api_data
 
-@shared_task
-def update_stock_data():
+@shared_task # type: ignore[untyped-decorator]
+def update_stock_data() -> str:
     """
     Selectively updates prices based on whether the stock's exchange is open.
     """
@@ -25,13 +25,12 @@ def update_stock_data():
         # update stocks
         update_stock_prices_simulation(stocks_to_update)
         return f"Updated simulated prices for {len(stocks_to_update)} stocks."
-    elif MARKET_DATA_MODE == 'LIVE':
+    else:
         # update stocks
         return "Live stock price update not implemented yet."
 
-    
-@shared_task
-def update_currency_data():
+@shared_task # type: ignore[untyped-decorator]
+def update_currency_data() -> dict[str, int] | str:
     """
     Updates currency asset prices. Always Live
     """

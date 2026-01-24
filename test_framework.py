@@ -1,8 +1,9 @@
 from decimal import Decimal
+from typing import Any
 from market.models import Currency, CurrencyAsset, PriceHistory
 
 
-def setup_currencies():
+def setup_currencies() -> dict[str, Currency]:
     """
     Create standard currencies for testing.
     Returns a dict mapping currency codes to Currency instances.
@@ -27,7 +28,7 @@ def setup_currencies():
     return currencies
 
 
-def setup_currency_assets():
+def setup_currency_assets() -> dict[str, CurrencyAsset]:
     """
     Create currency assets for all existing currencies.
     Returns a dict mapping currency codes to CurrencyAsset instances.
@@ -54,7 +55,7 @@ def setup_currency_assets():
     return currency_assets
 
 
-def setup_fx_rates():
+def setup_fx_rates() -> dict[str, Decimal]:
     """
     Add dummy FX rates for testing.
     Rates are relative to GBP (base currency).
@@ -86,7 +87,7 @@ def setup_fx_rates():
     return DUMMY_RATES
 
 
-def setup_complete_market_data():
+def setup_complete_market_data() -> dict[str, dict[str, Any]]:
     """
     Convenience function to set up all market data in one call:
     - Currencies

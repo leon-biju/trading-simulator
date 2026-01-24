@@ -1,7 +1,11 @@
+# mypy: disable-error-code=assignment
+# mypy: disable-error-code=no-untyped-def
+# mypy: disable-error-code=no-untyped-call
+
 import pytest
 from django.core.exceptions import ObjectDoesNotExist
 
-from market.models import Currency, Stock, CurrencyAsset
+from market.models import Currency, Stock, CurrencyAsset, Exchange
 from market.services import create_stock_asset, create_currency_asset
 from market.tests.factories import ExchangeFactory, CurrencyFactory
 
@@ -11,8 +15,8 @@ class TestAssetCreationServices:
         """
         Test that `create_stock_asset` service function correctly creates a Stock.
         """
-        exchange = ExchangeFactory()
-        currency = CurrencyFactory()
+        exchange: Exchange = ExchangeFactory()
+        currency: Currency = CurrencyFactory()
 
         stock = create_stock_asset(
             symbol="AAPL",

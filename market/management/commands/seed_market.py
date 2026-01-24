@@ -1,3 +1,6 @@
+# mypy: disable-error-code=no-untyped-def
+# mypy: disable-error-code=no-untyped-call
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from decimal import Decimal
@@ -111,7 +114,7 @@ class Command(BaseCommand):
             creator_func = create_stock_asset
         elif asset_type == "currency":
             asset_data = self._get_currency_assets_data()
-            creator_func = create_currency_asset
+            creator_func = create_currency_asset # type: ignore[assignment]
         else:
             self.stdout.write(self.style.ERROR(f"Unknown asset type: {asset_type}"))
             return

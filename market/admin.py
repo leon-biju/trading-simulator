@@ -1,3 +1,5 @@
+# mypy: disable-error-code=type-arg
+
 from django.contrib import admin
 from market.models import (
     Asset,

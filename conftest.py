@@ -1,3 +1,6 @@
+# mypy: disable-error-code=no-untyped-def
+# mypy: disable-error-code=no-untyped-call
+
 import pytest
 from test_framework import (
     setup_currencies,

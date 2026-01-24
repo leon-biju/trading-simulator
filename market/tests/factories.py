@@ -1,3 +1,7 @@
+# mypy: disable-error-code=type-arg
+# mypy: disable-error-code=no-untyped-call
+# mypy: disable-error-code=attr-defined
+
 import factory
 from factory.django import DjangoModelFactory
 import datetime
