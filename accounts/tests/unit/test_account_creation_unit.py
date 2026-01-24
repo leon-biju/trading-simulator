@@ -1,3 +1,5 @@
+# mypy: disable-error-code=no-untyped-def
+
 import pytest
 
 from accounts.forms import SignUpForm
