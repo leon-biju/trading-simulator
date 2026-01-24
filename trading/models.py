@@ -96,7 +96,7 @@ class Order(models.Model):
             models.Index(fields=['status', 'created_at']),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.get_side_display()} {self.quantity} {self.asset.symbol} - {self.get_status_display()}"
 
     @property
@@ -183,7 +183,7 @@ class Position(models.Model):
         verbose_name = 'Position'
         verbose_name_plural = 'Positions'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user.email}: {self.quantity} {self.asset.symbol} @ {self.average_cost}"
 
     @property
@@ -191,7 +191,7 @@ class Position(models.Model):
         """Total amount invested in current holdings."""
         return self.quantity * self.average_cost
 
-    def calculate_unrealized_pnl(self) -> Decimal:
+    def calculate_unrealized_pnl(self) -> Decimal | None:
         """
         Calculate unrealized P&L at given market price.
         Call from service layer after fetching current_price from PriceHistory.
@@ -199,9 +199,12 @@ class Position(models.Model):
         Args:
             current_price: Current market price per unit
         Returns:
-            Decimal: Unrealized profit/loss
+            Decimal | None: Unrealized profit/loss or None if price unavailable
         """
         current_price = self.asset.get_latest_price()
+        if current_price is None:
+            return None
+        
         if self.quantity == 0:
             return Decimal('0')
         current_value = self.quantity * current_price
@@ -295,15 +298,15 @@ class Trade(models.Model):
         verbose_name = 'Trade'
         verbose_name_plural = 'Trades'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.get_side_display()} {self.quantity} {self.asset.symbol} @ {self.price}"
 
     @property
-    def total_value(self):
+    def total_value(self) -> Decimal:
         return self.quantity * self.price
 
     @property
-    def net_amount(self):
+    def net_amount(self) -> Decimal:
         """
         Net amount for BUY (total + fee) or SELL (total - fee).
         Should match the absolute value of wallet_transaction.amount.
@@ -366,6 +369,6 @@ class PositionSnapshot(models.Model):
         verbose_name = 'Position Snapshot'
         verbose_name_plural = 'Position Snapshots'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.position.asset.symbol}: {self.quantity} @ {self.snapshot_at.strftime('%Y-%m-%d %H:%M')}"
 
