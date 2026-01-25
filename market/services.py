@@ -80,10 +80,7 @@ def update_stock_prices_simulation(stocks: Iterable[Stock]) -> None:
 
 @transaction.atomic
 def update_currency_prices(currency_update_dict: dict[str, Any]) -> int:
-    quotes = currency_update_dict.get('quotes', {})
-    if not quotes:
-        raise ValueError("No currency quotes in payload")
-    
+    quotes = currency_update_dict.get('quotes', {})    
     timestamp = currency_update_dict.get('timestamp')
     if timestamp is None:
         raise ValueError("Missing timestamp in payload")

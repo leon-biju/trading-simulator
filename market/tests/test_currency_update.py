@@ -45,9 +45,9 @@ def test_update_currency_prices_success(market_data: dict[str, dict[str, Any]]) 
     assert eur_price.timestamp == expected_timestamp
 
 
-def test_update_currency_prices_no_quotes(db): # type: ignore[no-untyped-def]
+def test_update_currency_prices_no_quotes(market_data: dict[str, dict[str, Any]]) -> None:
     """Test currency price update with empty quotes."""
-
+    initial_count = PriceHistory.objects.count()
     dummy_api_response = {
         'success': True,
         'timestamp': 1625247600,
@@ -57,8 +57,14 @@ def test_update_currency_prices_no_quotes(db): # type: ignore[no-untyped-def]
 
     currencies_updated = update_currency_prices(dummy_api_response)
 
-    assert currencies_updated == 1 # Only base currency
-    assert PriceHistory.objects.count() == 0
+    expected_timestamp = datetime.datetime.fromtimestamp(1625247600, tz=datetime.timezone.utc)
+    assert PriceHistory.objects.filter(timestamp=expected_timestamp).count() == 1
+    
+    base_currency_asset = CurrencyAsset.objects.get(symbol='GBP')
+    base_price = PriceHistory.objects.get(asset=base_currency_asset, timestamp=expected_timestamp)
+    assert base_price.price == Decimal('1.0000')
+    assert base_price.source == 'LIVE'
+    assert base_price.timestamp == expected_timestamp
 
 
 def test_update_currency_prices_inactive_assets(market_data: dict[str, dict[str, Any]]) -> None:
