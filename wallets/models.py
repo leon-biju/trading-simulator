@@ -7,6 +7,7 @@ from market.models import Currency
 class Wallet(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
+    available_balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
 
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -23,7 +24,7 @@ class Wallet(models.Model):
         return CURRENCY_SYMBOLS.get(self.currency.code) or self.currency.code
     
     def __str__(self) -> str:
-        return f"Wallet of {self.user.username} - Balance: {self.balance} {self.currency.code}"
+        return f"Wallet of {self.user.username} - Balance: {self.balance} {self.currency.code} (Available: {self.available_balance})"
 
 
 class Transaction(models.Model):
