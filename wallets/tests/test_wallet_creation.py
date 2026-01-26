@@ -32,4 +32,7 @@ def test_gbp_wallet_initial_balance(user_with_wallets: Tuple[CustomUser, QuerySe
     user, wallets = user_with_wallets
     base_currency = Currency.objects.filter(is_base=True).first()
     base_wallet = wallets.get(currency=base_currency)
+    # available_balance is now a computed property: balance - pending_balance
+    assert base_wallet.pending_balance == Decimal('0.00')
+    assert base_wallet.available_balance == base_wallet.balance
     assert base_wallet.balance == Decimal('100000.00')

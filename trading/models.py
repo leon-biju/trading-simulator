@@ -7,19 +7,6 @@ from wallets.models import Transaction, Wallet
 from config import settings
 
 class OrderType(models.TextChoices):
-    """
-    Represents a buy or sell order placed by a user.
-    
-    Service Layer Responsibilities (in services.py):
-    - Validate user has sufficient funds (BUY) or holdings (SELL)
-    - Check market hours for stocks via Exchange model
-    - Handle FX conversion when asset.currency != user's wallet.currency
-    - Execute MARKET orders immediately at current price
-    - Queue LIMIT orders and match when price conditions are met
-    - Update order status and filled_quantity as trades execute
-    - Cancel expired or user-requested cancellations
-    """
-        
     """Type of order execution."""
     MARKET = 'MARKET', 'Market Order'
     LIMIT = 'LIMIT', 'Limit Order'
@@ -32,13 +19,18 @@ class OrderSide(models.TextChoices):
 class OrderStatus(models.TextChoices):
     """Current state of an order."""
     PENDING = 'PENDING', 'Pending'
-    PARTIALLY_FILLED = 'PARTIALLY_FILLED', 'Partially Filled'
     FILLED = 'FILLED', 'Filled'
     CANCELLED = 'CANCELLED', 'Cancelled'
     REJECTED = 'REJECTED', 'Rejected'
 
 
 class Order(models.Model):
+    """
+    Represents a buy or sell order placed by a user.
+    
+    For BUY orders: reserved_amount tracks funds held in wallet.pending_balance
+    For SELL orders: reserved_quantity tracks shares held in position.pending_quantity
+    """
     user = models.ForeignKey(
             settings.AUTH_USER_MODEL,
             on_delete=models.CASCADE,
@@ -62,14 +54,7 @@ class Order(models.Model):
         max_digits=20,
         decimal_places=8,
         validators=[MinValueValidator(Decimal('0.00000001'))],
-        help_text="Total quantity requested"
-    )
-    filled_quantity = models.DecimalField(
-        max_digits=20,
-        decimal_places=8,
-        default=Decimal('0'),
-        validators=[MinValueValidator(Decimal('0'))],
-        help_text="Quantity filled so far (for partial fills)"
+        help_text="Quantity to buy or sell"
     )
     limit_price = models.DecimalField(
         max_digits=20,
@@ -78,6 +63,12 @@ class Order(models.Model):
         blank=True,
         validators=[MinValueValidator(Decimal('0.00000001'))],
         help_text="Target price for LIMIT orders (in asset's currency)"
+    )
+    reserved_amount = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=Decimal('0'),
+        help_text="For BUY: funds reserved in wallet. For SELL: not used (use reserved_quantity on Position)"
     )
     status = models.CharField(
         max_length=20,
@@ -100,25 +91,9 @@ class Order(models.Model):
         return f"{self.get_side_display()} {self.quantity} {self.asset.symbol} - {self.get_status_display()}"
 
     @property
-    def remaining_quantity(self) -> Decimal:
-        """ unfilled portion of the order."""
-        return self.quantity - self.filled_quantity
-
-    @property
-    def is_fully_filled(self) -> bool:
-        return self.filled_quantity >= self.quantity
-
-    @property
-    def is_active(self) -> bool:
-        """if order can still be executed"""
-        return self.status in [OrderStatus.PENDING, OrderStatus.PARTIALLY_FILLED]
-
-    @property
-    def fill_percentage(self) -> Decimal:
-        """how much of order has been filled"""
-        if self.quantity == 0:
-            return Decimal('0')
-        return (self.filled_quantity / self.quantity) * 100
+    def is_pending(self) -> bool:
+        """Check if order is still pending execution."""
+        return self.status == OrderStatus.PENDING
     
 
 
@@ -127,14 +102,8 @@ class Position(models.Model):
     Tracks a user's current holdings in a specific asset.
     One position per user-asset pair.
     
-    Service Layer Responsibilities (in services.py):
-    - Create position on first BUY trade
-    - On BUY: Update quantity and recalculate average_cost using weighted average
-      Formula: new_avg = (current_qty * current_avg + trade_qty * trade_price) / (current_qty + trade_qty)
-    - On SELL: Reduce quantity, keep average_cost same, calculate realized_pnl
-      realized_pnl += (sell_price - average_cost) * sell_quantity - fees
-    - Delete or mark inactive when quantity reaches zero
-    - Fetch current price from PriceHistory for unrealized P&L calculations
+    pending_quantity tracks shares reserved for pending SELL orders.
+    available_quantity = quantity - pending_quantity
     """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -152,6 +121,13 @@ class Position(models.Model):
         default=Decimal('0'),
         validators=[MinValueValidator(Decimal('0'))],
         help_text="Current holdings quantity"
+    )
+    pending_quantity = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0'))],
+        help_text="Quantity reserved for pending SELL orders"
     )
     average_cost = models.DecimalField(
         max_digits=20,
@@ -185,6 +161,11 @@ class Position(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.email}: {self.quantity} {self.asset.symbol} @ {self.average_cost}"
+
+    @property
+    def available_quantity(self) -> Decimal:
+        """Quantity available for selling (not reserved for pending orders)."""
+        return self.quantity - self.pending_quantity
 
     @property
     def total_cost_basis(self) -> Decimal:

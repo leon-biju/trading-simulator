@@ -55,8 +55,15 @@ def perform_fx_transfer(
         from_amount: Optional[Decimal] = None,
         to_amount: Optional[Decimal] = None,
     ) -> Fx_Transfer:
-    # Transfer funds between two wallets of the same user but different currencies
-    # Specify either from_amount OR to_amount, not both
+    """
+    Transfer funds between two wallets of the same user but different currencies.
+    Specify either from_amount OR to_amount, not both.
+    
+    Raises:
+        ValueError: If same currency or insufficient funds
+        LookupError: If wallet or FX rate not found
+        RuntimeError: For unexpected failures
+    """
     if from_wallet_currency_code == to_wallet_currency_code:
         raise ValueError("Cannot perform FX transfer between same currency wallets")
     from_amount, to_amount = get_fx_conversion(
@@ -70,7 +77,7 @@ def perform_fx_transfer(
         with transaction.atomic():
             from_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency__code=from_wallet_currency_code)
             to_wallet = Wallet.objects.select_for_update().get(user_id=user_id, currency__code=to_wallet_currency_code)
-            if from_wallet.balance < from_amount:
+            if from_wallet.available_balance < from_amount:
                 raise ValueError("Insufficient funds in from_wallet")
 
             # Get FX rates for exchange rate calculation
@@ -108,5 +115,8 @@ def perform_fx_transfer(
 
     except Wallet.DoesNotExist:
         raise LookupError("Wallet does not exist")
+    except (ValueError, LookupError):
+        # Re-raise validation and lookup errors as-is
+        raise
     except Exception as e:
-        raise RuntimeError(f"Unexpected error: {str(e)}")
+        raise RuntimeError(f"Unexpected error during FX transfer: {str(e)}")

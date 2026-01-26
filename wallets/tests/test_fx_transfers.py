@@ -84,7 +84,7 @@ def test_fx_transfer_insufficient_funds(user_with_wallets: Tuple[CustomUser, Que
 
     from_amount = gbp_wallet.balance + Decimal('1000.00')  # More than available
     
-    with pytest.raises(RuntimeError, match="Insufficient funds in from_wallet"):
+    with pytest.raises(ValueError, match="Insufficient funds in from_wallet"):
         perform_fx_transfer(
             user_id=user.id,
             from_wallet_currency_code='GBP',

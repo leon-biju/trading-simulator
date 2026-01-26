@@ -10,7 +10,7 @@ from market.models import Currency
 def create_wallets(sender, instance, created, **kwargs): # type: ignore
     if created:
         Wallet.objects.bulk_create(
-            [Wallet(user=instance, currency=currency, balance=0) for currency in Currency.objects.all()]
+            [Wallet(user=instance, currency=currency, balance=0, pending_balance=0) for currency in Currency.objects.all()]
         )
         
         base_currency = Currency.objects.get(is_base=True)

@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Any
-from market.models import Currency, CurrencyAsset, PriceHistory
+from market.models import Currency, CurrencyAsset, PriceHistory, Stock, Exchange
+import datetime
 
 
 def setup_currencies() -> dict[str, Currency]:
@@ -86,6 +87,71 @@ def setup_fx_rates() -> dict[str, Decimal]:
     
     return DUMMY_RATES
 
+def setup_stock_assets() -> dict[str, Any]:
+    """
+    Create standard stock assets for testing.
+    Returns a dict mapping stock symbols to Stock instances.
+    """
+
+    open_exchange, _ = Exchange.objects.get_or_create(
+        code="OpenEx",
+        defaults={
+            "name": "Open Exchange",
+            "timezone": "Europe/London",
+            "open_time": datetime.time(0, 0),
+            "close_time": datetime.time(23, 59),
+        },
+
+    )
+
+    closed_exchange, _ = Exchange.objects.get_or_create(
+        code="ClosedEx",
+        defaults={
+            "name": "Closed Exchange",
+            "timezone": "Europe/London",
+            "open_time": datetime.time(23, 58),
+            "close_time": datetime.time(23, 59),
+        },
+    )
+
+    stocks_data = [
+        {"symbol": "AAPL", "name": "Apple Inc.", "exchange": open_exchange, "is_active": True},
+        {"symbol": "GOOGL", "name": "Alphabet Inc.", "exchange": open_exchange, "is_active": False},
+        {"symbol": "MSFT", "name": "Microsoft Corporation", "exchange": closed_exchange, "is_active": True},
+    ]
+
+    stocks = {}
+    stock_prices = {
+        "AAPL": Decimal("150.00"),
+        "GOOGL": Decimal("140.00"),
+        "MSFT": Decimal("400.00"),
+    }
+    
+    for stock_data in stocks_data:
+        stock, created = Stock.objects.get_or_create(
+            symbol=stock_data["symbol"],
+            defaults={
+                "name": stock_data["name"],
+                "exchange": stock_data["exchange"],
+                "asset_type": "STOCK",
+                "is_active": stock_data["is_active"],
+                "currency": Currency.objects.get(code="USD"),  # Assuming USD
+            },
+        )
+
+        stocks[stock.symbol] = stock
+        
+        # Always ensure price history exists for each stock
+        # Delete old price history and create fresh to avoid stale data issues
+        PriceHistory.objects.filter(asset=stock).delete()
+        PriceHistory.objects.create(
+            asset=stock,
+            price=stock_prices.get(stock.symbol, Decimal("100.00")),
+            source="SIMULATION",
+        )
+
+    
+    return stocks
 
 def setup_complete_market_data() -> dict[str, dict[str, Any]]:
     """
@@ -104,4 +170,5 @@ def setup_complete_market_data() -> dict[str, dict[str, Any]]:
         'currencies': currencies,
         'currency_assets': currency_assets,
         'fx_rates': fx_rates,
+        'stocks': setup_stock_assets(),
     }

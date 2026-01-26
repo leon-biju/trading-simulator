@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 from config.constants import CURRENCY_SYMBOLS
@@ -7,7 +9,7 @@ from market.models import Currency
 class Wallet(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
-    available_balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
+    pending_balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
 
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -22,6 +24,11 @@ class Wallet(models.Model):
     @property
     def symbol(self) -> str:
         return CURRENCY_SYMBOLS.get(self.currency.code) or self.currency.code
+
+    @property
+    def available_balance(self) -> Decimal:
+        """Available balance is balance minus funds reserved for pending orders."""
+        return self.balance - self.pending_balance
     
     def __str__(self) -> str:
         return f"Wallet of {self.user.username} - Balance: {self.balance} {self.currency.code} (Available: {self.available_balance})"
