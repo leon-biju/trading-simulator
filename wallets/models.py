@@ -36,10 +36,10 @@ class Wallet(models.Model):
 
 class Transaction(models.Model):
     class Source(models.TextChoices):
-        DEPOSIT = 'DEPOSIT'
-        WITHDRAWAL = 'WITHDRAWAL'
-        BUY = 'BUY'
-        SELL = 'SELL'
+        DEPOSIT = 'DEPOSIT', 'DEPOSIT'
+        WITHDRAWAL = 'WITHDRAWAL', 'WITHDRAWAL'
+        BUY = 'BUY', 'BUY'
+        SELL = 'SELL', 'SELL'
         FX_TRANSFER = 'FX_TRANSFER', 'FX_TRANSFER'
 
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions')
