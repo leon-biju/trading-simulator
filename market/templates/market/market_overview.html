@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Markets{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-graph-up-arrow me-2"></i>Markets</h2>
+    </div>
+
+    {% if exchanges %}
+        {% for item in exchanges %}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0">
+                        <a href="{% url 'exchange_detail' item.exchange.code %}" class="text-decoration-none">
+                            {{ item.exchange.name }} ({{ item.exchange.code }})
+                        </a>
+                    </h5>
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>
+                        {{ item.exchange.open_time|time:"H:i" }} - {{ item.exchange.close_time|time:"H:i" }} {{ item.exchange.timezone }}
+                    </small>
+                </div>
+                <div>
+                    {% if item.is_open %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-circle-fill me-1"></i>Open
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary">
+                            <i class="bi bi-circle me-1"></i>Closed
+                        </span>
+                    {% endif %}
+                    <span class="badge bg-primary ms-1">{{ item.stock_count }} stocks</span>
+                </div>
+            </div>
+            
+            {% if item.stocks %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Name</th>
+                            <th class="text-end">Price</th>
+                            <th>Currency</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock_item in item.stocks|slice:":10" %}
+                        <tr>
+                            <td>
+                                <strong>{{ stock_item.stock.symbol }}</strong>
+                            </td>
+                            <td>{{ stock_item.stock.name }}</td>
+                            <td class="text-end">
+                                {% if stock_item.current_price %}
+                                    {{ stock_item.current_price|floatformat:2|intcomma }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ stock_item.stock.currency.code }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'stock_detail' item.exchange.code stock_item.stock.symbol %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-arrow-right"></i> Trade
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if item.stock_count > 10 %}
+            <div class="card-footer text-center">
+                <a href="{% url 'exchange_detail' item.exchange.code %}" class="btn btn-link">
+                    View all {{ item.stock_count }} stocks <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted mb-0">No active stocks on this exchange.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No exchanges available. Please check back later.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

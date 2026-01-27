@@ -19,7 +19,7 @@ from market.models import Asset, Stock
 from wallets.models import Wallet, Transaction
 
 
-# Fee percentage for trades (0.1%)
+# Fee percentage for trades (0.1%) TODO: Make configurable
 TRADING_FEE_PERCENTAGE = Decimal('0.001')
 
 
