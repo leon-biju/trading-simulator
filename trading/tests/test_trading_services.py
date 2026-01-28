@@ -17,9 +17,10 @@ from decimal import Decimal
 
 from django.db.models import QuerySet
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from accounts.models import CustomUser
-from market.models import Stock, Exchange, PriceHistory
+from market.models import Stock, Exchange, PriceCandle
 from trading.models import Order, OrderSide, OrderType, OrderStatus, Position, Trade
 from trading.services import (
     place_order,
@@ -592,9 +593,15 @@ class TestPendingOrderExecution:
         assert order.status == OrderStatus.PENDING
         
         # Now update price to meet condition
-        PriceHistory.objects.create(
+        PriceCandle.objects.create(
             asset=stock,
-            price=limit_price - Decimal('5'),  # Below limit price
+            interval_minutes=5,
+            start_at=timezone.now(),
+            open_price=limit_price - Decimal('5'),
+            high_price=limit_price - Decimal('5'),
+            low_price=limit_price - Decimal('5'),
+            close_price=limit_price - Decimal('5'),
+            volume=0,
             source='SIMULATION',
         )
         
@@ -629,9 +636,15 @@ class TestPositionManagement:
         new_qty = Decimal('50')
         
         # Update price
-        PriceHistory.objects.create(
+        PriceCandle.objects.create(
             asset=stock,
-            price=new_price,
+            interval_minutes=5,
+            start_at=timezone.now(),
+            open_price=new_price,
+            high_price=new_price,
+            low_price=new_price,
+            close_price=new_price,
+            volume=0,
             source='SIMULATION',
         )
         

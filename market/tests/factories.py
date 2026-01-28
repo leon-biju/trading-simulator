@@ -54,10 +54,16 @@ class CurrencyAssetFactory(AssetFactory):
 
     asset_type = 'CURRENCY'
 
-class PriceHistoryFactory(DjangoModelFactory):
+class PriceCandleFactory(DjangoModelFactory):
     class Meta:
-        model = models.PriceHistory
+        model = models.PriceCandle
 
     asset = factory.SubFactory(StockFactory)
-    price = factory.Faker('pydecimal', left_digits=10, right_digits=4, positive=True)
+    interval_minutes = 1440
+    start_at = factory.Faker('date_time_this_month', tzinfo=datetime.timezone.utc)
+    open_price = factory.Faker('pydecimal', left_digits=10, right_digits=4, positive=True)
+    high_price = factory.LazyAttribute(lambda obj: obj.open_price)
+    low_price = factory.LazyAttribute(lambda obj: obj.open_price)
+    close_price = factory.LazyAttribute(lambda obj: obj.open_price)
+    volume = 0
     source = 'SIMULATION'

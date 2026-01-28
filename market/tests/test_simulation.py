@@ -5,8 +5,8 @@
 from decimal import Decimal
 import pytest
 from market.services import update_stock_prices_simulation
-from market.models import PriceHistory, Stock
-from market.tests.factories import StockFactory, PriceHistoryFactory
+from market.models import PriceCandle, Stock
+from market.tests.factories import StockFactory, PriceCandleFactory
 
 
 class TestSimulatedMarket:
@@ -17,14 +17,14 @@ class TestSimulatedMarket:
         """
         stock: Stock = StockFactory()
         initial_price = Decimal('100.00')
-        PriceHistoryFactory(asset=stock, price=initial_price)
+        PriceCandleFactory(asset=stock, open_price=initial_price, close_price=initial_price)
 
         update_stock_prices_simulation([stock])
 
-        assert PriceHistory.objects.filter(asset=stock).count() == 2
+        assert PriceCandle.objects.filter(asset=stock, interval_minutes=5).count() >= 1
         
-        latest_price_entry = PriceHistory.objects.filter(asset=stock).latest('timestamp')
-        assert latest_price_entry.price != initial_price
+        latest_price_entry = PriceCandle.objects.filter(asset=stock, interval_minutes=5).latest('start_at')
+        assert latest_price_entry.close_price != initial_price
         assert latest_price_entry.source == 'SIMULATION'
 
     def test_update_stock_prices_with_no_prior_price(self, db):
@@ -35,11 +35,11 @@ class TestSimulatedMarket:
 
         update_stock_prices_simulation([stock])
 
-        assert PriceHistory.objects.filter(asset=stock).count() == 1
+        assert PriceCandle.objects.filter(asset=stock, interval_minutes=5).count() >= 1
         
-        latest_price_entry = PriceHistory.objects.get(asset=stock)
-        assert latest_price_entry.price > 0
-        assert 50.0 <= latest_price_entry.price <= 250.0
+        latest_price_entry = PriceCandle.objects.filter(asset=stock, interval_minutes=5).latest('start_at')
+        assert latest_price_entry.close_price > 0
+        assert 50.0 <= latest_price_entry.close_price <= 250.0
 
     def test_update_multiple_stock_prices(self, db):
         """
@@ -47,13 +47,13 @@ class TestSimulatedMarket:
         """
         stock1: Stock = StockFactory()
         stock2: Stock = StockFactory()
-        PriceHistoryFactory(asset=stock1, price=Decimal('150.00'))
-        PriceHistoryFactory(asset=stock2, price=Decimal('200.00'))
+        PriceCandleFactory(asset=stock1, open_price=Decimal('150.00'), close_price=Decimal('150.00'))
+        PriceCandleFactory(asset=stock2, open_price=Decimal('200.00'), close_price=Decimal('200.00'))
 
         update_stock_prices_simulation([stock1, stock2])
 
-        assert PriceHistory.objects.filter(asset=stock1).count() == 2
-        assert PriceHistory.objects.filter(asset=stock2).count() == 2
+        assert PriceCandle.objects.filter(asset=stock1, interval_minutes=5).count() >= 1
+        assert PriceCandle.objects.filter(asset=stock2, interval_minutes=5).count() >= 1
 
         latest_price1 = stock1.get_latest_price()
         latest_price2 = stock2.get_latest_price()
@@ -67,4 +67,4 @@ class TestSimulatedMarket:
         """
         update_stock_prices_simulation([])
 
-        assert PriceHistory.objects.count() == 0
+        assert PriceCandle.objects.count() == 0

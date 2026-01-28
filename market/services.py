@@ -4,10 +4,12 @@ from typing import Any
 from decimal import ROUND_HALF_UP, Decimal
 from math import exp, sqrt
 from collections.abc import Iterable
+from zoneinfo import ZoneInfo
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
-from .models import Currency, Stock, CurrencyAsset, Exchange, PriceHistory
+from .models import Currency, Stock, CurrencyAsset, Exchange, PriceCandle
 from config.constants import (
     SIMULATION_INITIAL_PRICE_RANGE,
     SIMULATION_MU,
@@ -16,6 +18,121 @@ from config.constants import (
 )
 
 TIME_STEP_IN_YEARS = STOCKS_UPDATE_INTERVAL_SECONDS / (365 * 24 * 60 * 60)
+
+
+def get_asset_timezone(asset: Stock | CurrencyAsset) -> datetime.tzinfo:
+    if isinstance(asset, Stock):
+        try:
+            return ZoneInfo(asset.exchange.timezone)
+        except Exception:
+            return datetime.timezone.utc
+    return datetime.timezone.utc
+
+
+def _to_local_date(ts: datetime.datetime, tz: datetime.tzinfo) -> datetime.date:
+    if timezone.is_naive(ts):
+        ts = timezone.make_aware(ts, datetime.timezone.utc)
+    try:
+        local_ts = ts.astimezone(tz)
+    except Exception:
+        local_ts = ts
+    return local_ts.date()
+
+
+def _floor_time_to_interval(
+    ts: datetime.datetime,
+    *,
+    interval_minutes: int,
+) -> datetime.datetime:
+    total_minutes = ts.hour * 60 + ts.minute
+    bucket_minutes = (total_minutes // interval_minutes) * interval_minutes
+    bucket_hour = bucket_minutes // 60
+    bucket_minute = bucket_minutes % 60
+    return ts.replace(hour=bucket_hour, minute=bucket_minute, second=0, microsecond=0)
+
+
+def get_candles_for_range(
+    asset: Stock | CurrencyAsset,
+    *,
+    start_at: datetime.datetime,
+    end_at: datetime.datetime,
+    interval_minutes: int,
+) -> list[dict[str, Any]]:
+    candles_qs = PriceCandle.objects.filter(
+        asset=asset,
+        interval_minutes=interval_minutes,
+        start_at__gte=start_at,
+        start_at__lte=end_at,
+    ).order_by("start_at")
+
+    return [
+        {
+            "x": candle.start_at.isoformat(),
+            "o": float(candle.open_price),
+            "h": float(candle.high_price),
+            "l": float(candle.low_price),
+            "c": float(candle.close_price),
+        }
+        for candle in candles_qs
+    ]
+
+
+def _get_bucket_start(
+    asset: Stock | CurrencyAsset,
+    *,
+    ts: datetime.datetime,
+    interval_minutes: int,
+) -> datetime.datetime:
+    tz = get_asset_timezone(asset)
+    local_ts = ts
+    if timezone.is_naive(local_ts):
+        local_ts = timezone.make_aware(local_ts, datetime.timezone.utc)
+    try:
+        local_ts = local_ts.astimezone(tz)
+    except Exception:
+        pass
+
+    bucket_start_local = _floor_time_to_interval(local_ts, interval_minutes=interval_minutes)
+    return bucket_start_local.astimezone(datetime.timezone.utc)
+
+
+def upsert_price_candle(
+    asset: Stock | CurrencyAsset,
+    *,
+    ts: datetime.datetime,
+    price: Decimal,
+    interval_minutes: int,
+    source: str,
+) -> None:
+    start_at = _get_bucket_start(asset, ts=ts, interval_minutes=interval_minutes)
+
+    candle, created = PriceCandle.objects.get_or_create(
+        asset=asset,
+        interval_minutes=interval_minutes,
+        start_at=start_at,
+        defaults={
+            "open_price": price,
+            "high_price": price,
+            "low_price": price,
+            "close_price": price,
+            "volume": 1,
+            "source": source,
+        },
+    )
+
+    if not created:
+        candle.high_price = max(candle.high_price, price)
+        candle.low_price = min(candle.low_price, price)
+        candle.close_price = price
+        candle.volume = candle.volume + 1
+        candle.source = source
+        candle.save(update_fields=[
+            "high_price",
+            "low_price",
+            "close_price",
+            "volume",
+            "source",
+        ])
 
 def round_to_two_dp(value: Decimal) -> Decimal:
     return value.quantize(Decimal('1.00'), rounding=ROUND_HALF_UP)
@@ -51,8 +168,6 @@ def create_currency_asset(symbol: str, name: str) -> CurrencyAsset:
 def update_stock_prices_simulation(stocks: Iterable[Stock]) -> None:
     # Simulate price updates for the given stocks
 
-    new_stocks_prices_list = []
-
     for stock in stocks:
         last_price = stock.get_latest_price()
         if last_price is None:
@@ -67,16 +182,15 @@ def update_stock_prices_simulation(stocks: Iterable[Stock]) -> None:
 
         new_price = Decimal(last_price * Decimal(price_change_factor)).quantize(Decimal('0.0001'))
 
-        new_stocks_prices_list.append(
-            PriceHistory(
-                asset=stock,
+        ts = timezone.now()
+        for interval in (5, 60, 1440):
+            upsert_price_candle(
+                stock,
+                ts=ts,
                 price=new_price,
-                source='SIMULATION'
+                interval_minutes=interval,
+                source="SIMULATION",
             )
-        )
-
-    if new_stocks_prices_list:
-        PriceHistory.objects.bulk_create(new_stocks_prices_list)
 
 @transaction.atomic
 def update_currency_prices(currency_update_dict: dict[str, Any]) -> int:
@@ -93,7 +207,7 @@ def update_currency_prices(currency_update_dict: dict[str, Any]) -> int:
         float(timestamp), tz=datetime.timezone.utc
     )
 
-    new_currency_prices = []
+    updated = 0
 
     for currency_asset in CurrencyAsset.objects.filter(is_active=True):
         quote_key = f"{base_currency_code}{currency_asset.symbol}"
@@ -106,33 +220,34 @@ def update_currency_prices(currency_update_dict: dict[str, Any]) -> int:
         except Exception as e:
             raise ValueError(f"Invalid price for {quote_key}: {price_str}") from e
         
-        new_currency_prices.append(
-            PriceHistory(
-                asset=currency_asset,
-                timestamp=ts,
+        for interval in (5, 60, 1440):
+            upsert_price_candle(
+                currency_asset,
+                ts=ts,
                 price=price,
+                interval_minutes=interval,
                 source="LIVE",
             )
-        )
+        updated += 1
 
 
     # also add a price history for the base currency at price 1.0
     base_currency_asset = CurrencyAsset.objects.get(symbol=base_currency_code)
-    new_currency_prices.append(
-        PriceHistory(
-            asset=base_currency_asset,
-            timestamp=ts,
-            price=Decimal('1.0000'),
-            source='LIVE'
+    for interval in (5, 60, 1440):
+        upsert_price_candle(
+            base_currency_asset,
+            ts=ts,
+            price=Decimal("1.0000"),
+            interval_minutes=interval,
+            source="LIVE",
         )
-    )
 
-    if not new_currency_prices:
+    updated += 1
+
+    if updated == 0:
         raise ValueError("No prices created from payload")
-    
-    PriceHistory.objects.bulk_create(new_currency_prices)
 
-    return len(new_currency_prices)
+    return updated
 
 
 def get_fx_rate(from_currency_code: str, to_currency_code: str) -> Decimal | None:

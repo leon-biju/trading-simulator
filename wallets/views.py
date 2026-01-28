@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
 from decimal import Decimal
 
-from market.models import PriceHistory
+from market.models import PriceCandle
 from .models import Wallet
 from .forms import AddFundsForm
 from market.services import  get_fx_rate
@@ -61,10 +61,13 @@ def wallet_detail(request: HttpRequest, currency_code: str) -> HttpResponse:
 
     serializable_fx_rates = {k: str(v) for k, v in exchange_rates.items()}
 
-    latest_rate = PriceHistory.objects.filter(asset__symbol=wallet.currency.code).order_by('-timestamp').first()
+    latest_rate = PriceCandle.objects.filter(
+        asset__symbol=wallet.currency.code,
+        interval_minutes=1440,
+    ).order_by('-start_at').first()
 
     if latest_rate is not None:
-        fx_rate_update_timestamp = latest_rate.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        fx_rate_update_timestamp = latest_rate.start_at.strftime('%Y-%m-%d %H:%M:%S')
     else:
         fx_rate_update_timestamp = None
     

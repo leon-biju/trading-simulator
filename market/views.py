@@ -1,11 +1,24 @@
+import datetime
+
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpRequest, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from .models import Stock, Exchange, CurrencyAsset
+from django.utils import timezone
+from .models import Stock, Exchange, CurrencyAsset, PriceCandle
 from trading.models import Order, OrderStatus, Position
 from trading.forms import PlaceOrderForm
 from wallets.models import Wallet
+from .services import get_asset_timezone, get_candles_for_range
+
+
+RANGE_TO_DAYS = {
+    "hour": 1 / 24,
+    "day": 1,
+    "month": 30,
+    "6m": 180,
+    "year": 365,
+}
 
 
 @login_required
@@ -130,45 +143,143 @@ def currency_asset_performance_view(request: HttpRequest, asset_symbol: str) -> 
 @login_required
 def stock_performance_chart_data_view(request: HttpRequest, exchange_code: str, asset_symbol: str) -> HttpResponse:
     stock = get_object_or_404(Stock, exchange__code=exchange_code, symbol=asset_symbol)
-    daily_price_history = stock.daily_price_history.order_by('date')
+    range_key = request.GET.get("range", "month")
+    tz = get_asset_timezone(stock)
+    now_local = timezone.now().astimezone(tz)
 
-    dates = [p.date.strftime('%Y-%m-%d') for p in daily_price_history]
-    candlestick_data = [
+    if range_key == "hour":
+        start_at = now_local - datetime.timedelta(hours=1)
+        candles = get_candles_for_range(
+            stock,
+            start_at=start_at,
+            end_at=now_local,
+            interval_minutes=5,
+        )
+        return JsonResponse({
+            "chart_type": "candlestick",
+            "candlestick_data": candles,
+            "currency_code": stock.currency.code,
+        })
+
+    if range_key == "day":
+        start_at = now_local - datetime.timedelta(days=1)
+        candles = get_candles_for_range(
+            stock,
+            start_at=start_at,
+            end_at=now_local,
+            interval_minutes=60,
+        )
+        return JsonResponse({
+            "chart_type": "candlestick",
+            "candlestick_data": candles,
+            "currency_code": stock.currency.code,
+        })
+
+    if range_key == "month":
+        start_at = now_local - datetime.timedelta(days=RANGE_TO_DAYS["month"] - 1)
+        candlestick_data = get_candles_for_range(
+            stock,
+            start_at=start_at,
+            end_at=now_local,
+            interval_minutes=1440,
+        )
+        return JsonResponse({
+            "chart_type": "candlestick",
+            "candlestick_data": candlestick_data,
+            "currency_code": stock.currency.code,
+        })
+
+    start_days = RANGE_TO_DAYS.get(range_key, RANGE_TO_DAYS["month"])
+    start_at = now_local - datetime.timedelta(days=start_days - 1)
+    daily_candles = PriceCandle.objects.filter(
+        asset=stock,
+        interval_minutes=1440,
+        start_at__gte=start_at,
+        start_at__lte=now_local,
+    ).order_by("start_at")
+
+    line_series = [
         {
-            'x': p.date.strftime('%Y-%m-%d'),
-            'o': float(p.open_price),
-            'h': float(p.high_price),
-            'l': float(p.low_price),
-            'c': float(p.close_price),
+            "x": candle.start_at.date().isoformat(),
+            "y": float(candle.close_price),
         }
-        for p in daily_price_history
+        for candle in daily_candles
     ]
 
     return JsonResponse({
-        'dates': dates,
-        'candlestick_data': candlestick_data,
-        'currency_code': stock.currency.code,
+        "chart_type": "line",
+        "line_series": line_series,
+        "currency_code": stock.currency.code,
     })
 
 @login_required
 def currency_asset_performance_chart_data_view(request: HttpRequest, asset_symbol: str) -> HttpResponse:
     currency_asset = get_object_or_404(CurrencyAsset, symbol=asset_symbol)
-    daily_price_history = currency_asset.daily_price_history.order_by('date')
+    range_key = request.GET.get("range", "month")
+    tz = get_asset_timezone(currency_asset)
+    now_local = timezone.now().astimezone(tz)
 
-    dates = [p.date.strftime('%Y-%m-%d') for p in daily_price_history]
-    candlestick_data = [
+    if range_key == "hour":
+        start_at = now_local - datetime.timedelta(hours=1)
+        candles = get_candles_for_range(
+            currency_asset,
+            start_at=start_at,
+            end_at=now_local,
+            interval_minutes=5,
+        )
+        return JsonResponse({
+            "chart_type": "candlestick",
+            "candlestick_data": candles,
+            "currency_code": currency_asset.currency.code,
+        })
+
+    if range_key == "day":
+        start_at = now_local - datetime.timedelta(days=1)
+        candles = get_candles_for_range(
+            currency_asset,
+            start_at=start_at,
+            end_at=now_local,
+            interval_minutes=60,
+        )
+        return JsonResponse({
+            "chart_type": "candlestick",
+            "candlestick_data": candles,
+            "currency_code": currency_asset.currency.code,
+        })
+
+    if range_key == "month":
+        start_at = now_local - datetime.timedelta(days=RANGE_TO_DAYS["month"] - 1)
+        candlestick_data = get_candles_for_range(
+            currency_asset,
+            start_at=start_at,
+            end_at=now_local,
+            interval_minutes=1440,
+        )
+        return JsonResponse({
+            "chart_type": "candlestick",
+            "candlestick_data": candlestick_data,
+            "currency_code": currency_asset.currency.code,
+        })
+
+    start_days = RANGE_TO_DAYS.get(range_key, RANGE_TO_DAYS["month"])
+    start_at = now_local - datetime.timedelta(days=start_days - 1)
+    daily_candles = PriceCandle.objects.filter(
+        asset=currency_asset,
+        interval_minutes=1440,
+        start_at__gte=start_at,
+        start_at__lte=now_local,
+    ).order_by("start_at")
+
+    line_series = [
         {
-            'x': p.date.strftime('%Y-%m-%d'),
-            'o': float(p.open_price),
-            'h': float(p.high_price),
-            'l': float(p.low_price),
-            'c': float(p.close_price),
+            "x": candle.start_at.date().isoformat(),
+            "y": float(candle.close_price),
         }
-        for p in daily_price_history
+        for candle in daily_candles
     ]
 
     return JsonResponse({
-        'dates': dates,
-        'candlestick_data': candlestick_data,
-        'currency_code': currency_asset.currency.code,
+        "chart_type": "line",
+        "line_series": line_series,
+        "currency_code": currency_asset.currency.code,
     })

@@ -12,10 +12,19 @@
     <h2>Currency Asset Performance: {{ currency_asset.name }} ({{ currency_asset.symbol }})</h2>
     {% endif %}
 
+    <div class="d-flex justify-content-end mb-2">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Price history range">
+            <button type="button" class="btn btn-outline-primary" data-range="hour">1H</button>
+            <button type="button" class="btn btn-outline-primary" data-range="day">1D</button>
+            <button type="button" class="btn btn-outline-primary" data-range="month">1M</button>
+            <button type="button" class="btn btn-outline-primary" data-range="6m">6M</button>
+            <button type="button" class="btn btn-outline-primary" data-range="year">1Y</button>
+        </div>
+    </div>
+
     <div id="chart-loader"
-         hx-get="{% if stock %}{% url 'stock_performance_chart_data' stock.exchange.code stock.symbol %}{% else %}{% url 'currency_asset_performance_chart_data' currency_asset.symbol %}{% endif %}"
-         hx-trigger="load"
-         hx-swap="none">
+         data-chart-url="{% if stock %}{% url 'stock_performance_chart_data' stock.exchange.code stock.symbol %}{% else %}{% url 'currency_asset_performance_chart_data' currency_asset.symbol %}{% endif %}"
+         data-default-range="month">
         <div id="assetChart"></div>
     </div>
 </div>

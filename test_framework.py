@@ -1,6 +1,6 @@
 from decimal import Decimal
 from typing import Any
-from market.models import Currency, CurrencyAsset, PriceHistory, Stock, Exchange
+from market.models import Currency, CurrencyAsset, PriceCandle, Stock, Exchange
 import datetime
 
 
@@ -73,17 +73,23 @@ def setup_fx_rates() -> dict[str, Decimal]:
     price_history_entries = []
     for asset in currency_assets:
         # Check if price already exists to avoid duplicates
-        existing = PriceHistory.objects.filter(asset=asset).first()
+        existing = PriceCandle.objects.filter(asset=asset, interval_minutes=1440).first()
         if not existing:
-            entry = PriceHistory(
+            entry = PriceCandle(
                 asset=asset,
-                price=DUMMY_RATES[asset.symbol],
+                interval_minutes=1440,
+                start_at=datetime.datetime.now(datetime.timezone.utc),
+                open_price=DUMMY_RATES[asset.symbol],
+                high_price=DUMMY_RATES[asset.symbol],
+                low_price=DUMMY_RATES[asset.symbol],
+                close_price=DUMMY_RATES[asset.symbol],
+                volume=0,
                 source='SIMULATION',
             )
             price_history_entries.append(entry)
     
     if price_history_entries:
-        PriceHistory.objects.bulk_create(price_history_entries)
+        PriceCandle.objects.bulk_create(price_history_entries)
     
     return DUMMY_RATES
 
@@ -143,10 +149,17 @@ def setup_stock_assets() -> dict[str, Any]:
         
         # Always ensure price history exists for each stock
         # Delete old price history and create fresh to avoid stale data issues
-        PriceHistory.objects.filter(asset=stock).delete()
-        PriceHistory.objects.create(
+        PriceCandle.objects.filter(asset=stock).delete()
+        price = stock_prices.get(stock.symbol, Decimal("100.00"))
+        PriceCandle.objects.create(
             asset=stock,
-            price=stock_prices.get(stock.symbol, Decimal("100.00")),
+            interval_minutes=1440,
+            start_at=datetime.datetime.now(datetime.timezone.utc),
+            open_price=price,
+            high_price=price,
+            low_price=price,
+            close_price=price,
+            volume=0,
             source="SIMULATION",
         )
 

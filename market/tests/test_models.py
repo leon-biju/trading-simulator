@@ -11,10 +11,10 @@ from django.utils import timezone
 from market.tests.factories import (
     CurrencyFactory,
     ExchangeFactory,
-    PriceHistoryFactory,
+    PriceCandleFactory,
     StockFactory,
 )
-from market.models import Exchange, Currency, CurrencyAsset, Stock, PriceHistory
+from market.models import Exchange, Currency, CurrencyAsset, Stock, PriceCandle
 
 
 class TestExchangeModel:
@@ -119,8 +119,8 @@ class TestAssetModels:
 
     def test_get_latest_price(self, db):
         stock: Stock = StockFactory()
-        PriceHistoryFactory(asset=stock, price=150.00)
-        PriceHistoryFactory(asset=stock, price=155.50)
+        PriceCandleFactory(asset=stock, interval_minutes=1440, close_price=150.00)
+        PriceCandleFactory(asset=stock, interval_minutes=1440, close_price=155.50)
 
         assert stock.get_latest_price() == 155.50
 
@@ -129,34 +129,32 @@ class TestAssetModels:
         assert stock.get_latest_price() is None
 
 
-class TestPriceHistoryModel:
-    def test_price_history_creation(self, db):
+class TestPriceCandleModel:
+    def test_price_candle_creation(self, db):
         stock: Stock = StockFactory()
-        price: PriceHistory = PriceHistoryFactory(asset=stock, price=200.25)
-        assert price.asset == stock
-        assert price.price == 200.25
-        assert price.source == "SIMULATION"
+        candle: PriceCandle = PriceCandleFactory(asset=stock, close_price=200.25)
+        assert candle.asset == stock
+        assert candle.close_price == 200.25
+        assert candle.source == "SIMULATION"
 
-    def test_price_history_ordering(self, db):
+    def test_price_candle_ordering(self, db):
         stock: Stock = StockFactory()
-        p1: PriceHistory = PriceHistoryFactory(
+        p1: PriceCandle = PriceCandleFactory(
             asset=stock,
-            price=100,
-            timestamp=timezone.now() - datetime.timedelta(days=1),
+            start_at=timezone.now() - datetime.timedelta(days=1),
         )
-        p2: PriceHistory = PriceHistoryFactory(asset=stock, price=102)
+        p2: PriceCandle = PriceCandleFactory(asset=stock)
 
-        prices = stock.price_history.all()
+        prices = stock.price_candles.all()
         assert prices[0] == p2
         assert prices[1] == p1
 
     def test_get_latest_by(self, db):
         stock: Stock = StockFactory()
-        PriceHistoryFactory(
+        PriceCandleFactory(
             asset=stock,
-            price=100,
-            timestamp=timezone.now() - datetime.timedelta(days=1),
+            start_at=timezone.now() - datetime.timedelta(days=1),
         )
-        latest_price: PriceHistory = PriceHistoryFactory(asset=stock, price=102)
+        latest_price: PriceCandle = PriceCandleFactory(asset=stock)
 
-        assert stock.price_history.latest() == latest_price
+        assert stock.price_candles.latest() == latest_price

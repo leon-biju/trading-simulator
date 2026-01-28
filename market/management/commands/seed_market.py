@@ -4,11 +4,12 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from decimal import Decimal
+import datetime
 from datetime import time, timedelta
 import random
 from math import exp, sqrt
 
-from market.models import DailyPriceHistory, Exchange, Currency, PriceHistory, Asset
+from market.models import PriceCandle, Exchange, Currency, Asset
 from market.services import create_stock_asset, create_currency_asset
 from config.constants import SIMULATION_MU, SIMULATION_SIGMA, SIMULATION_INITIAL_PRICE_RANGE
 
@@ -51,8 +52,7 @@ class Command(BaseCommand):
     def clear_data(self):
         """Clears existing market data from the database."""
         self.stdout.write("Clearing existing market data...")
-        PriceHistory.objects.all().delete()
-        DailyPriceHistory.objects.all().delete()
+        PriceCandle.objects.all().delete()
         Asset.objects.all().delete()
         Currency.objects.all().delete()
         Exchange.objects.all().delete()
@@ -127,10 +127,15 @@ class Command(BaseCommand):
             if generate_history:
                 self._create_price_history(asset, Decimal(price))
             else:
-                PriceHistory.objects.create(
+                PriceCandle.objects.create(
                     asset=asset,
-                    timestamp=timezone.now(),
-                    price=Decimal(price).quantize(Decimal("0.0001")),
+                    interval_minutes=1440,
+                    start_at=timezone.now(),
+                    open_price=Decimal(price).quantize(Decimal("0.0001")),
+                    high_price=Decimal(price).quantize(Decimal("0.0001")),
+                    low_price=Decimal(price).quantize(Decimal("0.0001")),
+                    close_price=Decimal(price).quantize(Decimal("0.0001")),
+                    volume=0,
                     source="SEEDING",
                 )
                 self.stdout.write(
@@ -299,9 +304,13 @@ class Command(BaseCommand):
                     volume = random.randint(100_000_000, 500_000_000)
 
             price_history_batch.append(
-                DailyPriceHistory(
+                PriceCandle(
                     asset=asset,
-                    date=day,
+                    interval_minutes=1440,
+                    start_at=timezone.make_aware(
+                        datetime.datetime.combine(day, time(0, 0)),
+                        datetime.timezone.utc,
+                    ),
                     open_price=open_price.quantize(Decimal("0.0001")),
                     high_price=high_price.quantize(Decimal("0.0001")),
                     low_price=low_price.quantize(Decimal("0.0001")),
@@ -311,7 +320,7 @@ class Command(BaseCommand):
                 )
             )
 
-        DailyPriceHistory.objects.bulk_create(price_history_batch)
+        PriceCandle.objects.bulk_create(price_history_batch)
         self.stdout.write(
             f"      Generated 30 days of price history for {asset.symbol}"
         )

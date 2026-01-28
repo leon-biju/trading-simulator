@@ -74,14 +74,15 @@ class Asset(models.Model):
     is_active = models.BooleanField(default=True) # To enable/disable trading for an asset
 
     def get_latest_price(self) -> Decimal | None:
-        latest_price_entry = PriceHistory.objects.filter(
-            asset=self
-        ).order_by("-timestamp").first()
-        
-        if latest_price_entry is None:
-            return None
-        
-        return latest_price_entry.price
+        for interval in (5, 60, 1440):
+            latest_candle = PriceCandle.objects.filter(
+                asset=self,
+                interval_minutes=interval,
+            ).order_by("-start_at").first()
+            if latest_candle is not None:
+                return latest_candle.close_price
+
+        return None
 
     
 class Stock(Asset):
@@ -97,45 +98,29 @@ class CurrencyAsset(Asset):
         return f"{self.name} ({self.symbol})"
 
 
-class PriceHistory(models.Model):
+class PriceCandle(models.Model):
     """
-    Stores timestamped price data for assets.
+    Stores OHLC candles for assets at specific intervals.
     """
     SOURCE_CHOICES = [
-        ('SIMULATION', 'Simulated Data'),
-        ('LIVE', 'Live API Data'),
+        ("SIMULATION", "Simulated Data"),
+        ("LIVE", "Live API Data"),
     ]
 
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='price_history')
-    timestamp = models.DateTimeField(default=timezone.now)
-    price = models.DecimalField(max_digits=19, decimal_places=4)
-    source = models.CharField(max_length=10, choices=SOURCE_CHOICES)
-
-    class Meta:
-        unique_together = ['asset', 'timestamp']
-        get_latest_by = 'timestamp'
-        ordering = ['-timestamp']
-        indexes = [
-            models.Index(fields=['asset', 'timestamp', 'source']),
-        ]
-
-class DailyPriceHistory(models.Model):
-    """
-    Stores daily aggregated price data for assets.
-    """
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='daily_price_history')
-    date = models.DateField()
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="price_candles")
+    interval_minutes = models.PositiveIntegerField()
+    start_at = models.DateTimeField(default=timezone.now)
     open_price = models.DecimalField(max_digits=19, decimal_places=4)
     high_price = models.DecimalField(max_digits=19, decimal_places=4)
     low_price = models.DecimalField(max_digits=19, decimal_places=4)
     close_price = models.DecimalField(max_digits=19, decimal_places=4)
-    volume = models.BigIntegerField()
-    source = models.CharField(max_length=10, choices=PriceHistory.SOURCE_CHOICES)
+    volume = models.BigIntegerField(default=0)
+    source = models.CharField(max_length=10, choices=SOURCE_CHOICES)
 
     class Meta:
-        unique_together = ['asset', 'date']
-        get_latest_by = 'date'
-        ordering = ['-date']
+        unique_together = ["asset", "interval_minutes", "start_at"]
+        get_latest_by = "start_at"
+        ordering = ["-start_at"]
         indexes = [
-            models.Index(fields=['asset', 'date', 'source']),
+            models.Index(fields=["asset", "interval_minutes", "start_at", "source"]),
         ]

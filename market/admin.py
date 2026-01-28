@@ -6,7 +6,7 @@ from market.models import (
     Currency,
     CurrencyAsset,
     Exchange,
-    PriceHistory,
+    PriceCandle,
     Stock,
 )
 
@@ -39,9 +39,9 @@ class CurrencyAssetAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "currency")
     search_fields = ("name", "symbol")
 
-@admin.register(PriceHistory)
-class PriceHistoryAdmin(admin.ModelAdmin):
-    list_display = ("asset", "timestamp", "price", "source")
-    list_filter = ("asset__asset_type", "source")
+@admin.register(PriceCandle)
+class PriceCandleAdmin(admin.ModelAdmin):
+    list_display = ("asset", "interval_minutes", "start_at", "close_price", "source")
+    list_filter = ("asset__asset_type", "interval_minutes", "source")
     search_fields = ("asset__name", "asset__symbol")
     raw_id_fields = ("asset",)

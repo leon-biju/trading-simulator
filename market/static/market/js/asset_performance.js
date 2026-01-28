@@ -1,21 +1,75 @@
-document.body.addEventListener('htmx:afterRequest', function(evt) {
-    if (evt.detail.target.id === 'chart-loader' && evt.detail.successful) {
-        const data = JSON.parse(evt.detail.xhr.responseText);
-        console.log('Chart data received:', data);
-        
-        // Transform data for ApexCharts candlestick format
-        const seriesData = data.candlestick_data.map(item => ({
-            x: new Date(item.x),
-            y: [item.o, item.h, item.l, item.c]
-        }));
-        
+document.addEventListener('DOMContentLoaded', () => {
+    const chartLoader = document.getElementById('chart-loader');
+    if (!chartLoader) {
+        return;
+    }
+
+    const baseUrl = chartLoader.dataset.chartUrl;
+    const defaultRange = chartLoader.dataset.defaultRange || 'month';
+    const rangeButtons = document.querySelectorAll('[data-range]');
+    let chart = null;
+
+    const setActiveRange = (range) => {
+        rangeButtons.forEach((button) => {
+            button.classList.toggle('active', button.dataset.range === range);
+        });
+    };
+
+    const parseDateValue = (value) => {
+        if (value.includes('T')) {
+            return new Date(value);
+        }
+        return new Date(`${value}T00:00:00`);
+    };
+
+    const buildCandleSeries = (data) => data.candlestick_data.map((item) => ({
+        x: parseDateValue(item.x),
+        y: [item.o, item.h, item.l, item.c]
+    }));
+
+    const buildLineSeries = (data) => data.line_series.map((item) => ({
+        x: parseDateValue(item.x),
+        y: item.y
+    }));
+
+    const renderChart = (data) => {
+        const chartType = data.chart_type || 'candlestick';
+        const seriesData = chartType === 'line'
+            ? buildLineSeries(data)
+            : buildCandleSeries(data);
+
+        if (chart) {
+            const currentType = chart.w?.config?.chart?.type;
+            if (currentType !== chartType) {
+                chart.destroy();
+                chart = null;
+            }
+        }
+
+        if (chart) {
+            chart.updateSeries([
+                {
+                    name: 'Price',
+                    data: seriesData
+                }
+            ], true);
+            chart.updateOptions({
+                yaxis: {
+                    title: {
+                        text: `Price (${data.currency_code})`
+                    }
+                }
+            });
+            return;
+        }
+
         const options = {
             series: [{
                 name: 'Price',
                 data: seriesData
             }],
             chart: {
-                type: 'candlestick',
+                type: chartType,
                 height: 500,
                 toolbar: {
                     show: true
@@ -33,7 +87,7 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
             },
             yaxis: {
                 title: {
-                    text: 'Price (' + data.currency_code + ')'
+                    text: `Price (${data.currency_code})`
                 },
                 tooltip: {
                     enabled: true
@@ -47,14 +101,45 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
                     }
                 }
             },
+            stroke: {
+                width: chartType === 'line' ? 2 : 1
+            },
             tooltip: {
                 enabled: true
             }
         };
-        
-        const chart = new ApexCharts(document.querySelector("#assetChart"), options);
+
+        chart = new ApexCharts(document.querySelector("#assetChart"), options);
         chart.render();
-        
-        console.log('Candlestick chart rendered successfully');
-    }
+    };
+
+    const loadRange = async (range) => {
+        if (!baseUrl) {
+            return;
+        }
+        const url = `${baseUrl}?range=${encodeURIComponent(range)}`;
+        const response = await fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        const data = await response.json();
+        renderChart(data);
+    };
+
+    rangeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const range = button.dataset.range || defaultRange;
+            setActiveRange(range);
+            loadRange(range);
+        });
+    });
+
+    setActiveRange(defaultRange);
+    loadRange(defaultRange);
 });

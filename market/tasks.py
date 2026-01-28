@@ -43,7 +43,7 @@ def update_currency_data() -> dict[str, int] | str:
 
     if json_data is None:
         return "Currency data fetch failed."
-    
+
     count = update_currency_prices(json_data)
 
     return {"rows_inserted": count}
