@@ -24,8 +24,6 @@ from market.models import Stock, Exchange, PriceCandle
 from trading.models import Order, OrderSide, OrderType, OrderStatus, Position, Trade
 from trading.services import (
     place_order,
-    place_stock_buy_order,
-    place_stock_sell_order,
     cancel_order,
     execute_pending_order,
     get_user_pending_orders,
@@ -94,9 +92,10 @@ class TestBuyOrderPlacement:
         assert stock_price is not None
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('10'),
                 order_type=OrderType.MARKET,
             )
@@ -143,9 +142,10 @@ class TestBuyOrderPlacement:
         assert stock_price is not None
         
         with patch.object(Exchange, 'is_currently_open', return_value=False):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('10'),
                 order_type=OrderType.MARKET,
             )
@@ -184,9 +184,10 @@ class TestBuyOrderPlacement:
         limit_price = current_price + Decimal('10')
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('5'),
                 order_type=OrderType.LIMIT,
                 limit_price=limit_price,
@@ -215,9 +216,10 @@ class TestBuyOrderPlacement:
         limit_price = current_price - Decimal('20')
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('5'),
                 order_type=OrderType.LIMIT,
                 limit_price=limit_price,
@@ -242,9 +244,10 @@ class TestBuyOrderPlacement:
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
             with pytest.raises(ValueError, match="Insufficient funds"):
-                place_stock_buy_order(
+                place_order(
                     user_id=user.id,
-                    stock=stock,
+                    asset=stock,
+                    side=OrderSide.BUY,
                     quantity=Decimal('1000000'),
                     order_type=OrderType.MARKET,
                 )
@@ -260,9 +263,10 @@ class TestBuyOrderPlacement:
         stock = market_data['stocks']['GOOGL']  # Inactive in test setup
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('5'),
                 order_type=OrderType.MARKET,
             )
@@ -290,9 +294,10 @@ class TestSellOrderPlacement:
         assert stock_price is not None
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            order = place_stock_sell_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.SELL,
                 quantity=Decimal('20'),
                 order_type=OrderType.MARKET,
             )
@@ -329,9 +334,10 @@ class TestSellOrderPlacement:
         initial_quantity = position.quantity
         
         with patch.object(Exchange, 'is_currently_open', return_value=False):
-            order = place_stock_sell_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.SELL,
                 quantity=Decimal('20'),
                 order_type=OrderType.MARKET,
             )
@@ -356,9 +362,10 @@ class TestSellOrderPlacement:
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
             with pytest.raises(ValueError, match="Insufficient holdings"):
-                place_stock_sell_order(
+                place_order(
                     user_id=user.id,
-                    stock=stock,
+                    asset=stock,
+                    side=OrderSide.SELL,
                     quantity=Decimal('200'),  # More than position.quantity (100)
                     order_type=OrderType.MARKET,
                 )
@@ -375,9 +382,10 @@ class TestSellOrderPlacement:
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
             with pytest.raises(LookupError, match="No position found"):
-                place_stock_sell_order(
+                place_order(
                     user_id=user.id,
-                    stock=stock,
+                    asset=stock,
+                    side=OrderSide.SELL,
                     quantity=Decimal('10'),
                     order_type=OrderType.MARKET,
                 )
@@ -399,9 +407,10 @@ class TestSellOrderPlacement:
         limit_price = current_price - Decimal('10')
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            order = place_stock_sell_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.SELL,
                 quantity=Decimal('10'),
                 order_type=OrderType.LIMIT,
                 limit_price=limit_price,
@@ -430,9 +439,10 @@ class TestOrderCancellation:
         
         # Create pending order
         with patch.object(Exchange, 'is_currently_open', return_value=False):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('10'),
                 order_type=OrderType.MARKET,
             )
@@ -465,9 +475,10 @@ class TestOrderCancellation:
         
         # Create pending order
         with patch.object(Exchange, 'is_currently_open', return_value=False):
-            order = place_stock_sell_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.SELL,
                 quantity=Decimal('20'),
                 order_type=OrderType.MARKET,
             )
@@ -497,9 +508,10 @@ class TestOrderCancellation:
         stock = market_data['stocks']['AAPL']
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('5'),
                 order_type=OrderType.MARKET,
             )
@@ -537,9 +549,10 @@ class TestPendingOrderExecution:
         
         # Create pending order
         with patch.object(Exchange, 'is_currently_open', return_value=False):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('10'),
                 order_type=OrderType.MARKET,
             )
@@ -573,9 +586,10 @@ class TestPendingOrderExecution:
         
         # Create pending limit order
         with patch.object(Exchange, 'is_currently_open', return_value=False):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('10'),
                 order_type=OrderType.LIMIT,
                 limit_price=limit_price,
@@ -650,9 +664,10 @@ class TestPositionManagement:
         
         # Buy more shares at the new price
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            order = place_stock_buy_order(
+            order = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=new_qty,
                 order_type=OrderType.MARKET,
             )
@@ -681,17 +696,19 @@ class TestQueryFunctions:
         
         # Create some pending orders
         with patch.object(Exchange, 'is_currently_open', return_value=False):
-            order1 = place_stock_buy_order(
+            order1 = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
+                side=OrderSide.BUY,
                 quantity=Decimal('5'),
                 order_type=OrderType.MARKET,
             )
-            order2 = place_stock_buy_order(
+            order2 = place_order(
                 user_id=user.id,
-                stock=stock,
+                asset=stock,
                 quantity=Decimal('10'),
                 order_type=OrderType.MARKET,
+                side=OrderSide.BUY,
             )
         
         pending = get_user_pending_orders(user.id)

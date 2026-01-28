@@ -33,26 +33,6 @@ def round_to_eight_dp(value: Decimal) -> Decimal:
     return value.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
 
 
-def _get_execution_price(order: Order) -> Decimal:
-    """
-    Get the execution price for an order.
-    For MARKET orders: use current market price.
-    For LIMIT orders: use limit price (only called when price condition is met).
-    
-    Raises:
-        LookupError: If price is not available
-    """
-    if order.order_type == OrderType.LIMIT:
-        if order.limit_price is None:
-            raise ValueError("LIMIT order missing limit_price")
-        return order.limit_price
-    
-    # MARKET order - use current price
-    current_price = order.asset.get_latest_price()
-    if current_price is None:
-        raise LookupError(f"Price not available for {order.asset.symbol}")
-    return current_price
-
 
 def _can_execute_immediately(stock: Stock) -> bool:
     """Check if a stock order can be executed immediately."""
@@ -79,16 +59,6 @@ def _check_limit_price_condition(order: Order, current_price: Decimal) -> bool:
         return current_price <= order.limit_price
     else:  # SELL
         return current_price >= order.limit_price
-
-
-def _calculate_order_cost(quantity: Decimal, price: Decimal) -> Decimal:
-    """Calculate the cost of an order (quantity * price), rounded to 2dp."""
-    return round_to_two_dp(quantity * price)
-
-
-def _calculate_fee(total_value: Decimal) -> Decimal:
-    """Calculate trading fee based on total value."""
-    return round_to_two_dp(total_value * TRADING_FEE_PERCENTAGE)
 
 
 def place_order(
@@ -162,7 +132,7 @@ def _place_buy_order(
             raise LookupError(f"Price not available for {asset.symbol}")
     
     assert reserve_price is not None  # Type narrowing
-    reserved_amount = _calculate_order_cost(quantity, reserve_price)
+    reserved_amount = round_to_two_dp(quantity * reserve_price)
     
     try:
         with transaction.atomic():
@@ -309,9 +279,11 @@ def _execute_order(
         raise ValueError(f"Cannot execute order with status {order.status}")
     
     # Get execution price
-    execution_price = _get_execution_price(order)
-    total_value = _calculate_order_cost(order.quantity, execution_price)
-    fee = _calculate_fee(total_value)
+    execution_price = order.asset.get_latest_price()
+    if execution_price is None:
+        raise LookupError(f"Price not available for {order.asset.symbol}")
+    total_value = round_to_two_dp(order.quantity * execution_price)
+    fee = round_to_two_dp(total_value * TRADING_FEE_PERCENTAGE)
     
     if order.side == OrderSide.BUY:
         return _execute_buy_order(order, wallet, execution_price, total_value, fee)
@@ -610,50 +582,4 @@ def get_user_positions(user_id: int) -> list[Position]:
             user_id=user_id,
             quantity__gt=0,
         ).select_related('asset')
-    )
-
-
-# =============================================================================
-# Convenience functions matching the old API (for backward compatibility)
-# =============================================================================
-
-def place_stock_buy_order(
-    user_id: int,
-    stock: Stock,
-    quantity: Decimal,
-    order_type: OrderType,
-    limit_price: Optional[Decimal] = None,
-) -> Order:
-    """
-    Convenience function for placing stock buy orders.
-    Wraps the generic place_order function.
-    """
-    return place_order(
-        user_id=user_id,
-        asset=stock,
-        side=OrderSide.BUY,
-        quantity=quantity,
-        order_type=order_type,
-        limit_price=limit_price,
-    )
-
-
-def place_stock_sell_order(
-    user_id: int,
-    stock: Stock,
-    quantity: Decimal,
-    order_type: OrderType,
-    limit_price: Optional[Decimal] = None,
-) -> Order:
-    """
-    Convenience function for placing stock sell orders.
-    Wraps the generic place_order function.
-    """
-    return place_order(
-        user_id=user_id,
-        asset=stock,
-        side=OrderSide.SELL,
-        quantity=quantity,
-        order_type=order_type,
-        limit_price=limit_price,
     )
