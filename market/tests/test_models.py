@@ -1,6 +1,7 @@
 # mypy: disable-error-code=no-untyped-def
 # mypy: disable-error-code=no-untyped-call
 # mypy: disable-error-code=assignment
+from time import sleep
 import datetime
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -119,8 +120,9 @@ class TestAssetModels:
 
     def test_get_latest_price(self, db):
         stock: Stock = StockFactory()
-        PriceCandleFactory(asset=stock, interval_minutes=1440, close_price=150.00)
-        PriceCandleFactory(asset=stock, interval_minutes=1440, close_price=155.50)
+        t0 = timezone.now()
+        PriceCandleFactory(asset=stock, interval_minutes=1440, close_price=150.00, start_at=t0 - datetime.timedelta(seconds=60))
+        PriceCandleFactory(asset=stock, interval_minutes=1440, close_price=155.50, start_at=t0)
 
         assert stock.get_latest_price() == 155.50
 
@@ -138,23 +140,25 @@ class TestPriceCandleModel:
         assert candle.source == "SIMULATION"
 
     def test_price_candle_ordering(self, db):
+        t0 = timezone.now()
         stock: Stock = StockFactory()
         p1: PriceCandle = PriceCandleFactory(
             asset=stock,
-            start_at=timezone.now() - datetime.timedelta(days=1),
+            start_at=t0 - datetime.timedelta(minutes=10),
         )
-        p2: PriceCandle = PriceCandleFactory(asset=stock)
+        p2: PriceCandle = PriceCandleFactory(asset=stock, start_at=t0)
 
         prices = stock.price_candles.all()
-        assert prices[0] == p2
+        assert prices[0] == p2 
         assert prices[1] == p1
 
     def test_get_latest_by(self, db):
+        t0 = timezone.now()
         stock: Stock = StockFactory()
         PriceCandleFactory(
             asset=stock,
-            start_at=timezone.now() - datetime.timedelta(days=1),
+            start_at=t0 - datetime.timedelta(days=1),
         )
-        latest_price: PriceCandle = PriceCandleFactory(asset=stock)
+        latest_price: PriceCandle = PriceCandleFactory(asset=stock, start_at=t0)
 
         assert stock.price_candles.latest() == latest_price

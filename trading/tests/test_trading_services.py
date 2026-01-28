@@ -197,7 +197,7 @@ class TestBuyOrderPlacement:
         assert order.status == OrderStatus.FILLED
         
         trade = Trade.objects.get(order=order)
-        assert trade.price == limit_price
+        assert trade.price == current_price  # Executes at market price, not limit price
     
     @pytest.mark.django_db
     def test_limit_buy_order_pending_when_price_not_met(
@@ -419,7 +419,7 @@ class TestSellOrderPlacement:
         assert order.status == OrderStatus.FILLED
         
         trade = Trade.objects.get(order=order)
-        assert trade.price == limit_price
+        assert trade.price == current_price  # Executes at market price, not limit price
 
 
 class TestOrderCancellation:
