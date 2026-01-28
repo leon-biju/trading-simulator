@@ -10,7 +10,7 @@ urlpatterns = [
     ),
     
     # Order management
-    path('order/<int:order_id>/cancel/', views.cancel_order_view, name='cancel_order'),
+    path('order/<int:order_id>/cancel/', views.cancel_order_view, name='cancel_order'), # This is horrible why would you do this. TODO make it not stupid. smh treating a POST like you do a GET request no forms or anything.
     
     # History views
     path('orders/', views.order_history_view, name='order_history'),

@@ -18,7 +18,7 @@ from market.services import get_asset_timezone
 class Command(BaseCommand):
     help = "Backfill about a year of simulated OHLC candles for all assets."
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser): # type: ignore[no-untyped-def]
         parser.add_argument(
             "--days",
             type=int,
@@ -43,7 +43,7 @@ class Command(BaseCommand):
             help="Delete existing candle history before backfilling.",
         )
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options): # type: ignore[no-untyped-def]
         days = options["days"]
         intraday_days = options["intraday_days"]
         interval_minutes = options["interval_minutes"]
@@ -66,7 +66,7 @@ class Command(BaseCommand):
         batch_size = 4000
 
         for asset in assets:
-            tz = get_asset_timezone(asset)
+            tz = get_asset_timezone(asset) # type: ignore[arg-type] # Asset can only be Stock or CurrencyAsset
             latest_candle = PriceCandle.objects.filter(
                 asset=asset,
                 interval_minutes=1440,
