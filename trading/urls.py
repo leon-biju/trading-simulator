@@ -2,16 +2,17 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Order management
+    path('order/<int:order_id>/cancel/', views.cancel_order_view, name='cancel_order'),
+
+
     # Order placement
     path(
         'order/<str:exchange_code>/<str:stock_symbol>/', 
         views.place_order_view, 
         name='place_order'
     ),
-    
-    # Order management
-    path('order/<int:order_id>/cancel/', views.cancel_order_view, name='cancel_order'), # This is horrible why would you do this. TODO make it not stupid. smh treating a POST like you do a GET request no forms or anything.
-    
+        
     # History views
     path('orders/', views.order_history_view, name='order_history'),
     path('trades/', views.trade_history_view, name='trade_history'),
