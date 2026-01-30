@@ -16,7 +16,7 @@ from decimal import Decimal
 from django.db.models import QuerySet
 from django.contrib.auth import get_user_model
 
-from market.models import Stock, Exchange
+from market.models import Asset, Exchange
 from trading.models import Order, OrderSide, OrderStatus, OrderType, Position, Trade
 from trading.services import (
     place_order,
@@ -238,7 +238,7 @@ class TestSellOrderExecution:
         stock = market_data['stocks']['AAPL']
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            with pytest.raises(LookupError, match=f"No position found for {stock.symbol}"):
+            with pytest.raises(LookupError, match=f"No position found for {stock.ticker}"):
                 place_order(
                     user_id=user.id,
                     asset=stock,
@@ -258,7 +258,7 @@ class TestSellOrderExecution:
         stock = market_data['stocks']['AAPL']
         
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            with pytest.raises(ValueError, match=f"Insufficient holdings of {stock.symbol}"):
+            with pytest.raises(ValueError, match=f"Insufficient holdings of {stock.ticker}"):
                 place_order(
                     user_id=user.id,
                     asset=stock,

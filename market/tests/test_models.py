@@ -15,7 +15,7 @@ from market.tests.factories import (
     PriceCandleFactory,
     StockFactory,
 )
-from market.models import Exchange, Currency, CurrencyAsset, Stock, PriceCandle
+from market.models import Asset, Exchange, Currency, PriceCandle
 
 
 class TestExchangeModel:
@@ -110,16 +110,16 @@ class TestCurrencyModel:
 
 class TestAssetModels:
     def test_stock_creation(self, db):
-        stock: Stock = StockFactory(
-            symbol="AAPL", name="Apple Inc.", exchange__code="NASDAQ"
+        stock: Asset = StockFactory(
+            ticker="AAPL", name="Apple Inc.", exchange__code="NASDAQ"
         )
         assert stock.name == "Apple Inc."
         assert stock.asset_type == "STOCK"
-        assert stock.symbol == "AAPL"
-        assert str(stock) == "Apple Inc. (AAPL) on NASDAQ"
+        assert stock.ticker == "AAPL"
+        assert str(stock) == "AAPL on NASDAQ"
 
     def test_get_latest_price(self, db):
-        stock: Stock = StockFactory()
+        stock: Asset = StockFactory()
         t0 = timezone.now()
         PriceCandleFactory(asset=stock, interval_minutes=1440, close_price=150.00, start_at=t0 - datetime.timedelta(seconds=60))
         PriceCandleFactory(asset=stock, interval_minutes=1440, close_price=155.50, start_at=t0)
@@ -127,13 +127,13 @@ class TestAssetModels:
         assert stock.get_latest_price() == 155.50
 
     def test_get_latest_price_no_history(self, db):
-        stock: Stock = StockFactory()
+        stock: Asset = StockFactory()
         assert stock.get_latest_price() is None
 
 
 class TestPriceCandleModel:
     def test_price_candle_creation(self, db):
-        stock: Stock = StockFactory()
+        stock: Asset = StockFactory()
         candle: PriceCandle = PriceCandleFactory(asset=stock, close_price=200.25)
         assert candle.asset == stock
         assert candle.close_price == 200.25
@@ -141,7 +141,7 @@ class TestPriceCandleModel:
 
     def test_price_candle_ordering(self, db):
         t0 = timezone.now()
-        stock: Stock = StockFactory()
+        stock: Asset = StockFactory()
         p1: PriceCandle = PriceCandleFactory(
             asset=stock,
             start_at=t0 - datetime.timedelta(minutes=10),
@@ -154,7 +154,7 @@ class TestPriceCandleModel:
 
     def test_get_latest_by(self, db):
         t0 = timezone.now()
-        stock: Stock = StockFactory()
+        stock: Asset = StockFactory()
         PriceCandleFactory(
             asset=stock,
             start_at=t0 - datetime.timedelta(days=1),

@@ -2,7 +2,7 @@ import os
 from typing import Any
 
 import requests
-from market.models import CurrencyAsset, Currency
+from market.models import Currency, FXRate
 
 def get_currency_layer_api_data() -> dict[str, Any] | None:
 
@@ -13,12 +13,16 @@ def get_currency_layer_api_data() -> dict[str, Any] | None:
     if not api_key:
         print("Currency Layer API key not found in environment variables.")
         return None
-    
-    currencies = CurrencyAsset.objects.values_list('symbol', flat=True)
+
+    base_currency = Currency.objects.get(is_base=True)
+    currencies = Currency.objects.exclude(code=base_currency.code).values_list('code', flat=True)
+    if not currencies:
+        return {"skipped": True, "reason": "no_currencies"}
+
     params: dict[str, str | int] = {
         'access_key': api_key,
         'currencies': ','.join(currencies),
-        'source': Currency.objects.get(is_base=True).code,
+        'source': base_currency.code,
         'format': 1
     }
     response = requests.get(base_url, params=params)
@@ -33,3 +37,5 @@ def get_currency_layer_api_data() -> dict[str, Any] | None:
         return None
     else:
         return data
+
+# TODO: get stock market data from another API

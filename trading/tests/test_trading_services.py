@@ -20,7 +20,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from accounts.models import CustomUser
-from market.models import Stock, Exchange, PriceCandle
+from market.models import Asset, Exchange, PriceCandle
 from trading.models import Order, OrderSide, OrderType, OrderStatus, Position, Trade
 from trading.services import (
     place_order,

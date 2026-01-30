@@ -2,7 +2,7 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}{{ stock.symbol }} - {{ stock.name }}{% endblock %}
+{% block title %}{{ stock.ticker }} - {{ stock.name }}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -57,7 +57,7 @@
                         <div>
                             <h2 class="mb-1">{{ stock.name }}</h2>
                             <p class="text-muted mb-2">
-                                <strong>{{ stock.symbol }}</strong> · {{ stock.exchange.name }} ({{ stock.exchange.code }})
+                                <strong>{{ stock.ticker }}</strong> · {{ stock.exchange.name }} ({{ stock.exchange.code }})
                             </p>
                         </div>
                         <div class="text-end">
@@ -120,7 +120,7 @@
                 </div>
                 <div class="card-body">
                     <div id="chart-loader"
-                         data-chart-url="{% url 'stock_performance_chart_data' stock.exchange.code stock.symbol %}"
+                         data-chart-url="{% url 'stock_performance_chart_data' stock.exchange.code stock.ticker %}"
                          data-default-range="month">
                         <div id="assetChart" style="min-height: 350px;"></div>
                     </div>
@@ -213,7 +213,7 @@
                             Trading is currently disabled for this stock.
                         </div>
                     {% else %}
-                        <form method="post" action="{% url 'place_order' stock.exchange.code stock.symbol %}" id="orderForm">
+                        <form method="post" action="{% url 'place_order' stock.exchange.code stock.ticker %}" id="orderForm">
                             {% csrf_token %}
                             
                             <!-- Buy/Sell Toggle -->

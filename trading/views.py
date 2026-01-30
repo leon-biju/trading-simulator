@@ -14,7 +14,7 @@ from trading.services import (
     get_user_positions,
 )
 from trading.models import OrderSide, OrderType
-from market.models import Stock
+from market.models import Asset
 from wallets.models import Wallet
 
 
@@ -27,9 +27,10 @@ def place_order_view(request: HttpRequest, exchange_code: str, stock_symbol: str
         return redirect('login')  # Redundant but mypy is being pedantic
 
     stock = get_object_or_404(
-        Stock.objects.select_related('exchange', 'currency'),
+        Asset.objects.select_related('exchange', 'currency'),
         exchange__code=exchange_code,
-        symbol=stock_symbol
+        ticker=stock_symbol,
+        asset_type='STOCK',
     )
     
     form = PlaceOrderForm(request.POST)
@@ -58,12 +59,12 @@ def place_order_view(request: HttpRequest, exchange_code: str, stock_symbol: str
         if order.status == OrderStatus.FILLED:
             messages.success(
                 request, 
-                f"Order filled: {order.get_side_display()} {order.quantity} {stock.symbol}"
+                f"Order filled: {order.get_side_display()} {order.quantity} {stock.ticker}"
             )
         else:
             messages.info(
                 request,
-                f"Order placed: {order.get_side_display()} {order.quantity} {stock.symbol} (Pending)"
+                f"Order placed: {order.get_side_display()} {order.quantity} {stock.ticker} (Pending)"
             )
             
     except ValueError as e:
@@ -83,7 +84,7 @@ def cancel_order_view(request: HttpRequest, order_id: int) -> HttpResponse:
         return redirect('login')  # Redundant but mypy is being pedantic
     try:
         order = cancel_order(order_id=order_id, user_id=request.user.id)
-        messages.success(request, f"Order cancelled: {order.quantity} {order.asset.symbol}")
+        messages.success(request, f"Order cancelled: {order.quantity} {order.asset.ticker}")
     except ValueError as e:
         messages.error(request, str(e))
     except LookupError as e:
@@ -171,9 +172,10 @@ def portfolio_view(request: HttpRequest) -> HttpResponse:
 def get_position_for_stock(request: HttpRequest, exchange_code: str, stock_symbol: str) -> JsonResponse:
     """API endpoint to get user's position for a specific stock."""
     stock = get_object_or_404(
-        Stock.objects.select_related('exchange'),
+        Asset.objects.select_related('exchange'),
         exchange__code=exchange_code,
-        symbol=stock_symbol
+        ticker=stock_symbol,
+        asset_type='STOCK',
     )
     
     try:

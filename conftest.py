@@ -4,7 +4,6 @@
 import pytest
 from test_framework import (
     setup_currencies,
-    setup_currency_assets,
     setup_fx_rates,
     setup_complete_market_data,
 )
@@ -20,20 +19,10 @@ def currencies(db):
 
 
 @pytest.fixture
-def currency_assets(db, currencies):
-    """
-    Fixture that creates currency assets.
-    Automatically depends on currencies fixture.
-    Usage: def test_something(currency_assets):
-    """
-    return setup_currency_assets()
-
-
-@pytest.fixture
-def fx_rates(db, currency_assets):
+def fx_rates(db, currencies):
     """
     Fixture that creates FX rates.
-    Automatically depends on currency_assets fixture.
+    Automatically depends on currencies fixture.
     Usage: def test_something(fx_rates):
     """
     return setup_fx_rates()

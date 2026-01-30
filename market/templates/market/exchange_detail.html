@@ -61,8 +61,8 @@
                     {% for item in stocks %}
                     <tr>
                         <td>
-                            <a href="{% url 'stock_detail' exchange.code item.stock.symbol %}" class="text-decoration-none fw-bold">
-                                {{ item.stock.symbol }}
+                            <a href="{% url 'stock_detail' exchange.code item.stock.ticker %}" class="text-decoration-none fw-bold">
+                                {{ item.stock.ticker }}
                             </a>
                         </td>
                         <td>{{ item.stock.name }}</td>
@@ -82,7 +82,7 @@
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            <a href="{% url 'stock_detail' exchange.code item.stock.symbol %}" 
+                            <a href="{% url 'stock_detail' exchange.code item.stock.ticker %}" 
                                class="btn btn-sm btn-primary">
                                 <i class="bi bi-arrow-left-right me-1"></i>Trade
                             </a>

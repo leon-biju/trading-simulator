@@ -2,7 +2,7 @@ from typing import Optional, Tuple
 
 from .models import Fx_Transfer, Transaction, Wallet
 
-from market.models import Currency, CurrencyAsset
+from market.models import Currency
 from market.services import get_fx_rate, get_fx_conversion
 from django.db import transaction
 from decimal import Decimal, ROUND_HALF_UP

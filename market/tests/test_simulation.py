@@ -5,7 +5,7 @@
 from decimal import Decimal
 import pytest
 from market.services import update_stock_prices_simulation
-from market.models import PriceCandle, Stock
+from market.models import Asset, PriceCandle
 from market.tests.factories import StockFactory, PriceCandleFactory
 
 
@@ -15,7 +15,7 @@ class TestSimulatedMarket:
         """
         Test that stock prices are updated based on the last known price.
         """
-        stock: Stock = StockFactory()
+        stock: Asset = StockFactory()
         initial_price = Decimal('100.00')
         PriceCandleFactory(asset=stock, open_price=initial_price, close_price=initial_price)
 
@@ -31,7 +31,7 @@ class TestSimulatedMarket:
         """
         Test that a new random price is generated if no history exists.
         """
-        stock: Stock = StockFactory()
+        stock: Asset = StockFactory()
 
         update_stock_prices_simulation([stock])
 
@@ -45,8 +45,8 @@ class TestSimulatedMarket:
         """
         Test that multiple stocks are updated correctly in one go.
         """
-        stock1: Stock = StockFactory()
-        stock2: Stock = StockFactory()
+        stock1: Asset = StockFactory()
+        stock2: Asset = StockFactory()
         PriceCandleFactory(asset=stock1, open_price=Decimal('150.00'), close_price=Decimal('150.00'))
         PriceCandleFactory(asset=stock2, open_price=Decimal('200.00'), close_price=Decimal('200.00'))
 

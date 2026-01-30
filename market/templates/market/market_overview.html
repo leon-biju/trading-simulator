@@ -54,7 +54,7 @@
                         {% for stock_item in item.stocks|slice:":10" %}
                         <tr>
                             <td>
-                                <strong>{{ stock_item.stock.symbol }}</strong>
+                                <strong>{{ stock_item.stock.ticker }}</strong>
                             </td>
                             <td>{{ stock_item.stock.name }}</td>
                             <td class="text-end">
@@ -66,7 +66,7 @@
                             </td>
                             <td>{{ stock_item.stock.currency.code }}</td>
                             <td class="text-end">
-                                <a href="{% url 'stock_detail' item.exchange.code stock_item.stock.symbol %}" 
+                                <a href="{% url 'stock_detail' item.exchange.code stock_item.stock.ticker %}" 
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-arrow-right"></i> Trade
                                 </a>

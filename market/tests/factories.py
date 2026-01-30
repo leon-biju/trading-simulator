@@ -31,28 +31,20 @@ class CurrencyFactory(DjangoModelFactory):
 class AssetFactory(DjangoModelFactory):
     class Meta:
         model = models.Asset
-        abstract = True
 
     asset_type = 'STOCK'
-    symbol = factory.Faker('lexify', text='????')
+    ticker = factory.Faker('lexify', text='????')
     name = factory.Faker('company')
     currency = factory.SubFactory(CurrencyFactory)
+    exchange = factory.SubFactory(ExchangeFactory)
     is_active = True
 
 class StockFactory(AssetFactory):
     class Meta:
-        model = models.Stock
-        django_get_or_create = ('symbol',)
+        model = models.Asset
+        django_get_or_create = ('ticker',)
 
     asset_type = 'STOCK'
-    exchange = factory.SubFactory(ExchangeFactory)
-
-class CurrencyAssetFactory(AssetFactory):
-    class Meta:
-        model = models.CurrencyAsset
-        django_get_or_create = ('symbol',)
-
-    asset_type = 'CURRENCY'
 
 class PriceCandleFactory(DjangoModelFactory):
     class Meta:

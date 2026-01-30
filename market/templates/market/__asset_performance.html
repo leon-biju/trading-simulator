@@ -1,16 +1,12 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{% if stock %}Stock{% else %}Currency Asset{% endif %} Performance for {% if stock %}{{ stock.symbol }}{% else %}{{ currency_asset.symbol }}{% endif %}{% endblock %}
+{% block title %}Stock Performance for {{ stock.ticker }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    {% if stock %}
-    <h2>Stock Performance: {{ stock.name }} ({{ stock.symbol }})</h2>
+    <h2>Stock Performance: {{ stock.name }} ({{ stock.ticker }})</h2>
     <p>Exchange: {{ stock.exchange.name }}</p>
-    {% else %}
-    <h2>Currency Asset Performance: {{ currency_asset.name }} ({{ currency_asset.symbol }})</h2>
-    {% endif %}
 
     <div class="d-flex justify-content-end mb-2">
         <div class="btn-group btn-group-sm" role="group" aria-label="Price history range">
@@ -23,7 +19,7 @@
     </div>
 
     <div id="chart-loader"
-         data-chart-url="{% if stock %}{% url 'stock_performance_chart_data' stock.exchange.code stock.symbol %}{% else %}{% url 'currency_asset_performance_chart_data' currency_asset.symbol %}{% endif %}"
+         data-chart-url="{% url 'stock_performance_chart_data' stock.exchange.code stock.ticker %}"
          data-default-range="month">
         <div id="assetChart"></div>
     </div>

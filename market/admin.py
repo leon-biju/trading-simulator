@@ -4,10 +4,9 @@ from django.contrib import admin
 from market.models import (
     Asset,
     Currency,
-    CurrencyAsset,
     Exchange,
+    FXRate,
     PriceCandle,
-    Stock,
 )
 
 @admin.register(Exchange)
@@ -23,25 +22,19 @@ class CurrencyAdmin(admin.ModelAdmin):
 
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
-    list_display = ("symbol", "name", "asset_type", "currency", "is_active")
+    list_display = ("ticker", "name", "asset_type", "exchange", "currency", "is_active")
     list_filter = ("asset_type", "is_active", "currency")
-    search_fields = ("symbol", "name")
+    search_fields = ("ticker", "name")
 
-@admin.register(Stock)
-class StockAdmin(admin.ModelAdmin):
-    list_display = ("name", "symbol", "exchange", "currency", "is_active")
-    list_filter = ("is_active", "exchange", "currency")
-    search_fields = ("name", "symbol")
-
-@admin.register(CurrencyAsset)
-class CurrencyAssetAdmin(admin.ModelAdmin):
-    list_display = ("name", "symbol", "currency", "is_active")
-    list_filter = ("is_active", "currency")
-    search_fields = ("name", "symbol")
+@admin.register(FXRate)
+class FXRateAdmin(admin.ModelAdmin):
+    list_display = ("base_currency", "target_currency", "rate", "last_updated")
+    list_filter = ("base_currency", "target_currency")
+    search_fields = ("base_currency__code", "target_currency__code")
 
 @admin.register(PriceCandle)
 class PriceCandleAdmin(admin.ModelAdmin):
     list_display = ("asset", "interval_minutes", "start_at", "close_price", "source")
     list_filter = ("asset__asset_type", "interval_minutes", "source")
-    search_fields = ("asset__name", "asset__symbol")
+    search_fields = ("asset__name", "asset__ticker")
     raw_id_fields = ("asset",)

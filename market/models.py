@@ -38,12 +38,11 @@ class Exchange(models.Model):
         return f"{self.name} ({self.code})"
 
 
-#TODO: Add a symbol to represent currency symbols once other migrations done
 class Currency(models.Model):
     code = models.CharField(max_length=3, unique=True)  # e.g., 'USD', 'EUR'
     name = models.CharField(max_length=50)              # e.g., 'United States Dollar'
     is_base = models.BooleanField(default=False)
-    
+    #symbol = models.CharField(max_length=5, blank=True, null=True)  # e.g., '$', '€'
     def save(self, *args, **kwargs): # type: ignore[no-untyped-def]
         if self.is_base:
             Currency.objects.filter(is_base=True).exclude(pk=self.pk).update(is_base=False)
@@ -55,21 +54,37 @@ class Currency(models.Model):
     class Meta:
         verbose_name_plural = "currencies"
 
+class FXRate(models.Model):
+    """
+    Represents the exchange rate between two currencies.
+    """
+    base_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, related_name="base_currency_rates")
+    target_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, related_name="target_currency_rates")
+    rate = models.DecimalField(max_digits=19, decimal_places=6)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("base_currency", "target_currency")
+
+    def __str__(self) -> str:
+        return f"1 {self.base_currency.code} = {self.rate} {self.target_currency.code}"
 
 class Asset(models.Model):
     """
-    Represents a tradable asset, like a stock or a currency.
+    Represents an exchange traded instrument.
     """
     ASSET_TYPE_CHOICES = [
         ('STOCK', 'Stock'),
-        ('CURRENCY', 'Currency'),
+        ('ETF', 'ETF'),
+        ('FUTURE', 'Future'),
+        ('OPTION', 'Option'),
     ]
 
     asset_type = models.CharField(max_length=10, choices=ASSET_TYPE_CHOICES)
-    #TODO: Rename to 'ticker' once other migrations are done
-    symbol = models.CharField(max_length=10, unique=True, db_index=True)
+    ticker = models.CharField(max_length=10, unique=True, db_index=True)
     name = models.CharField(max_length=100)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT) # The currency the asset is priced in. for currency assets it's the base currency
+    exchange = models.ForeignKey(Exchange, on_delete=models.PROTECT)
     
     is_active = models.BooleanField(default=True) # To enable/disable trading for an asset
 
@@ -84,19 +99,8 @@ class Asset(models.Model):
 
         return None
 
-    
-class Stock(Asset):
-    exchange = models.ForeignKey(Exchange, on_delete=models.CASCADE, related_name='stocks')
-
     def __str__(self) -> str:
-        return f"{self.name} ({self.symbol}) on {self.exchange.code}"
-
-
-class CurrencyAsset(Asset):
-
-    def __str__(self) -> str:
-        return f"{self.name} ({self.symbol})"
-
+        return f"{self.ticker} on {self.exchange.code}"
 
 class PriceCandle(models.Model):
     """

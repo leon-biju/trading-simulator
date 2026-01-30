@@ -11,7 +11,7 @@ from config.constants import (
     SIMULATION_MU,
     SIMULATION_SIGMA,
 )
-from market.models import Asset, Stock, PriceCandle
+from market.models import Asset, PriceCandle
 from market.services import get_asset_timezone
 
 
@@ -66,7 +66,7 @@ class Command(BaseCommand):
         batch_size = 4000
 
         for asset in assets:
-            tz = get_asset_timezone(asset) # type: ignore[arg-type] # Asset can only be Stock or CurrencyAsset
+            tz = get_asset_timezone(asset)
             latest_candle = PriceCandle.objects.filter(
                 asset=asset,
                 interval_minutes=1440,
@@ -78,19 +78,15 @@ class Command(BaseCommand):
 
             day = start_date
             while day <= now.date():
-                if isinstance(asset, Stock):
-                    if day.weekday() >= 5:
-                        day += datetime.timedelta(days=1)
-                        continue
-                    open_time = asset.exchange.open_time
-                    close_time = asset.exchange.close_time
-                    open_dt = datetime.datetime.combine(day, open_time, tzinfo=tz)
-                    close_dt = datetime.datetime.combine(day, close_time, tzinfo=tz)
-                    if close_dt <= open_dt:
-                        close_dt += datetime.timedelta(days=1)
-                else:
-                    open_dt = datetime.datetime.combine(day, datetime.time(0, 0), tzinfo=tz)
-                    close_dt = datetime.datetime.combine(day, datetime.time(23, 59), tzinfo=tz)
+                if day.weekday() >= 5:
+                    day += datetime.timedelta(days=1)
+                    continue
+                open_time = asset.exchange.open_time
+                close_time = asset.exchange.close_time
+                open_dt = datetime.datetime.combine(day, open_time, tzinfo=tz)
+                close_dt = datetime.datetime.combine(day, close_time, tzinfo=tz)
+                if close_dt <= open_dt:
+                    close_dt += datetime.timedelta(days=1)
 
                 if day >= intraday_start_date:
                     (
@@ -280,7 +276,5 @@ class Command(BaseCommand):
         return current_price, daily_candle, hourly_candles, intraday_candles
 
     def _estimate_volume(self, asset: Asset, *, scale: int) -> int:
-        if isinstance(asset, Stock):
-            base = 100_000 if scale >= 1440 else 10_000
-            return random.randint(int(base * 0.5), int(base * 1.5))
-        return random.randint(250_000, 1_250_000)
+        base = 100_000 if scale >= 1440 else 10_000
+        return random.randint(int(base * 0.5), int(base * 1.5))

@@ -78,7 +78,7 @@
                     {% for item in positions %}
                     <tr>
                         <td>
-                            <strong>{{ item.position.asset.symbol }}</strong>
+                            <strong>{{ item.position.asset.ticker }}</strong>
                             <br><small class="text-muted">{{ item.position.asset.name }}</small>
                         </td>
                         <td class="text-end">
@@ -122,14 +122,12 @@
                             </span>
                         </td>
                         <td>
-                            {% with stock=item.position.asset.stock %}
-                            {% if stock %}
-                                <a href="{% url 'stock_detail' stock.exchange.code stock.symbol %}" 
+                            {% if item.position.asset.asset_type == "STOCK" %}
+                                <a href="{% url 'stock_detail' item.position.asset.exchange.code item.position.asset.ticker %}" 
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-graph-up"></i> Trade
                                 </a>
                             {% endif %}
-                            {% endwith %}
                         </td>
                     </tr>
                     {% endfor %}

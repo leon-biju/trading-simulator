@@ -15,7 +15,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from trading.models import Order, OrderSide, OrderStatus, OrderType, Position, Trade
-from market.models import Asset, Stock
+from market.models import Asset
 from wallets.models import Wallet, Transaction
 
 
@@ -34,11 +34,11 @@ def round_to_eight_dp(value: Decimal) -> Decimal:
 
 
 
-def _can_execute_immediately(stock: Stock) -> bool:
-    """Check if a stock order can be executed immediately."""
-    if not stock.is_active:
+def _can_execute_immediately(asset: Asset) -> bool:
+    """Check if an asset order can be executed immediately."""
+    if not asset.is_active:
         return False
-    if not stock.exchange.is_currently_open():
+    if not asset.exchange.is_currently_open():
         return False
     return True
 
@@ -129,7 +129,7 @@ def _place_buy_order(
     else:
         reserve_price = asset.get_latest_price()
         if reserve_price is None:
-            raise LookupError(f"Price not available for {asset.symbol}")
+            raise LookupError(f"Price not available for {asset.ticker}")
     
     assert reserve_price is not None  # Type narrowing
     reserved_amount = round_to_two_dp(quantity * reserve_price)
@@ -162,13 +162,7 @@ def _place_buy_order(
             )
             
             # Check if we can execute immediately
-            can_execute = False
-            try:
-                stock = Stock.objects.get(pk=asset.pk)
-                can_execute = _can_execute_immediately(stock)
-            except Stock.DoesNotExist:
-                # Not a stock (e.g., currency) - can always trade if active
-                can_execute = asset.is_active
+            can_execute = _can_execute_immediately(asset)
             
             if can_execute:
                 # For LIMIT orders, check price condition
@@ -205,7 +199,7 @@ def _place_sell_order(
             )
             
             if position.available_quantity < quantity:
-                raise ValueError(f"Insufficient holdings of {asset.symbol}")
+                raise ValueError(f"Insufficient holdings of {asset.ticker}")
             
             # Also lock the wallet for potential execution
             wallet = Wallet.objects.select_for_update().get(
@@ -230,13 +224,7 @@ def _place_sell_order(
             )
             
             # Check if we can execute immediately
-            can_execute = False
-            try:
-                stock = Stock.objects.get(pk=asset.pk)
-                can_execute = _can_execute_immediately(stock)
-            except Stock.DoesNotExist:
-                # Not a stock (e.g., currency) - can always trade if active
-                can_execute = asset.is_active
+            can_execute = _can_execute_immediately(asset)
             
             if can_execute:
                 # For LIMIT orders, check price condition
@@ -247,7 +235,7 @@ def _place_sell_order(
             return order
             
     except Position.DoesNotExist:
-        raise LookupError(f"No position found for {asset.symbol}")
+        raise LookupError(f"No position found for {asset.ticker}")
     except Wallet.DoesNotExist:
         raise LookupError(f"Wallet not found for currency {asset.currency.code}")
 
@@ -281,7 +269,7 @@ def _execute_order(
     # Get execution price
     execution_price = order.asset.get_latest_price()
     if execution_price is None:
-        raise LookupError(f"Price not available for {order.asset.symbol}")
+        raise LookupError(f"Price not available for {order.asset.ticker}")
     total_value = round_to_two_dp(order.quantity * execution_price)
     fee = round_to_two_dp(total_value * TRADING_FEE_PERCENTAGE)
     
@@ -328,7 +316,7 @@ def _execute_buy_order(
         amount=-total_cost,
         balance_after=wallet.balance,
         source=Transaction.Source.BUY,
-        description=f"BUY {order.quantity} {order.asset.symbol} @ {execution_price} (fee: {fee})"
+        description=f"BUY {order.quantity} {order.asset.ticker} @ {execution_price} (fee: {fee})"
     )
     
     # Update or create position
@@ -412,7 +400,7 @@ def _execute_sell_order(
         amount=net_proceeds,
         balance_after=wallet.balance,
         source=Transaction.Source.SELL,
-        description=f"SELL {order.quantity} {order.asset.symbol} @ {execution_price} (fee: {fee})"
+        description=f"SELL {order.quantity} {order.asset.ticker} @ {execution_price} (fee: {fee})"
     )
     
     # Update order status
@@ -512,14 +500,8 @@ def execute_pending_order(order_id: int) -> Optional[Trade]:
             
             # Check if market is open for stocks
             asset = order.asset
-            try:
-                stock = Stock.objects.get(pk=asset.pk)
-                if not _can_execute_immediately(stock):
-                    return None
-            except Stock.DoesNotExist:
-                # Not a stock - check if asset is active
-                if not asset.is_active:
-                    return None
+            if not _can_execute_immediately(asset):
+                return None
             
             # Check price conditions for LIMIT orders
             current_price = asset.get_latest_price()
@@ -560,7 +542,7 @@ def get_pending_orders_for_exchange(exchange_code: str) -> list[Order]:
     return list(
         Order.objects.filter(
             status=OrderStatus.PENDING,
-            asset__stock__exchange__code=exchange_code,
+            asset__exchange__code=exchange_code,
         ).select_related('asset', 'user').order_by('created_at')
     )
 

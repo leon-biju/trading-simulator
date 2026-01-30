@@ -9,7 +9,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from .models import Currency, Stock, CurrencyAsset, Exchange, PriceCandle
+from .models import Asset, Currency, Exchange, FXRate, PriceCandle
 from config.constants import (
     SIMULATION_INITIAL_PRICE_RANGE,
     SIMULATION_MU,
@@ -20,13 +20,11 @@ from config.constants import (
 TIME_STEP_IN_YEARS = STOCKS_UPDATE_INTERVAL_SECONDS / (365 * 24 * 60 * 60)
 
 
-def get_asset_timezone(asset: Stock | CurrencyAsset) -> datetime.tzinfo:
-    if isinstance(asset, Stock):
-        try:
-            return ZoneInfo(asset.exchange.timezone)
-        except Exception:
-            return datetime.timezone.utc
-    return datetime.timezone.utc
+def get_asset_timezone(asset: Asset) -> datetime.tzinfo:
+    try:
+        return ZoneInfo(asset.exchange.timezone)
+    except Exception:
+        return datetime.timezone.utc
 
 
 def _to_local_date(ts: datetime.datetime, tz: datetime.tzinfo) -> datetime.date:
@@ -52,7 +50,7 @@ def _floor_time_to_interval(
 
 
 def get_candles_for_range(
-    asset: Stock | CurrencyAsset,
+    asset: Asset,
     *,
     start_at: datetime.datetime,
     end_at: datetime.datetime,
@@ -78,7 +76,7 @@ def get_candles_for_range(
 
 
 def _get_bucket_start(
-    asset: Stock | CurrencyAsset,
+    asset: Asset,
     *,
     ts: datetime.datetime,
     interval_minutes: int,
@@ -97,7 +95,7 @@ def _get_bucket_start(
 
 
 def upsert_price_candle(
-    asset: Stock | CurrencyAsset,
+    asset: Asset,
     *,
     ts: datetime.datetime,
     price: Decimal,
@@ -139,33 +137,19 @@ def round_to_two_dp(value: Decimal) -> Decimal:
 
 
 @transaction.atomic
-def create_stock_asset(symbol: str, name: str, exchange: Exchange, currency: Currency) -> Stock:
-    stock = Stock.objects.create(
+def create_stock_asset(symbol: str, name: str, exchange: Exchange, currency: Currency) -> Asset:
+    stock = Asset.objects.create(
         asset_type='STOCK',
-        symbol=symbol,
+        ticker=symbol,
         name=name,
         currency=currency,
-        exchange=exchange
+        exchange=exchange,
     )
     return stock
 
 
 @transaction.atomic
-def create_currency_asset(symbol: str, name: str) -> CurrencyAsset:
-    #All currency assets are priced in the base currency.
-
-    base_currency = Currency.objects.get(is_base=True)
-    currency_asset = CurrencyAsset.objects.create(
-        asset_type='CURRENCY',
-        symbol=symbol,
-        name=name,
-        currency=base_currency
-    )
-    return currency_asset
-
-
-@transaction.atomic
-def update_stock_prices_simulation(stocks: Iterable[Stock]) -> None:
+def update_stock_prices_simulation(stocks: Iterable[Asset]) -> None:
     # Simulate price updates for the given stocks
 
     for stock in stocks:
@@ -194,79 +178,80 @@ def update_stock_prices_simulation(stocks: Iterable[Stock]) -> None:
 
 @transaction.atomic
 def update_currency_prices(currency_update_dict: dict[str, Any]) -> int:
-    quotes = currency_update_dict.get('quotes', {})    
+    quotes = currency_update_dict.get('quotes', {})
     timestamp = currency_update_dict.get('timestamp')
     if timestamp is None:
         raise ValueError("Missing timestamp in payload")
-    
 
     base_currency = Currency.objects.get(is_base=True)
     base_currency_code = base_currency.code
 
-    ts = datetime.datetime.fromtimestamp(
-        float(timestamp), tz=datetime.timezone.utc
-    )
-
     updated = 0
 
-    for currency_asset in CurrencyAsset.objects.filter(is_active=True):
-        quote_key = f"{base_currency_code}{currency_asset.symbol}"
+    for currency_code in quotes.keys():
+        quote_key = f"{base_currency_code}{currency_code}"
         price_str = quotes.get(quote_key)
         if price_str is None:
             continue
 
         try:
-            price = Decimal(price_str).quantize(Decimal("0.0001"))
+            price = Decimal(price_str).quantize(Decimal("0.000001"))
         except Exception as e:
             raise ValueError(f"Invalid price for {quote_key}: {price_str}") from e
-        
-        for interval in (5, 60, 1440):
-            upsert_price_candle(
-                currency_asset,
-                ts=ts,
-                price=price,
-                interval_minutes=interval,
-                source="LIVE",
-            )
+
+        FXRate.objects.update_or_create(
+            base_currency=base_currency,
+            target_currency=Currency.objects.get(code=currency_code),
+            defaults={"rate": price},
+        )
         updated += 1
 
-
-    # also add a price history for the base currency at price 1.0
-    base_currency_asset = CurrencyAsset.objects.get(symbol=base_currency_code)
-    for interval in (5, 60, 1440):
-        upsert_price_candle(
-            base_currency_asset,
-            ts=ts,
-            price=Decimal("1.0000"),
-            interval_minutes=interval,
-            source="LIVE",
-        )
-
+    # Also update the base currency rate to itself
+    FXRate.objects.update_or_create(
+        base_currency=base_currency,
+        target_currency=base_currency,
+        defaults={"rate": Decimal("1.0")},
+    )
     updated += 1
 
     if updated == 0:
-        raise ValueError("No prices created from payload")
+        raise ValueError("No rates created from payload")
 
     return updated
 
 
 def get_fx_rate(from_currency_code: str, to_currency_code: str) -> Decimal | None:
-    # Get the latest FX rate between two currencies
+    if from_currency_code == to_currency_code:
+        return Decimal("1.0")
+
     try:
-        from_currencyasset = CurrencyAsset.objects.get(symbol=from_currency_code)
-        to_currencyasset = CurrencyAsset.objects.get(symbol=to_currency_code)
-    except CurrencyAsset.DoesNotExist:
-        return None
+        from_currency = Currency.objects.get(code=from_currency_code)
+    except Currency.DoesNotExist:
+        raise LookupError(f"Currency not found: {from_currency_code}")
+    
+    try:
+        to_currency = Currency.objects.get(code=to_currency_code)
+    except Currency.DoesNotExist:
+        raise LookupError(f"Currency not found: {to_currency_code}")
 
-    from_rate = from_currencyasset.get_latest_price()
-    to_rate = to_currencyasset.get_latest_price()
+    from_rate = FXRate.objects.filter(
+        base_currency__is_base=True,
+        target_currency=from_currency,
+    ).first()
 
-    if from_rate is None or to_rate is None:
-        return None
+    to_rate = FXRate.objects.filter(
+        base_currency__is_base=True,
+        target_currency=to_currency,
+    ).first()
 
-    exchange_rate = to_rate / from_rate
-    return exchange_rate
+    if from_rate is None:
+        raise LookupError(f"FX rate not found for currency: {from_currency_code}")
+    if to_rate is None:
+        raise LookupError(f"FX rate not found for currency: {to_currency_code}")
 
+    return to_rate.rate / from_rate.rate
+
+    
 def get_fx_conversion(
     from_currency_code: str,
     to_currency_code: str,

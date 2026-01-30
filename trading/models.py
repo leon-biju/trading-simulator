@@ -88,7 +88,7 @@ class Order(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.get_side_display()} {self.quantity} {self.asset.symbol} - {self.get_status_display()}"
+        return f"{self.get_side_display()} {self.quantity} {self.asset.ticker} - {self.get_status_display()}"
 
     @property
     def is_pending(self) -> bool:
@@ -160,7 +160,7 @@ class Position(models.Model):
         verbose_name_plural = 'Positions'
 
     def __str__(self) -> str:
-        return f"{self.user.email}: {self.quantity} {self.asset.symbol} @ {self.average_cost}"
+        return f"{self.user.email}: {self.quantity} {self.asset.ticker} @ {self.average_cost}"
 
     @property
     def available_quantity(self) -> Decimal:
@@ -280,7 +280,7 @@ class Trade(models.Model):
         verbose_name_plural = 'Trades'
 
     def __str__(self) -> str:
-        return f"{self.get_side_display()} {self.quantity} {self.asset.symbol} @ {self.price}"
+        return f"{self.get_side_display()} {self.quantity} {self.asset.ticker} @ {self.price}"
 
     @property
     def total_value(self) -> Decimal:
@@ -351,5 +351,5 @@ class PositionSnapshot(models.Model):
         verbose_name_plural = 'Position Snapshots'
 
     def __str__(self) -> str:
-        return f"{self.position.asset.symbol}: {self.quantity} @ {self.snapshot_at.strftime('%Y-%m-%d %H:%M')}"
+        return f"{self.position.asset.ticker}: {self.quantity} @ {self.snapshot_at.strftime('%Y-%m-%d %H:%M')}"
 
