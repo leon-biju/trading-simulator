@@ -5,6 +5,12 @@ services:
     volumes: [ "pgdata:/var/lib/postgresql/data" ]
     ports: [ "5432:5432" ]
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    env_file: .env
+    ports: [ "8080:80" ]
+    depends_on: [ db ]
+
   redis:
     image: "redis:7-alpine"
     ports: [ "6379:6379" ]
