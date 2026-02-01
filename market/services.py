@@ -6,7 +6,6 @@ from math import exp, sqrt
 from collections.abc import Iterable
 from zoneinfo import ZoneInfo
 from django.db import transaction
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from .models import Asset, Currency, Exchange, FXRate, PriceCandle
@@ -85,10 +84,8 @@ def _get_bucket_start(
     local_ts = ts
     if timezone.is_naive(local_ts):
         local_ts = timezone.make_aware(local_ts, datetime.timezone.utc)
-    try:
-        local_ts = local_ts.astimezone(tz)
-    except Exception:
-        pass
+    
+    local_ts = local_ts.astimezone(tz)
 
     bucket_start_local = _floor_time_to_interval(local_ts, interval_minutes=interval_minutes)
     return bucket_start_local.astimezone(datetime.timezone.utc)

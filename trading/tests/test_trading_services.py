@@ -20,8 +20,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from accounts.models import CustomUser
-from market.models import Asset, Exchange, PriceCandle
-from trading.models import Order, OrderSide, OrderType, OrderStatus, Position, Trade
+from market.models import Exchange, PriceCandle
+from trading.models import OrderSide, OrderType, OrderStatus, Position, Trade
 from trading.services import (
     place_order,
     cancel_order,
@@ -664,7 +664,7 @@ class TestPositionManagement:
         
         # Buy more shares at the new price
         with patch.object(Exchange, 'is_currently_open', return_value=True):
-            order = place_order(
+            _ = place_order(
                 user_id=user.id,
                 asset=stock,
                 side=OrderSide.BUY,
@@ -696,14 +696,14 @@ class TestQueryFunctions:
         
         # Create some pending orders
         with patch.object(Exchange, 'is_currently_open', return_value=False):
-            order1 = place_order(
+            _ = place_order(
                 user_id=user.id,
                 asset=stock,
                 side=OrderSide.BUY,
                 quantity=Decimal('5'),
                 order_type=OrderType.MARKET,
             )
-            order2 = place_order(
+            _ = place_order(
                 user_id=user.id,
                 asset=stock,
                 quantity=Decimal('10'),

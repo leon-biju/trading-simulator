@@ -91,18 +91,13 @@ def asset_detail_view(request: HttpRequest, exchange_code: str, asset_symbol: st
     current_price = asset.get_latest_price()
     
     # Get user's wallet for this currency
-    wallet = None
-    try:
-        wallet = Wallet.objects.get(user_id=request.user.id, currency=asset.currency)
-    except Wallet.DoesNotExist:
-        pass
+    wallet = get_object_or_404(Wallet, user_id=request.user.id, currency=asset.currency)
     
     # Get user's position for this stock
-    position = None
     try:
         position = Position.objects.get(user_id=request.user.id, asset=asset)
     except Position.DoesNotExist:
-        pass
+        position = None
     
     # Get user's pending orders for this stock
     pending_orders = Order.objects.filter(

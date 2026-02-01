@@ -1,5 +1,4 @@
 from typing import Any
-import pytest
 from decimal import Decimal
 
 from market.models import Currency, FXRate

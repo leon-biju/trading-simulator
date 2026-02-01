@@ -1,4 +1,4 @@
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -10,10 +10,8 @@ from trading.forms import PlaceOrderForm
 from trading.services import (
     place_order,
     cancel_order,
-    get_user_pending_orders,
     get_user_positions,
 )
-from trading.models import OrderSide, OrderType
 from market.models import Asset
 from wallets.models import Wallet
 

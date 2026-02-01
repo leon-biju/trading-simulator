@@ -1,5 +1,5 @@
 from celery import shared_task
-import logging
+#import logging
 import datetime
 from django.utils import timezone
 

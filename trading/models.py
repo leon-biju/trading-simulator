@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 
 from market.models import Asset, Currency
-from wallets.models import Transaction, Wallet
+from wallets.models import Transaction
 from config import settings
 
 class OrderType(models.TextChoices):

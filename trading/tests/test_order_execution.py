@@ -16,8 +16,8 @@ from decimal import Decimal
 from django.db.models import QuerySet
 from django.contrib.auth import get_user_model
 
-from market.models import Asset, Exchange
-from trading.models import Order, OrderSide, OrderStatus, OrderType, Position, Trade
+from market.models import Exchange
+from trading.models import OrderSide, OrderStatus, OrderType, Position, Trade
 from trading.services import (
     place_order,
     cancel_order,
@@ -433,6 +433,8 @@ class TestPendingOrderExecution:
         # Verify position exists
         position = Position.objects.get(user=user, asset=stock)
         assert position.quantity == Decimal('10')
+        usd_wallet.refresh_from_db()
+        assert usd_wallet.balance < initial_balance  # Funds deducted
 
     @pytest.mark.django_db
     def test_execute_pending_sell_order(
