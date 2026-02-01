@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Stock Performance for {{ stock.ticker }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Stock Performance: {{ stock.name }} ({{ stock.ticker }})</h2>
+    <p>Exchange: {{ stock.exchange.name }}</p>
+
+    <div class="d-flex justify-content-end mb-2">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Price history range">
+            <button type="button" class="btn btn-outline-primary" data-range="hour">1H</button>
+            <button type="button" class="btn btn-outline-primary" data-range="day">1D</button>
+            <button type="button" class="btn btn-outline-primary" data-range="month">1M</button>
+            <button type="button" class="btn btn-outline-primary" data-range="6m">6M</button>
+            <button type="button" class="btn btn-outline-primary" data-range="year">1Y</button>
+        </div>
+    </div>
+
+    <div id="chart-loader"
+         data-chart-url="{% url 'stock_performance_chart_data' stock.exchange.code stock.ticker %}"
+         data-default-range="month">
+        <div id="assetChart"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+<script src="{% static 'market/js/asset_performance.js' %}"></script>
+{% endblock %}

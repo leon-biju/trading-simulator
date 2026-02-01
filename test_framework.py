@@ -1,8 +1,10 @@
 from decimal import Decimal
-from apps.market.models import Currency, CurrencyAsset, PriceHistory
+from typing import Any
+from market.models import Asset, Currency, FXRate, PriceCandle, Exchange
+import datetime
 
 
-def setup_currencies():
+def setup_currencies() -> dict[str, Currency]:
     """
     Create standard currencies for testing.
     Returns a dict mapping currency codes to Currency instances.
@@ -27,34 +29,7 @@ def setup_currencies():
     return currencies
 
 
-def setup_currency_assets():
-    """
-    Create currency assets for all existing currencies.
-    Returns a dict mapping currency codes to CurrencyAsset instances.
-    """
-    base_currency = Currency.objects.filter(is_base=True).first()
-    if not base_currency:
-        raise ValueError("No base currency found. Run setup_currencies() first.")
-    
-    currencies = Currency.objects.all()
-    currency_assets = {}
-    
-    for currency in currencies:
-        asset, _ = CurrencyAsset.objects.get_or_create(
-            symbol=currency.code,
-            defaults={
-                "asset_type": "CURRENCY",
-                "name": currency.name,
-                "currency": base_currency,
-                "is_active": True,
-            },
-        )
-        currency_assets[currency.code] = asset
-    
-    return currency_assets
-
-
-def setup_fx_rates():
+def setup_fx_rates() -> dict[str, Decimal]:
     """
     Add dummy FX rates for testing.
     Rates are relative to GBP (base currency).
@@ -66,41 +41,104 @@ def setup_fx_rates():
         "GBP": Decimal("1.0"),   # 1 GBP = 1 GBP
     }
     
-    currency_assets = CurrencyAsset.objects.filter(symbol__in=DUMMY_RATES.keys())
-    
-    price_history_entries = []
-    for asset in currency_assets:
-        # Check if price already exists to avoid duplicates
-        existing = PriceHistory.objects.filter(asset=asset).first()
-        if not existing:
-            entry = PriceHistory(
-                asset=asset,
-                price=DUMMY_RATES[asset.symbol],
-                source='SIMULATION',
-            )
-            price_history_entries.append(entry)
-    
-    if price_history_entries:
-        PriceHistory.objects.bulk_create(price_history_entries)
+    base_currency = Currency.objects.get(is_base=True)
+    for code, rate in DUMMY_RATES.items():
+        currency = Currency.objects.get(code=code)
+        FXRate.objects.update_or_create(
+            base_currency=base_currency,
+            target_currency=currency,
+            defaults={"rate": rate},
+        )
     
     return DUMMY_RATES
 
+def setup_stock_assets() -> dict[str, Any]:
+    """
+    Create standard stock assets for testing.
+    Returns a dict mapping stock symbols to Asset instances.
+    (Since behaviour of trading doesn't depend on asset type, we focus on stocks here.)
+    """
 
-def setup_complete_market_data():
+    open_exchange, _ = Exchange.objects.get_or_create(
+        code="OpenEx",
+        defaults={
+            "name": "Open Exchange",
+            "timezone": "Europe/London",
+            "open_time": datetime.time(0, 0),
+            "close_time": datetime.time(23, 59),
+        },
+
+    )
+
+    closed_exchange, _ = Exchange.objects.get_or_create(
+        code="ClosedEx",
+        defaults={
+            "name": "Closed Exchange",
+            "timezone": "Europe/London",
+            "open_time": datetime.time(23, 58),
+            "close_time": datetime.time(23, 59),
+        },
+    )
+
+    stocks_data = [
+        {"symbol": "AAPL", "name": "Apple Inc.", "exchange": open_exchange, "is_active": True},
+        {"symbol": "GOOGL", "name": "Alphabet Inc.", "exchange": open_exchange, "is_active": False},
+        {"symbol": "MSFT", "name": "Microsoft Corporation", "exchange": closed_exchange, "is_active": True},
+    ]
+
+    stocks = {}
+    stock_prices = {
+        "AAPL": Decimal("150.00"),
+        "GOOGL": Decimal("140.00"),
+        "MSFT": Decimal("400.00"),
+    }
+    
+    for stock_data in stocks_data:
+        stock, created = Asset.objects.get_or_create(
+            ticker=stock_data["symbol"],
+            defaults={
+                "name": stock_data["name"],
+                "exchange": stock_data["exchange"],
+                "asset_type": "STOCK",
+                "is_active": stock_data["is_active"],
+                "currency": Currency.objects.get(code="USD"),  # Assuming USD
+            },
+        )
+
+        stocks[stock.ticker] = stock
+        
+        # Always ensure price history exists for each stock
+        # Delete old price history and create fresh to avoid stale data issues
+        PriceCandle.objects.filter(asset=stock).delete()
+        price = stock_prices.get(stock.ticker, Decimal("100.00"))
+        PriceCandle.objects.create(
+            asset=stock,
+            interval_minutes=1440,
+            start_at=datetime.datetime.now(datetime.timezone.utc),
+            open_price=price,
+            high_price=price,
+            low_price=price,
+            close_price=price,
+            volume=0,
+            source="SIMULATION",
+        )
+
+    
+    return stocks
+
+def setup_complete_market_data() -> dict[str, dict[str, Any]]:
     """
     Convenience function to set up all market data in one call:
     - Currencies
-    - Currency assets
     - FX rates
     
     Returns a dict with all created objects.
     """
     currencies = setup_currencies()
-    currency_assets = setup_currency_assets()
     fx_rates = setup_fx_rates()
     
     return {
         'currencies': currencies,
-        'currency_assets': currency_assets,
         'fx_rates': fx_rates,
+        'stocks': setup_stock_assets(),
     }

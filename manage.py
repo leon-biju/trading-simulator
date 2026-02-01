@@ -3,8 +3,11 @@
 import os
 import sys
 
+import django_stubs_ext
+django_stubs_ext.monkeypatch()
 
-def main():
+
+def main() -> None:
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
     try:

@@ -1,0 +1,70 @@
+from decimal import Decimal
+
+from django.conf import settings
+from django.db import models
+from config.constants import CURRENCY_SYMBOLS
+from market.models import Currency
+
+
+class Wallet(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
+    pending_balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
+
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # One user gets one wallet for a given currency
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'currency'], name='unique_user_currency_wallet')
+        ]
+
+    @property
+    def symbol(self) -> str:
+        return CURRENCY_SYMBOLS.get(self.currency.code) or self.currency.code
+
+    @property
+    def available_balance(self) -> Decimal:
+        """Available balance is balance minus funds reserved for pending orders."""
+        return self.balance - self.pending_balance
+    
+    def __str__(self) -> str:
+        return f"Wallet of {self.user.username} - Balance: {self.balance} {self.currency.code} (Available: {self.available_balance})"
+
+
+class Transaction(models.Model):
+    class Source(models.TextChoices):
+        DEPOSIT = 'DEPOSIT', 'DEPOSIT'
+        WITHDRAWAL = 'WITHDRAWAL', 'WITHDRAWAL'
+        BUY = 'BUY', 'BUY'
+        SELL = 'SELL', 'SELL'
+        FX_TRANSFER = 'FX_TRANSFER', 'FX_TRANSFER'
+
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions')
+    amount = models.DecimalField(max_digits=20, decimal_places=2) # Positive for deposits/buys, negative for withdrawals/sells
+    balance_after = models.DecimalField(max_digits=20, decimal_places=2)
+    source = models.CharField(max_length=16, choices=Source.choices)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self) -> str:
+        return f"{self.wallet.user.username}:  {self.amount} {self.wallet.currency} ({self.source}) on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+    
+
+
+# Transfer between wallets of same user but different currencies
+class Fx_Transfer(models.Model):
+    from_wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='fx_transfers_from')
+    to_wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='fx_transfers_to')
+    from_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    to_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    exchange_rate = models.DecimalField(max_digits=20, decimal_places=6)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"FX Transfer: [{self.from_wallet.currency}] to [{self.to_wallet.currency}] - {self.from_wallet.symbol}{self.to_amount} at {self.exchange_rate} on {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"

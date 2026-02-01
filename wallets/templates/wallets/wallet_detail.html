@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load static %}
+{% load mathfilters %}
+
+{% block title %}{{ wallet.currency.code }} Wallet{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">{{ wallet.currency.code }} Wallet</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Wallet Details
+        </div>
+        <div class="card-body">
+            <p>Balance: <strong>{{ wallet.symbol }}{{ wallet.balance|intcomma }}</strong></p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Add Funds
+        </div>
+        <div class="card-body">
+    <form 
+        method="post" 
+        id="fx-form"
+        data-fx-rates="{{ fx_rates }}"
+        data-to-currency="{{ wallet.currency.code }}"
+    >
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="id_from_wallet_currency">From Wallet</label>
+            <select name="from_wallet_currency" id="id_from_wallet_currency" class="form-control">
+                {% for w in user_other_wallets %}
+                    <option value="{{ w.currency.code }}">{{ w.currency.code }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="id_to_amount">Amount to Add ({{ wallet.currency.code }})</label>
+            <div class="input-group">
+                <span class="input-group-text">{{ wallet.symbol }}</span>
+                <input 
+                    type="number" 
+                    name="to_amount" 
+                    id="id_to_amount" 
+                    step="0.01" 
+                    class="form-control" 
+                    required
+                >
+            </div>
+            <small class="form-text text-muted">
+                You will be charged: <span id="fx-from-symbol">—</span><span id="converted-amount">0.00</span>
+            </small>
+            <small class="form-text text-muted float-end" id="exchange-rate" aria-live="polite">
+                Exchange rate: 1 {{ wallet.currency.code }} = <span id="fx-rate">—</span><span id="fx-from-currency">—</span>
+                <br>
+                <small class="text-muted">Last updated: {{ fx_last_updated }}</small>
+            </small>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Transfer</button>
+    </form>
+</div>
+</div>
+
+<div class="card">
+<div class="card-header">
+    Transaction History
+</div>
+<div class="card-body">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Source</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th>Balance After</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tx in transactions %}
+            <tr>
+                <td>{{ tx.timestamp|date:"Y-m-d H:i" }}</td>
+                <td>{{ tx.get_source_display }}</td>
+                {% if tx.amount < 0 %}
+                    <td class="text-danger">-{{ wallet.symbol }}{{ tx.amount|abs|intcomma }}</td>
+                {% else %}
+                    <td class="text-success">{{ wallet.symbol }}{{ tx.amount|intcomma }}</td>
+                {% endif %}
+                <td>{{ tx.description }}</td>
+                <td>{{ wallet.symbol }}{{ tx.balance_after|intcomma }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">No transactions yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'wallets/js/fx_calculator.js' %}"></script>
+<script src="{% static 'wallets/js/input_validation.js' %}"></script>
+{% endblock %}

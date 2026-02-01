@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Order History{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-clock-history me-2"></i>Order History</h2>
+        <div>
+            <a href="{% url 'trade_history' %}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left-right me-1"></i>Trade History
+            </a>
+            <a href="{% url 'portfolio' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-briefcase me-1"></i>Portfolio
+            </a>
+        </div>
+    </div>
+
+    {% if orders %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Asset</th>
+                        <th>Side</th>
+                        <th>Type</th>
+                        <th class="text-end">Quantity</th>
+                        <th class="text-end">Limit Price</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>
+                            <small class="text-muted">{{ order.created_at|date:"M d, Y H:i" }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ order.asset.ticker }}</strong>
+                            <br><small class="text-muted">{{ order.asset.name }}</small>
+                        </td>
+                        <td>
+                            {% if order.side == 'BUY' %}
+                                <span class="badge bg-success">BUY</span>
+                            {% else %}
+                                <span class="badge bg-danger">SELL</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ order.order_type }}</span>
+                        </td>
+                        <td class="text-end">{{ order.quantity|floatformat:4 }}</td>
+                        <td class="text-end">
+                            {% if order.limit_price %}
+                                {{ order.asset.currency.code }} {{ order.limit_price|floatformat:2|intcomma }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.status == 'PENDING' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif order.status == 'FILLED' %}
+                                <span class="badge bg-success">Filled</span>
+                            {% elif order.status == 'CANCELLED' %}
+                                <span class="badge bg-secondary">Cancelled</span>
+                            {% elif order.status == 'REJECTED' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.status == 'PENDING' %}
+                                <form action="{% url 'cancel_order' order.id %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                            onclick="return confirm('Cancel this order?')">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        You haven't placed any orders yet.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
