@@ -186,9 +186,9 @@ def update_currency_prices(currency_update_dict: dict[str, Any]) -> int:
     base_currency = Currency.objects.get(is_base=True)
     base_currency_code = base_currency.code
 
+    currency_codes = Currency.objects.exclude(is_base=True).values_list('code', flat=True)
     updated = 0
-
-    for currency_code in quotes.keys():
+    for currency_code in currency_codes:
         quote_key = f"{base_currency_code}{currency_code}"
         price_str = quotes.get(quote_key)
         if price_str is None:
@@ -205,17 +205,6 @@ def update_currency_prices(currency_update_dict: dict[str, Any]) -> int:
             defaults={"rate": price},
         )
         updated += 1
-
-    # Also update the base currency rate to itself
-    FXRate.objects.update_or_create(
-        base_currency=base_currency,
-        target_currency=base_currency,
-        defaults={"rate": Decimal("1.0")},
-    )
-    updated += 1
-
-    if updated == 0:
-        raise ValueError("No rates created from payload")
 
     return updated
 

@@ -43,8 +43,6 @@ def setup_fx_rates() -> dict[str, Decimal]:
     
     base_currency = Currency.objects.get(is_base=True)
     for code, rate in DUMMY_RATES.items():
-        if code == base_currency.code:
-            continue
         currency = Currency.objects.get(code=code)
         FXRate.objects.update_or_create(
             base_currency=base_currency,

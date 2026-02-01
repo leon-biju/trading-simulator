@@ -42,8 +42,9 @@ def test_update_currency_prices_no_quotes(market_data: dict[str, dict[str, Any]]
         'quotes': {}
     }
 
-    with pytest.raises(ValueError, match="No rates created"):
-        update_currency_prices(dummy_api_response)
+    currencies_updated = update_currency_prices(dummy_api_response)
+
+    assert currencies_updated == 0
 
 
 def test_update_currency_prices_partial_quotes(market_data: dict[str, dict[str, Any]]) -> None:
