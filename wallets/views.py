@@ -61,7 +61,10 @@ def wallet_detail(request: HttpRequest, currency_code: str) -> HttpResponse:
 
     serializable_fx_rates = {k: str(v) for k, v in exchange_rates.items()}
 
-    latest_rate = FXRate.objects.order_by('-last_updated').first()
+    latest_rate = FXRate.objects.filter(
+        base_currency__is_base=True,
+        target_currency=wallet.currency
+    ).first()
     if latest_rate is not None:
         fx_rate_update_timestamp = latest_rate.last_updated.strftime('%Y-%m-%d %H:%M:%S')
     else:
