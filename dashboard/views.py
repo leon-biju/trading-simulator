@@ -2,12 +2,14 @@ from django.http import HttpRequest, HttpResponse
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_GET
 from accounts.models import Profile
 from wallets.models import Wallet
 from trading.models import Order, OrderStatus, Trade
 from trading.services import get_user_positions
 
 @login_required
+@require_GET
 def dashboard_view(request: HttpRequest) -> HttpResponse:
     if request.user.id is None:
         return redirect('login') # Redundant but mypy is bieng pedantic

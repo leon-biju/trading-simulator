@@ -1,6 +1,8 @@
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from .forms import SignUpForm, LoginForm
 
 
@@ -45,12 +47,9 @@ def login_view(request: HttpRequest) -> HttpResponse:
     
     return render(request, "accounts/login.html", {"form": form})
 
-
+@login_required
+@require_POST
 def logout_view(request: HttpRequest) -> HttpResponse:
-    # User should be logged in to access logout
-    if not request.user.is_authenticated:
-        return redirect("/accounts/login/")
-    if request.method == "POST":
-        logout(request)
+    logout(request)
     
     return redirect("/accounts/login/")
