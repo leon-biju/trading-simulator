@@ -441,7 +441,9 @@ def cancel_order(order_id: int, user_id: int) -> Order:
     try:
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=order_id, user_id=user_id)
-            
+            if order.status == OrderStatus.CANCELLED:
+                raise ValueError("Order has already been cancelled")
+
             if order.status != OrderStatus.PENDING:
                 raise ValueError(f"Cannot cancel order with status {order.status}")
             
