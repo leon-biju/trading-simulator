@@ -34,11 +34,11 @@
                             <i class="bi bi-circle me-1"></i>Closed
                         </span>
                     {% endif %}
-                    <span class="badge bg-primary ms-1">{{ item.stock_count }} stocks</span>
+                    <span class="badge bg-primary ms-1">{{ item.asset_count }} assets</span>
                 </div>
             </div>
             
-            {% if item.stocks %}
+            {% if item.assets %}
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
@@ -51,22 +51,25 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for stock_item in item.stocks|slice:":10" %}
+                        {% for asset_item in item.assets|slice:":10" %}
                         <tr>
                             <td>
-                                <strong>{{ stock_item.stock.ticker }}</strong>
+                                <a href="{% url 'asset_detail' item.exchange.code asset_item.asset.ticker %}"
+                                   class="text-decoration-none fw-bold">
+                                    {{ asset_item.asset.ticker }}
+                                </a>
                             </td>
-                            <td>{{ stock_item.stock.name }}</td>
+                            <td>{{ asset_item.asset.name }}</td>
                             <td class="text-end">
-                                {% if stock_item.current_price %}
-                                    {{ stock_item.current_price|floatformat:2|intcomma }}
+                                {% if asset_item.current_price %}
+                                    {{ asset_item.current_price|floatformat:2|intcomma }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td>{{ stock_item.stock.currency.code }}</td>
+                            <td>{{ asset_item.asset.currency.code }}</td>
                             <td class="text-end">
-                                <a href="{% url 'stock_detail' item.exchange.code stock_item.stock.ticker %}" 
+                                <a href="{% url 'asset_detail' item.exchange.code asset_item.asset.ticker %}" 
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-arrow-right"></i> Trade
                                 </a>
@@ -76,16 +79,16 @@
                     </tbody>
                 </table>
             </div>
-            {% if item.stock_count > 10 %}
+            {% if item.asset_count > 10 %}
             <div class="card-footer text-center">
                 <a href="{% url 'exchange_detail' item.exchange.code %}" class="btn btn-link">
-                    View all {{ item.stock_count }} stocks <i class="bi bi-arrow-right"></i>
+                    View all {{ item.asset_count }} assets <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
             {% endif %}
             {% else %}
             <div class="card-body">
-                <p class="text-muted mb-0">No active stocks on this exchange.</p>
+                <p class="text-muted mb-0">No active assets on this exchange.</p>
             </div>
             {% endif %}
         </div>

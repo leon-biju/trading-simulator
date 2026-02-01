@@ -8,7 +8,7 @@ urlpatterns = [
 
     # Order placement
     path(
-        'order/<str:exchange_code>/<str:stock_symbol>/', 
+        'order/<str:exchange_code>/<str:asset_symbol>/', 
         views.place_order_view, 
         name='place_order'
     ),
@@ -22,7 +22,7 @@ urlpatterns = [
     
     # API endpoints for dynamic form updates
     path(
-        'api/position/<str:exchange_code>/<str:stock_symbol>/', 
+        'api/position/<str:exchange_code>/<str:asset_symbol>/', 
         views.get_position_for_stock, 
         name='api_get_position'
     ),

@@ -40,7 +40,10 @@
                             <small class="text-muted">{{ trade.executed_at|date:"M d, Y H:i:s" }}</small>
                         </td>
                         <td>
-                            <strong>{{ trade.asset.ticker }}</strong>
+                            <a href="{% url 'asset_detail' trade.asset.exchange.code trade.asset.ticker %}"
+                               class="text-decoration-none fw-bold">
+                                {{ trade.asset.ticker }}
+                            </a>
                             <br><small class="text-muted">{{ trade.asset.name }}</small>
                         </td>
                         <td>

@@ -40,7 +40,10 @@
                             <small class="text-muted">{{ order.created_at|date:"M d, Y H:i" }}</small>
                         </td>
                         <td>
-                            <strong>{{ order.asset.ticker }}</strong>
+                            <a href="{% url 'asset_detail' order.asset.exchange.code order.asset.ticker %}"
+                               class="text-decoration-none fw-bold">
+                                {{ order.asset.ticker }}
+                            </a>
                             <br><small class="text-muted">{{ order.asset.name }}</small>
                         </td>
                         <td>

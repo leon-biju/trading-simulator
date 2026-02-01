@@ -82,7 +82,10 @@
               {% for order in pending_orders %}
               <tr>
                 <td>
-                  <strong>{{ order.asset.ticker }}</strong>
+                  <a href="{% url 'asset_detail' order.asset.exchange.code order.asset.ticker %}"
+                     class="text-decoration-none fw-bold">
+                    {{ order.asset.ticker }}
+                  </a>
                 </td>
                 <td>
                   {% if order.side == 'BUY' %}
@@ -142,7 +145,12 @@
             <tbody>
               {% for trade in recent_trades %}
               <tr>
-                <td><strong>{{ trade.asset.ticker }}</strong></td>
+                <td>
+                  <a href="{% url 'asset_detail' trade.asset.exchange.code trade.asset.ticker %}"
+                     class="text-decoration-none fw-bold">
+                    {{ trade.asset.ticker }}
+                  </a>
+                </td>
                 <td>
                   {% if trade.side == 'BUY' %}
                     <span class="badge bg-success">BUY</span>
@@ -191,7 +199,10 @@
               {% for position in positions %}
               <tr>
                 <td>
-                  <strong>{{ position.asset.ticker }}</strong>
+                  <a href="{% url 'asset_detail' position.asset.exchange.code position.asset.ticker %}"
+                     class="text-decoration-none fw-bold">
+                    {{ position.asset.ticker }}
+                  </a>
                   <br><small class="text-muted">{{ position.asset.name }}</small>
                 </td>
                 <td class="text-end">{{ position.quantity|floatformat:4 }}</td>

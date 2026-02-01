@@ -2,7 +2,7 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}{{ stock.ticker }} - {{ stock.name }}{% endblock %}
+{% block title %}{{ asset.ticker }} - {{ asset.name }}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -48,16 +48,16 @@
     {% endif %}
 
     <div class="row">
-        <!-- Main Content: Stock Info & Chart -->
+        <!-- Main Content: Asset Info & Chart -->
         <div class="col-lg-8">
-            <!-- Stock Header -->
+            <!-- Asset Header -->
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h2 class="mb-1">{{ stock.name }}</h2>
+                            <h2 class="mb-1">{{ asset.name }}</h2>
                             <p class="text-muted mb-2">
-                                <strong>{{ stock.ticker }}</strong> · {{ stock.exchange.name }} ({{ stock.exchange.code }})
+                                <strong>{{ asset.ticker }}</strong> · {{ asset.exchange.name }} ({{ asset.exchange.code }})
                             </p>
                         </div>
                         <div class="text-end">
@@ -72,7 +72,7 @@
                                 </span>
                             {% endif %}
                             
-                            {% if stock.is_active %}
+                            {% if asset.is_active %}
                                 <span class="badge bg-primary market-status-badge ms-1">
                                     <i class="bi bi-check-circle me-1"></i>Active
                                 </span>
@@ -87,7 +87,7 @@
                     <!-- Current Price -->
                     <div class="mt-3">
                         {% if current_price %}
-                            <span class="price-display">{{ stock.currency.code }} {{ current_price|floatformat:2|intcomma }}</span>
+                            <span class="price-display">{{ asset.currency.code }} {{ current_price|floatformat:2|intcomma }}</span>
                         {% else %}
                             <span class="price-display text-muted">Price unavailable</span>
                         {% endif %}
@@ -97,8 +97,8 @@
                     <div class="mt-2">
                         <small class="text-muted">
                             <i class="bi bi-clock me-1"></i>
-                            Trading Hours: {{ stock.exchange.open_time|time:"H:i" }} - {{ stock.exchange.close_time|time:"H:i" }} 
-                            ({{ stock.exchange.timezone }})
+                            Trading Hours: {{ asset.exchange.open_time|time:"H:i" }} - {{ asset.exchange.close_time|time:"H:i" }} 
+                            ({{ asset.exchange.timezone }})
                         </small>
                     </div>
                 </div>
@@ -120,7 +120,7 @@
                 </div>
                 <div class="card-body">
                     <div id="chart-loader"
-                         data-chart-url="{% url 'stock_performance_chart_data' stock.exchange.code stock.ticker %}"
+                         data-chart-url="{% url 'asset_performance_chart_data' asset.exchange.code asset.ticker %}"
                          data-default-range="month">
                         <div id="assetChart" style="min-height: 350px;"></div>
                     </div>
@@ -134,7 +134,7 @@
             <div class="card mb-3 info-card">
                 <div class="card-body">
                     <h6 class="card-subtitle mb-3 text-muted">
-                        <i class="bi bi-wallet2 me-1"></i>{{ stock.currency.code }} Wallet
+                        <i class="bi bi-wallet2 me-1"></i>{{ asset.currency.code }} Wallet
                     </h6>
                     {% if wallet %}
                         <div class="row">
@@ -149,7 +149,7 @@
                         </div>
                     {% else %}
                         <div class="alert alert-warning mb-0 py-2">
-                            <small><i class="bi bi-exclamation-triangle me-1"></i>No {{ stock.currency.code }} wallet found</small>
+                            <small><i class="bi bi-exclamation-triangle me-1"></i>No {{ asset.currency.code }} wallet found</small>
                         </div>
                     {% endif %}
                 </div>
@@ -175,14 +175,14 @@
                         <div class="row">
                             <div class="col-6">
                                 <small class="text-muted">Avg Cost</small>
-                                <div>{{ stock.currency.code }} {{ position.average_cost|floatformat:2|intcomma }}</div>
+                                <div>{{ asset.currency.code }} {{ position.average_cost|floatformat:2|intcomma }}</div>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Unrealized P&L</small>
                                 {% with pnl=position.calculate_unrealized_pnl %}
                                 {% if pnl != None %}
                                     <div class="{% if pnl > 0 %}text-success{% elif pnl < 0 %}text-danger{% endif %}">
-                                        {% if pnl > 0 %}+{% endif %}{{ stock.currency.code }} {{ pnl|floatformat:2|intcomma }}
+                                        {% if pnl > 0 %}+{% endif %}{{ asset.currency.code }} {{ pnl|floatformat:2|intcomma }}
                                     </div>
                                 {% else %}
                                     <div class="text-muted">—</div>
@@ -191,7 +191,7 @@
                             </div>
                         </div>
                     {% else %}
-                        <p class="text-muted mb-0"><small>No position in this stock</small></p>
+                        <p class="text-muted mb-0"><small>No position in this asset</small></p>
                     {% endif %}
                 </div>
             </div>
@@ -205,15 +205,15 @@
                     {% if not wallet %}
                         <div class="alert alert-danger">
                             <i class="bi bi-exclamation-octagon me-2"></i>
-                            You need a {{ stock.currency.code }} wallet to trade this stock.
+                            You need a {{ asset.currency.code }} wallet to trade this asset.
                         </div>
-                    {% elif not stock.is_active %}
+                    {% elif not asset.is_active %}
                         <div class="alert alert-warning">
                             <i class="bi bi-pause-circle me-2"></i>
-                            Trading is currently disabled for this stock.
+                            Trading is currently disabled for this asset.
                         </div>
                     {% else %}
-                        <form method="post" action="{% url 'place_order' stock.exchange.code stock.ticker %}" id="orderForm">
+                        <form method="post" action="{% url 'place_order' asset.exchange.code asset.ticker %}" id="orderForm">
                             {% csrf_token %}
                             
                             <!-- Buy/Sell Toggle -->
@@ -251,7 +251,7 @@
                             
                             <!-- Limit Price (shown only for LIMIT orders) -->
                             <div class="mb-3" id="limitPriceGroup" style="display: none;">
-                                <label for="limit_price" class="form-label">Limit Price ({{ stock.currency.code }})</label>
+                                <label for="limit_price" class="form-label">Limit Price ({{ asset.currency.code }})</label>
                                 <input type="number" name="limit_price" id="limit_price" 
                                        class="form-control" placeholder="{{ current_price|floatformat:2 }}"
                                        step="0.01" min="0.01"
@@ -286,7 +286,7 @@
                 </div>
             </div>
 
-            <!-- Pending Orders for this Stock -->
+            <!-- Pending Orders for this Asset -->
             {% if pending_orders %}
             <div class="card pending-orders-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -324,12 +324,12 @@
 
 {% block extra_js %}
 {{ current_price|json_script:"current_price" }}
-{{ stock.currency.code|json_script:"currency_code" }}
+{{ asset.currency.code|json_script:"currency_code" }}
 {{ wallet.available_balance|json_script:"available_balance" }}
 {{ position.available_quantity|json_script:"available_quantity" }}
 
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
 <script src="{% static 'market/js/asset_performance.js' %}"></script>
-<script src="{% static 'market/js/stock_detail.js' %}"></script>
+<script src="{% static 'market/js/asset_detail.js' %}"></script>
 {% endblock %}

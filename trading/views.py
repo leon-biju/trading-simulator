@@ -18,17 +18,16 @@ from wallets.models import Wallet
 
 @login_required
 @require_POST
-def place_order_view(request: HttpRequest, exchange_code: str, stock_symbol: str) -> HttpResponse:
-    """Handle order placement for a stock."""
+def place_order_view(request: HttpRequest, exchange_code: str, asset_symbol: str) -> HttpResponse:
+    """Handle order placement for an asset."""
 
     if request.user.id is None:
         return redirect('login')  # Redundant but mypy is being pedantic
 
-    stock = get_object_or_404(
+    asset = get_object_or_404(
         Asset.objects.select_related('exchange', 'currency'),
         exchange__code=exchange_code,
-        ticker=stock_symbol,
-        asset_type='STOCK',
+        ticker=asset_symbol,
     )
     
     form = PlaceOrderForm(request.POST)
@@ -37,7 +36,7 @@ def place_order_view(request: HttpRequest, exchange_code: str, stock_symbol: str
         for field, errors in form.errors.items():
             for error in errors:
                 messages.error(request, f"{field}: {error}")
-        return redirect('stock_detail', exchange_code=exchange_code, stock_symbol=stock_symbol)
+        return redirect('asset_detail', exchange_code=exchange_code, asset_symbol=asset_symbol)
     
     side = form.cleaned_data['side']
     order_type = form.cleaned_data['order_type']
@@ -47,7 +46,7 @@ def place_order_view(request: HttpRequest, exchange_code: str, stock_symbol: str
     try:
         order = place_order(
             user_id=request.user.id,
-            asset=stock,
+            asset=asset,
             side=side,
             quantity=quantity,
             order_type=order_type,
@@ -57,12 +56,12 @@ def place_order_view(request: HttpRequest, exchange_code: str, stock_symbol: str
         if order.status == OrderStatus.FILLED:
             messages.success(
                 request, 
-                f"Order filled: {order.get_side_display()} {order.quantity} {stock.ticker}"
+                f"Order filled: {order.get_side_display()} {order.quantity} {asset.ticker}"
             )
         else:
             messages.info(
                 request,
-                f"Order placed: {order.get_side_display()} {order.quantity} {stock.ticker} (Pending)"
+                f"Order placed: {order.get_side_display()} {order.quantity} {asset.ticker} (Pending)"
             )
             
     except ValueError as e:
@@ -72,7 +71,7 @@ def place_order_view(request: HttpRequest, exchange_code: str, stock_symbol: str
     except Exception as e:
         messages.error(request, f"Unexpected error: {str(e)}")
     
-    return redirect('stock_detail', exchange_code=exchange_code, stock_symbol=stock_symbol)
+    return redirect('asset_detail', exchange_code=exchange_code, asset_symbol=asset_symbol)
 
 
 @login_required
@@ -167,17 +166,16 @@ def portfolio_view(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @require_GET
-def get_position_for_stock(request: HttpRequest, exchange_code: str, stock_symbol: str) -> JsonResponse:
-    """API endpoint to get user's position for a specific stock."""
-    stock = get_object_or_404(
+def get_position_for_stock(request: HttpRequest, exchange_code: str, asset_symbol: str) -> JsonResponse:
+    """API endpoint to get user's position for a specific asset."""
+    asset = get_object_or_404(
         Asset.objects.select_related('exchange'),
         exchange__code=exchange_code,
-        ticker=stock_symbol,
-        asset_type='STOCK',
+        ticker=asset_symbol,
     )
     
     try:
-        position = Position.objects.get(user_id=request.user.id, asset=stock)
+        position = Position.objects.get(user_id=request.user.id, asset=asset)
         return JsonResponse({
             'has_position': True,
             'quantity': str(position.quantity),

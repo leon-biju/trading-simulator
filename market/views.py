@@ -23,30 +23,29 @@ RANGE_TO_DAYS = {
 
 @login_required
 def market_overview_view(request: HttpRequest) -> HttpResponse:
-    """Market overview showing all exchanges and their stocks."""
+    """Market overview showing all exchanges and their assets."""
     exchanges = Exchange.objects.all()
     
     # Build exchange data with market status
     exchange_data = []
     for exchange in exchanges:
-        stocks = Asset.objects.filter(
+        assets = Asset.objects.filter(
             exchange=exchange,
-            asset_type='STOCK',
             is_active=True,
         ).select_related('currency')
-        # Enrich stocks with current price
-        stocks_with_prices = []
-        for stock in stocks:
-            stocks_with_prices.append({
-                'stock': stock,
-                'current_price': stock.get_latest_price(),
+        # Enrich assets with current price
+        assets_with_prices = []
+        for asset in assets:
+            assets_with_prices.append({
+                'asset': asset,
+                'current_price': asset.get_latest_price(),
             })
         
         exchange_data.append({
             'exchange': exchange,
             'is_open': exchange.is_currently_open(),
-            'stocks': stocks_with_prices,
-            'stock_count': len(stocks_with_prices),
+            'assets': assets_with_prices,
+            'asset_count': len(assets_with_prices),
         })
     
     return render(request, 'market/market_overview.html', {
@@ -93,13 +92,13 @@ def asset_detail_view(request: HttpRequest, exchange_code: str, asset_symbol: st
     # Get user's wallet for this currency
     wallet = get_object_or_404(Wallet, user_id=request.user.id, currency=asset.currency)
     
-    # Get user's position for this stock
+    # Get user's position for this asset
     try:
         position = Position.objects.get(user_id=request.user.id, asset=asset)
     except Position.DoesNotExist:
         position = None
     
-    # Get user's pending orders for this stock
+    # Get user's pending orders for this asset
     pending_orders = Order.objects.filter(
         user_id=request.user.id,
         asset=asset,
@@ -122,14 +121,6 @@ def asset_detail_view(request: HttpRequest, exchange_code: str, asset_symbol: st
         'form': form,
     }
     return render(request, 'market/asset_detail.html', context)
-
-
-# Keep old view for backwards compatibility (redirect or keep as alias)
-@login_required
-def asset_performance_view(request: HttpRequest, exchange_code: str, asset_symbol: str) -> HttpResponse:
-    """Deprecated: Use asset_detail_view instead."""
-    return asset_detail_view(request, exchange_code, asset_symbol)
-
 
 @login_required
 def asset_performance_chart_data_view(request: HttpRequest, exchange_code: str, asset_symbol: str) -> HttpResponse:
