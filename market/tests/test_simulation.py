@@ -3,7 +3,7 @@
 # mypy: disable-error-code=no-untyped-call
 
 from decimal import Decimal
-from market.services import update_stock_prices_simulation
+from market.services.simulation import update_stock_prices_simulation
 from market.models import Asset, PriceCandle
 from market.tests.factories import StockFactory, PriceCandleFactory
 

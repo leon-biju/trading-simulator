@@ -9,7 +9,7 @@ from .models import Asset, Exchange, PriceCandle
 from trading.models import Order, OrderStatus, Position
 from trading.forms import PlaceOrderForm
 from wallets.models import Wallet
-from .services import get_asset_timezone, get_candles_for_range
+from .services.candles import get_asset_timezone, get_candles_for_range
 
 
 RANGE_TO_DAYS = {

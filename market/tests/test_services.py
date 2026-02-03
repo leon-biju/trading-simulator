@@ -3,7 +3,7 @@
 # mypy: disable-error-code=no-untyped-call
 
 from market.models import Asset, Currency, Exchange
-from market.services import create_stock_asset
+from market.services.assets import create_stock_asset
 from market.tests.factories import ExchangeFactory, CurrencyFactory
 
 

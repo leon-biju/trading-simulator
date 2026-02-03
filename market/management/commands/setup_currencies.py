@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 
 from market.models import Currency, FXRate
 from market.api_access import get_currency_layer_api_data
-from market.services import update_currency_prices
+from market.services.fx import update_currency_prices
 
 
 class Command(BaseCommand):

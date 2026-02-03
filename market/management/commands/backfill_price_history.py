@@ -12,7 +12,7 @@ from config.constants import (
     SIMULATION_SIGMA,
 )
 from market.models import Asset, PriceCandle
-from market.services import get_asset_timezone
+from market.services.candles import get_asset_timezone
 
 
 class Command(BaseCommand):

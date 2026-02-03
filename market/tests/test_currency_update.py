@@ -2,7 +2,7 @@ from typing import Any
 from decimal import Decimal
 
 from market.models import Currency, FXRate
-from market.services import update_currency_prices
+from market.services.fx import update_currency_prices
 from market.tests.factories import CurrencyFactory
 
 

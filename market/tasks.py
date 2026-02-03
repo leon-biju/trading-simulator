@@ -6,7 +6,8 @@ from django.utils import timezone
 from market.models import Asset, Currency, Exchange, FXRate
 from config.constants import MARKET_DATA_MODE
 
-from .services import update_stock_prices_simulation, update_currency_prices
+from .services.simulation import update_stock_prices_simulation
+from .services.fx import update_currency_prices
 from .api_access import get_currency_layer_api_data
 
 @shared_task # type: ignore[untyped-decorator]
@@ -58,4 +59,13 @@ def update_currency_data() -> dict[str, int] | str:
     count = update_currency_prices(json_data)
 
     return {"rows_inserted": count}
+
+
+
+def aggregate_asset_prices() -> str:
+    """
+    Aggregates intraday asset prices into daily candles.
+    """
+    # Placeholder implementation
+    return "Asset price aggregation not implemented yet."
 

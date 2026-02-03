@@ -7,7 +7,7 @@ from decimal import Decimal
 from market.models import FXRate
 from .models import Wallet
 from .forms import AddFundsForm
-from market.services import  get_fx_rate
+from market.services.fx import get_fx_rate
 from wallets.services import perform_fx_transfer
 import json
 
