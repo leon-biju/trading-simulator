@@ -187,7 +187,7 @@ from config.constants import STOCKS_UPDATE_INTERVAL_SECONDS, FX_RATES_UPDATE_INT
 # Celery Beat Schedule
 CELERY_BEAT_SCHEDULE = {
     f'update-market-every-{STOCKS_UPDATE_INTERVAL_SECONDS}-seconds': {
-        'task': 'market.tasks.update_stock_data',
+        'task': 'market.tasks.update_asset_data',
         'schedule': STOCKS_UPDATE_INTERVAL_SECONDS
     },
     f'update-fx-rates-every-{FX_RATES_UPDATE_INTERVAL_SECONDS}-seconds': {
