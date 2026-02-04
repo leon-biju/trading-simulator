@@ -1,0 +1,18 @@
+services:
+  web:
+    environment:
+      POSTGRES_DB: setup_db
+      POSTGRES_USER: setup
+      POSTGRES_PASSWORD: setup
+    depends_on:
+      - setup_db
+
+  setup_db:
+    image: postgres:16
+    container_name: setup_db
+    environment:
+      POSTGRES_DB: setup_db
+      POSTGRES_USER: setup
+      POSTGRES_PASSWORD: setup
+    tmpfs:
+      - /var/lib/postgresql/data
