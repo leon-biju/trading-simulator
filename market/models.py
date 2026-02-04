@@ -81,13 +81,18 @@ class Asset(models.Model):
     ]
 
     asset_type = models.CharField(max_length=10, choices=ASSET_TYPE_CHOICES)
-    ticker = models.CharField(max_length=10, unique=True, db_index=True)
+    ticker = models.CharField(max_length=10, db_index=True)
     name = models.CharField(max_length=100)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT) # The currency the asset is priced in. for currency assets it's the base currency
     exchange = models.ForeignKey(Exchange, on_delete=models.PROTECT)
     
     is_active = models.BooleanField(default=True) # To enable/disable trading for an asset
 
+    class Meta:
+        unique_together = ("ticker", "exchange")
+        indexes = [
+            models.Index(fields=["ticker", "exchange"]),
+        ]
     def get_latest_price(self) -> Decimal | None:
         for interval in (5, 60, 1440):
             latest_candle = PriceCandle.objects.filter(
