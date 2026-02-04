@@ -20,15 +20,15 @@
   <div class="col-md-4 mb-4">
     <div class="card card-hover wallet-card" id="{{ wallet.currency }}">
       <div class="card-header">
-        {{ wallet.currency.code }} Wallet
+        {{ wallet.currency }} Wallet
       </div>
       <div class="card-body">
-        <p class="card-text">Balance: <strong>{{ wallet.symbol }}{{ wallet.balance|intcomma }}</strong></p>
+        <p class="card-text">Balance: <strong>{{ wallet.balance|intcomma }} {{ wallet.currency }}</strong></p>
         <p class="card-text">
           <small class="text-muted">
-            Available: {{ wallet.symbol }}{{ wallet.available_balance|intcomma }}
+            Available: {{ wallet.available_balance|intcomma }} {{ wallet.currency }}
             {% if wallet.pending_balance > 0 %}
-              <span class="text-warning">({{ wallet.symbol }}{{ wallet.pending_balance|intcomma }} pending)</span>
+              <span class="text-warning">({{ wallet.pending_balance|intcomma }} {{ wallet.currency }} pending)</span>
             {% endif %}
           </small>
         </p>
@@ -206,11 +206,11 @@
                   <br><small class="text-muted">{{ position.asset.name }}</small>
                 </td>
                 <td class="text-end">{{ position.quantity|floatformat:4 }}</td>
-                <td class="text-end">{{ position.asset.currency.code }} {{ position.average_cost|floatformat:2|intcomma }}</td>
+                <td class="text-end">{{ position.average_cost|floatformat:2|intcomma }} {{ position.asset.currency }}</td>
                 <td class="text-end">
                   {% with price=position.asset.get_latest_price %}
                     {% if price %}
-                      {{ position.asset.currency.code }} {{ price|floatformat:2|intcomma }}
+                      {{ price|floatformat:2|intcomma }} {{ position.asset.currency }}
                     {% else %}
                       <span class="text-muted">—</span>
                     {% endif %}

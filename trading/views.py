@@ -202,7 +202,7 @@ def get_wallet_balance(request: HttpRequest, currency_code: str) -> JsonResponse
             'balance': str(wallet.balance),
             'available_balance': str(wallet.available_balance),
             'pending_balance': str(wallet.pending_balance),
-            'symbol': wallet.symbol,
+            'symbol': wallet.currency.code,
         })
     except Wallet.DoesNotExist:
         return JsonResponse({

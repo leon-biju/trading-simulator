@@ -1,12 +1,6 @@
 import os
 # Application specific constants
 
-CURRENCY_SYMBOLS = {
-    "GBP": "£",
-    "USD": "$",
-    "EUR": "€",
-}
-
 # Application specific settings
 STARTING_BALANCE = 100_000.00 #gbp
 MARKET_DATA_MODE = os.getenv("MARKET_DATA_MODE", "SIMULATION").upper()  # live or simulation

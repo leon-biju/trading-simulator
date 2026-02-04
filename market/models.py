@@ -73,7 +73,6 @@ class Currency(models.Model):
     code = models.CharField(max_length=3, unique=True)  # e.g., 'USD', 'EUR'
     name = models.CharField(max_length=50)              # e.g., 'United States Dollar'
     is_base = models.BooleanField(default=False)
-    #symbol = models.CharField(max_length=5, blank=True, null=True)  # e.g., '$', '€'
     def save(self, *args, **kwargs): # type: ignore[no-untyped-def]
         if self.is_base:
             Currency.objects.filter(is_base=True).exclude(pk=self.pk).update(is_base=False)

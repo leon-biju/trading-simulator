@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
-from config.constants import CURRENCY_SYMBOLS
 from market.models import Currency
 
 
@@ -23,7 +22,7 @@ class Wallet(models.Model):
 
     @property
     def symbol(self) -> str:
-        return CURRENCY_SYMBOLS.get(self.currency.code) or self.currency.code
+        return self.currency.code
 
     @property
     def available_balance(self) -> Decimal:

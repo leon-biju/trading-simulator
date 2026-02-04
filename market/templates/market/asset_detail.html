@@ -87,7 +87,7 @@
                     <!-- Current Price -->
                     <div class="mt-3">
                         {% if current_price %}
-                            <span class="price-display">{{ asset.currency.code }} {{ current_price|floatformat:2|intcomma }}</span>
+                            <span class="price-display"> {{ current_price|floatformat:2|intcomma }} {{ asset.currency }}</span>
                         {% else %}
                             <span class="price-display text-muted">Price unavailable</span>
                         {% endif %}
@@ -134,22 +134,22 @@
             <div class="card mb-3 info-card">
                 <div class="card-body">
                     <h6 class="card-subtitle mb-3 text-muted">
-                        <i class="bi bi-wallet2 me-1"></i>{{ asset.currency.code }} Wallet
+                        <i class="bi bi-wallet2 me-1"></i>{{ asset.currency }} Wallet
                     </h6>
                     {% if wallet %}
                         <div class="row">
                             <div class="col-6">
                                 <small class="text-muted">Available</small>
-                                <div class="fw-bold">{{ wallet.symbol }}{{ wallet.available_balance|floatformat:2|intcomma }}</div>
+                                <div class="fw-bold">{{ wallet.available_balance|floatformat:2|intcomma }} {{ wallet.currency }}</div>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Pending</small>
-                                <div class="text-warning">{{ wallet.symbol }}{{ wallet.pending_balance|floatformat:2|intcomma }}</div>
+                                <div class="text-warning">{{ wallet.pending_balance|floatformat:2|intcomma }} {{ wallet.currency }}</div>
                             </div>
                         </div>
                     {% else %}
                         <div class="alert alert-warning mb-0 py-2">
-                            <small><i class="bi bi-exclamation-triangle me-1"></i>No {{ asset.currency.code }} wallet found</small>
+                            <small><i class="bi bi-exclamation-triangle me-1"></i>No {{ asset.currency }} wallet found</small>
                         </div>
                     {% endif %}
                 </div>
@@ -175,14 +175,14 @@
                         <div class="row">
                             <div class="col-6">
                                 <small class="text-muted">Avg Cost</small>
-                                <div>{{ asset.currency.code }} {{ position.average_cost|floatformat:2|intcomma }}</div>
+                                <div>{{ asset.currency }} {{ position.average_cost|floatformat:2|intcomma }}</div>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Unrealized P&L</small>
                                 {% with pnl=position.calculate_unrealized_pnl %}
                                 {% if pnl != None %}
                                     <div class="{% if pnl > 0 %}text-success{% elif pnl < 0 %}text-danger{% endif %}">
-                                        {% if pnl > 0 %}+{% endif %}{{ asset.currency.code }} {{ pnl|floatformat:2|intcomma }}
+                                        {% if pnl > 0 %}+{% endif %}{{ asset.currency }} {{ pnl|floatformat:2|intcomma }}
                                     </div>
                                 {% else %}
                                     <div class="text-muted">—</div>
@@ -205,7 +205,7 @@
                     {% if not wallet %}
                         <div class="alert alert-danger">
                             <i class="bi bi-exclamation-octagon me-2"></i>
-                            You need a {{ asset.currency.code }} wallet to trade this asset.
+                            You need a {{ asset.currency }} wallet to trade this asset.
                         </div>
                     {% elif not asset.is_active %}
                         <div class="alert alert-warning">
@@ -251,7 +251,7 @@
                             
                             <!-- Limit Price (shown only for LIMIT orders) -->
                             <div class="mb-3" id="limitPriceGroup" style="display: none;">
-                                <label for="limit_price" class="form-label">Limit Price ({{ asset.currency.code }})</label>
+                                <label for="limit_price" class="form-label">Limit Price ({{ asset.currency }})</label>
                                 <input type="number" name="limit_price" id="limit_price" 
                                        class="form-control" placeholder="{{ current_price|floatformat:2 }}"
                                        step="0.01" min="0.01"

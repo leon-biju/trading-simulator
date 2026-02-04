@@ -68,12 +68,12 @@
                         <td>{{ item.asset.name }}</td>
                         <td class="text-end">
                             {% if item.current_price %}
-                                <strong>{{ item.asset.currency.code }} {{ item.current_price|floatformat:2|intcomma }}</strong>
+                                <strong>{{ item.current_price|floatformat:2|intcomma }} {{ item.asset.currency }}</strong>
                             {% else %}
                                 <span class="text-muted">Price unavailable</span>
                             {% endif %}
                         </td>
-                        <td>{{ item.asset.currency.code }}</td>
+                        <td>{{ item.asset.currency }}</td>
                         <td>
                             {% if item.asset.is_active %}
                                 <span class="badge bg-success">Active</span>

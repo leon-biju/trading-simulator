@@ -91,18 +91,18 @@
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            {{ item.position.asset.currency.code }} {{ item.position.average_cost|floatformat:2|intcomma }}
+                            {{ item.position.average_cost|floatformat:2|intcomma }} {{ item.position.asset.currency }}
                         </td>
                         <td class="text-end">
                             {% if item.current_price %}
-                                {{ item.position.asset.currency.code }} {{ item.current_price|floatformat:2|intcomma }}
+                                {{ item.current_price|floatformat:2|intcomma }} {{ item.position.asset.currency }}
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
                             {% if item.current_value %}
-                                {{ item.position.asset.currency.code }} {{ item.current_value|floatformat:2|intcomma }}
+                                {{ item.current_value|floatformat:2|intcomma }} {{ item.position.asset.currency }}
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
