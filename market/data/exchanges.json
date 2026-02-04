@@ -1,0 +1,72 @@
+[
+	{
+		"name": "New York Stock Exchange",
+		"code": "NYSE",
+		"timezone": "America/New_York",
+		"open_time": "09:30:00",
+		"close_time": "16:00:00"
+	},
+	{
+		"name": "NASDAQ",
+		"code": "NASDAQ",
+		"timezone": "America/New_York",
+		"open_time": "09:30:00",
+		"close_time": "16:00:00"
+	},
+	{
+		"name": "London Stock Exchange",
+		"code": "LSE",
+		"timezone": "Europe/London",
+		"open_time": "08:00:00",
+		"close_time": "16:30:00"
+	},
+	{
+		"name": "Japan Exchange Group",
+		"code": "JPX",
+		"timezone": "Asia/Tokyo",
+		"open_time": "09:00:00",
+		"close_time": "15:00:00"
+	},
+	{
+		"name": "Toronto Stock Exchange",
+		"code": "TSX",
+		"timezone": "America/Toronto",
+		"open_time": "09:30:00",
+		"close_time": "16:00:00"
+	},
+	{
+		"name": "Australian Securities Exchange",
+		"code": "ASX",
+		"timezone": "Australia/Sydney",
+		"open_time": "10:00:00",
+		"close_time": "16:00:00"
+	},
+	{
+		"name": "Shanghai Stock Exchange",
+		"code": "SSE",
+		"timezone": "Asia/Shanghai",
+		"open_time": "09:30:00",
+		"close_time": "15:00:00"
+	},
+	{
+		"name": "Hong Kong Stock Exchange",
+		"code": "HKEX",
+		"timezone": "Asia/Hong_Kong",
+		"open_time": "09:30:00",
+		"close_time": "16:00:00"
+	},
+	{
+		"name": "Euronext Paris",
+		"code": "EPA",
+		"timezone": "Europe/Paris",
+		"open_time": "09:00:00",
+		"close_time": "17:30:00"
+	},
+	{
+		"name": "SIX Swiss Exchange",
+		"code": "SIX",
+		"timezone": "Europe/Zurich",
+		"open_time": "09:00:00",
+		"close_time": "17:30:00"
+	}
+]
