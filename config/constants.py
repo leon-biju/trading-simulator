@@ -15,7 +15,7 @@ MARKET_DATA_MODE = os.getenv("MARKET_DATA_MODE", "SIMULATION").upper()  # live o
 
 
 
-STOCKS_UPDATE_INTERVAL_MINUTES = 60  # Interval for market data updates (1hr)
+ASSETS_UPDATE_INTERVAL_MINUTES = 60  # Interval for market data updates (1hr)
 FX_RATES_UPDATE_INTERVAL_MINUTES = 8 * 60  # Interval for FX rates updates (8hrs)
 
 # SImulation parameters
