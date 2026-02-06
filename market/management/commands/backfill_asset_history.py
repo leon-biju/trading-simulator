@@ -110,6 +110,15 @@ class Command(BaseCommand):
                     close_dt += datetime.timedelta(days=1)
 
                 if day >= intraday_start_date:
+                    # For the current day, don't generate candles for future times
+                    effective_close_dt = close_dt
+                    if day == now.date():
+                        effective_close_dt = min(close_dt, now.astimezone(tz))
+                        # If market hasn't opened yet today, skip this day
+                        if effective_close_dt <= open_dt:
+                            day += datetime.timedelta(days=1)
+                            continue
+
                     (
                         current_price,
                         daily_candle,
@@ -119,7 +128,7 @@ class Command(BaseCommand):
                         asset,
                         current_price,
                         open_dt,
-                        close_dt,
+                        effective_close_dt,
                         interval_minutes,
                     )
 
