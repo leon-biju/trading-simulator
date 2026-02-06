@@ -323,13 +323,19 @@ class Command(BaseCommand):
         if raw not in {"y", "yes"}:
             return
 
+        tickers = list(Asset.objects.values_list("ticker", flat=True))
+        if not tickers:
+            self.stdout.write(self.style.WARNING("No assets found. Skipping backfill."))
+            return
+
         days = self._prompt_int("Days to backfill", default=365)
         intraday_days = self._prompt_int("Intraday days", default=7)
         interval_minutes = self._prompt_int("Intraday interval minutes", default=5)
         reset = self._prompt_bool("Reset existing price history", default=False)
 
         call_command(
-            "backfill_price_history",
+            "backfill_asset_history",
+            ticker=tickers,
             days=days,
             intraday_days=intraday_days,
             interval_minutes=interval_minutes,
