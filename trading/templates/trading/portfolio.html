@@ -71,7 +71,6 @@
                         <th class="text-end">Current Value</th>
                         <th class="text-end">Unrealized P&L</th>
                         <th class="text-end">Realized P&L</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -123,12 +122,6 @@
                             <span class="{% if item.position.realized_pnl > 0 %}text-success{% elif item.position.realized_pnl < 0 %}text-danger{% endif %}">
                                 {% if item.position.realized_pnl > 0 %}+{% endif %}{{ item.position.realized_pnl|floatformat:2|intcomma }}
                             </span>
-                        </td>
-                        <td>
-                            <a href="{% url 'asset_detail' item.position.asset.exchange.code item.position.asset.ticker %}" 
-                                class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-graph-up"></i> Trade
-                            </a>
                         </td>
                     </tr>
                     {% endfor %}

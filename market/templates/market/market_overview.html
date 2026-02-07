@@ -51,8 +51,6 @@
                             <th>Symbol</th>
                             <th>Name</th>
                             <th class="text-end">Price</th>
-                            <th>Currency</th>
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -71,13 +69,7 @@
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
-                            <td>{{ asset_item.asset.currency.code }}</td>
-                            <td class="text-end">
-                                <a href="{% url 'asset_detail' item.exchange.code asset_item.asset.ticker %}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-arrow-right"></i> Trade
-                                </a>
+                                {{ asset_item.asset.currency.code }}
                             </td>
                         </tr>
                         {% endfor %}

@@ -61,7 +61,7 @@
                     {{ total_cash|add:total_value|floatformat:2|intcomma }}
                     {% if base_currency %}{{ base_currency.code }}{% endif %}
                 </h4>
-                <small class="text-muted">Cash + Holdings</small>
+                <small class="text-muted">Cash + Current Holdings</small>
             </div>
         </div>
     </div>
@@ -98,7 +98,7 @@
 {% if positions %}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Holdings</h5>
+        <h5 class="mb-0">Current Holdings</h5>
         <a href="{% url 'portfolio' %}" class="btn btn-sm btn-outline-primary">View Full Portfolio</a>
     </div>
     <div class="table-responsive">
@@ -112,7 +112,6 @@
                     <th class="text-end">Current Value</th>
                     <th class="text-end">Unrealized P&L</th>
                     <th class="text-end">Realized P&L</th>
-                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -164,12 +163,6 @@
                         <span class="{% if item.position.realized_pnl > 0 %}text-success{% elif item.position.realized_pnl < 0 %}text-danger{% endif %}">
                             {% if item.position.realized_pnl > 0 %}+{% endif %}{{ item.position.realized_pnl|floatformat:2|intcomma }}
                         </span>
-                    </td>
-                    <td>
-                        <a href="{% url 'asset_detail' item.position.asset.exchange.code item.position.asset.ticker %}" 
-                            class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-graph-up"></i> Trade
-                        </a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -303,7 +296,7 @@
 </div>
 
 <!-- Wallets Section -->
-<h4 class="mt-4 mb-3"><i class="bi bi-wallet2 me-2"></i>Wallets</h4>
+<h4 class="mt-4 mb-3"><i class="bi bi-wallet2 me-2"></i>Cash</h4>
 <div class="row">
   {% for wallet in wallets %}
   <div class="col-md-4 mb-4">
