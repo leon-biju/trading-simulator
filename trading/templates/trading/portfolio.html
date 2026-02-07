@@ -71,7 +71,6 @@
                         <th class="text-end">Current Value</th>
                         <th class="text-end">Unrealized P&L</th>
                         <th class="text-end">Realized P&L</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,18 +90,18 @@
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            {{ item.position.asset.currency.code }} {{ item.position.average_cost|floatformat:2|intcomma }}
+                            {{ item.position.average_cost|floatformat:2|intcomma }} {{ item.position.asset.currency }}
                         </td>
                         <td class="text-end">
                             {% if item.current_price %}
-                                {{ item.position.asset.currency.code }} {{ item.current_price|floatformat:2|intcomma }}
+                                {{ item.current_price|floatformat:2|intcomma }} {{ item.position.asset.currency }}
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
                             {% if item.current_value %}
-                                {{ item.position.asset.currency.code }} {{ item.current_value|floatformat:2|intcomma }}
+                                {{ item.current_value|floatformat:2|intcomma }} {{ item.position.asset.currency }}
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
@@ -123,12 +122,6 @@
                             <span class="{% if item.position.realized_pnl > 0 %}text-success{% elif item.position.realized_pnl < 0 %}text-danger{% endif %}">
                                 {% if item.position.realized_pnl > 0 %}+{% endif %}{{ item.position.realized_pnl|floatformat:2|intcomma }}
                             </span>
-                        </td>
-                        <td>
-                            <a href="{% url 'asset_detail' item.position.asset.exchange.code item.position.asset.ticker %}" 
-                                class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-graph-up"></i> Trade
-                            </a>
                         </td>
                     </tr>
                     {% endfor %}

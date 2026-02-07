@@ -1,4 +1,6 @@
 import datetime
+import math
+from zoneinfo import ZoneInfo
 
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpRequest, HttpResponse
@@ -28,6 +30,7 @@ def market_overview_view(request: HttpRequest) -> HttpResponse:
     
     # Build exchange data with market status
     exchange_data = []
+    
     for exchange in exchanges:
         assets = Asset.objects.filter(
             exchange=exchange,
@@ -41,12 +44,26 @@ def market_overview_view(request: HttpRequest) -> HttpResponse:
                 'current_price': asset.get_latest_price(),
             })
         
+        is_open = exchange.is_currently_open()
+        hours_until_open = None
+        if not is_open:
+            hours_until_open = exchange.hours_until_open()
+
         exchange_data.append({
             'exchange': exchange,
-            'is_open': exchange.is_currently_open(),
+            'is_open': is_open,
             'assets': assets_with_prices,
             'asset_count': len(assets_with_prices),
+            'hours_until_open': hours_until_open,
         })
+
+    exchange_data.sort(
+        key=lambda item: (
+            not item['is_open'],
+            item['hours_until_open'] if item['hours_until_open'] is not None else 999999,
+            item['exchange'].name.lower(), # type: ignore[attr-defined]
+        )
+    )
     
     return render(request, 'market/market_overview.html', {
         'exchanges': exchange_data,

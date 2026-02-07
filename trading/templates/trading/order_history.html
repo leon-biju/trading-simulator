@@ -59,7 +59,7 @@
                         <td class="text-end">{{ order.quantity|floatformat:4 }}</td>
                         <td class="text-end">
                             {% if order.limit_price %}
-                                {{ order.asset.currency.code }} {{ order.limit_price|floatformat:2|intcomma }}
+                                {{ order.limit_price|floatformat:2|intcomma }} {{ order.asset.currency }}
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}

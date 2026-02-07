@@ -3,7 +3,7 @@ import random
 from decimal import Decimal
 from math import exp, sqrt
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from config.constants import (
@@ -16,9 +16,15 @@ from market.services.candles import get_asset_timezone
 
 
 class Command(BaseCommand):
-    help = "Backfill about a year of simulated OHLC candles for all assets."
+    help = "Backfill simulated OHLC candles for specified assets."
 
-    def add_arguments(self, parser): # type: ignore[no-untyped-def]
+    def add_arguments(self, parser):  # type: ignore[no-untyped-def]
+        parser.add_argument(
+            "--ticker",
+            nargs="+",
+            required=True,
+            help="One or more ticker symbols to backfill (e.g., --ticker AAPL GOOGL).",
+        )
         parser.add_argument(
             "--days",
             type=int,
@@ -40,23 +46,38 @@ class Command(BaseCommand):
         parser.add_argument(
             "--reset",
             action="store_true",
-            help="Delete existing candle history before backfilling.",
+            help="Delete existing candle history for specified assets before backfilling.",
         )
 
-    def handle(self, *args, **options): # type: ignore[no-untyped-def]
+    def handle(self, *args, **options):  # type: ignore[no-untyped-def]
+        tickers = options["ticker"]
         days = options["days"]
         intraday_days = options["intraday_days"]
         interval_minutes = options["interval_minutes"]
         reset = options["reset"]
 
-        if reset:
-            PriceCandle.objects.all().delete()
-            self.stdout.write(self.style.WARNING("Cleared existing candle history."))
+        # Validate all tickers exist before proceeding
+        assets = []
+        missing_tickers = []
+        for ticker in tickers:
+            asset = Asset.objects.select_related("currency", "exchange").filter(ticker=ticker).first()
+            if asset is None:
+                missing_tickers.append(ticker)
+            else:
+                assets.append(asset)
 
-        assets = Asset.objects.select_related("currency").all()
-        if not assets.exists():
-            self.stdout.write(self.style.WARNING("No assets found. Exiting."))
-            return
+        if missing_tickers:
+            raise CommandError(
+                f"The following tickers do not exist: {', '.join(missing_tickers)}"
+            )
+
+        if reset:
+            deleted_count, _ = PriceCandle.objects.filter(asset__in=assets).delete()
+            self.stdout.write(
+                self.style.WARNING(
+                    f"Cleared {deleted_count} existing candles for specified assets."
+                )
+            )
 
         now = timezone.now()
         start_date = (now - datetime.timedelta(days=days - 1)).date()
@@ -89,6 +110,15 @@ class Command(BaseCommand):
                     close_dt += datetime.timedelta(days=1)
 
                 if day >= intraday_start_date:
+                    # For the current day, don't generate candles for future times
+                    effective_close_dt = close_dt
+                    if day == now.date():
+                        effective_close_dt = min(close_dt, now.astimezone(tz))
+                        # If market hasn't opened yet today, skip this day
+                        if effective_close_dt <= open_dt:
+                            day += datetime.timedelta(days=1)
+                            continue
+
                     (
                         current_price,
                         daily_candle,
@@ -98,7 +128,7 @@ class Command(BaseCommand):
                         asset,
                         current_price,
                         open_dt,
-                        close_dt,
+                        effective_close_dt,
                         interval_minutes,
                     )
 
@@ -125,7 +155,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Backfill complete. Generated OHLC candles for {assets.count()} assets."
+                f"Backfill complete. Generated OHLC candles for {len(assets)} asset(s): {', '.join(tickers)}"
             )
         )
 

@@ -2,7 +2,7 @@ from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 from zoneinfo import ZoneInfo, available_timezones
-
+import datetime
 class Exchange(models.Model):
     """
     Represents a financial exchange where stocks are traded.
@@ -34,6 +34,37 @@ class Exchange(models.Model):
         
         return is_weekday and is_trading_hours
 
+    def hours_until_open(self) -> int | None:
+        utc_now = timezone.now()
+        try:
+            exchange_tz = ZoneInfo(self.timezone)
+            local_now = utc_now.astimezone(exchange_tz)
+            local_today = local_now.date()
+            open_today = datetime.datetime.combine(
+                local_today,
+                self.open_time,
+                tzinfo=exchange_tz,
+            )
+
+            if local_now.weekday() < 5 and local_now < open_today:
+                next_open = open_today
+            else:
+                days_ahead = 1
+                while True:
+                    candidate_date = local_today + datetime.timedelta(days=days_ahead)
+                    if candidate_date.weekday() < 5:
+                        break
+                    days_ahead += 1
+                next_open = datetime.datetime.combine(
+                    candidate_date,
+                    self.open_time,
+                    tzinfo=exchange_tz,
+                )
+
+            delta_seconds = (next_open - local_now).total_seconds()
+            return max(0, int(delta_seconds // 3600))
+        except Exception:
+            return None
     def __str__(self) -> str:
         return f"{self.name} ({self.code})"
 
@@ -42,7 +73,6 @@ class Currency(models.Model):
     code = models.CharField(max_length=3, unique=True)  # e.g., 'USD', 'EUR'
     name = models.CharField(max_length=50)              # e.g., 'United States Dollar'
     is_base = models.BooleanField(default=False)
-    #symbol = models.CharField(max_length=5, blank=True, null=True)  # e.g., '$', '€'
     def save(self, *args, **kwargs): # type: ignore[no-untyped-def]
         if self.is_base:
             Currency.objects.filter(is_base=True).exclude(pk=self.pk).update(is_base=False)

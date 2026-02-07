@@ -10,10 +10,10 @@ from config.constants import (
     SIMULATION_INITIAL_PRICE_RANGE,
     SIMULATION_MU,
     SIMULATION_SIGMA,
-    STOCKS_UPDATE_INTERVAL_MINUTES
+    ASSETS_UPDATE_INTERVAL_MINUTES
 )
 
-TIME_STEP_IN_YEARS = STOCKS_UPDATE_INTERVAL_MINUTES / (365 * 24 * 60)
+TIME_STEP_IN_YEARS = ASSETS_UPDATE_INTERVAL_MINUTES / (365 * 24 * 60)
 
 @transaction.atomic
 def update_stock_prices_simulation(stocks: Iterable[Asset]) -> None:

@@ -11,8 +11,8 @@
 
     {% if exchanges %}
         {% for item in exchanges %}
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card mb-4 {% if item.is_open %}border-success shadow-sm{% else %}border-light{% endif %}">
+            <div class="card-header d-flex justify-content-between align-items-center {% if item.is_open %}bg-success bg-opacity-10{% endif %}">
                 <div>
                     <h5 class="mb-0">
                         <a href="{% url 'exchange_detail' item.exchange.code %}" class="text-decoration-none">
@@ -33,6 +33,11 @@
                         <span class="badge bg-secondary">
                             <i class="bi bi-circle me-1"></i>Closed
                         </span>
+                        {% if item.hours_until_open != None %}
+                            <span class="badge bg-info text-dark ms-1">
+                                Opens in {{ item.hours_until_open }}h
+                            </span>
+                        {% endif %}
                     {% endif %}
                     <span class="badge bg-primary ms-1">{{ item.asset_count }} assets</span>
                 </div>
@@ -46,8 +51,6 @@
                             <th>Symbol</th>
                             <th>Name</th>
                             <th class="text-end">Price</th>
-                            <th>Currency</th>
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -66,13 +69,7 @@
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
-                            <td>{{ asset_item.asset.currency.code }}</td>
-                            <td class="text-end">
-                                <a href="{% url 'asset_detail' item.exchange.code asset_item.asset.ticker %}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-arrow-right"></i> Trade
-                                </a>
+                                {{ asset_item.asset.currency.code }}
                             </td>
                         </tr>
                         {% endfor %}
