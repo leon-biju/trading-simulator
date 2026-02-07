@@ -31,6 +31,7 @@ class CurrencyFactory(DjangoModelFactory):
 class AssetFactory(DjangoModelFactory):
     class Meta:
         model = models.Asset
+        django_get_or_create = ('ticker', 'exchange')
 
     asset_type = 'STOCK'
     ticker = factory.Faker('lexify', text='????')
@@ -39,18 +40,11 @@ class AssetFactory(DjangoModelFactory):
     exchange = factory.SubFactory(ExchangeFactory)
     is_active = True
 
-class StockFactory(AssetFactory):
-    class Meta:
-        model = models.Asset
-        django_get_or_create = ('ticker',)
-
-    asset_type = 'STOCK'
-
 class PriceCandleFactory(DjangoModelFactory):
     class Meta:
         model = models.PriceCandle
 
-    asset = factory.SubFactory(StockFactory)
+    asset = factory.SubFactory(AssetFactory)
     interval_minutes = 1440
     start_at = factory.Faker('date_time_this_month', tzinfo=datetime.timezone.utc)
     open_price = factory.Faker('pydecimal', left_digits=10, right_digits=4, positive=True)
