@@ -15,6 +15,8 @@ class Exchange(models.Model):
     close_time = models.TimeField()
 
     def is_currently_open(self) -> bool:
+        if self.code == "247EX":
+            return True
 
         utc_now = timezone.now()
         
