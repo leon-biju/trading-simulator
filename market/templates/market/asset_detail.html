@@ -261,8 +261,8 @@
                             <!-- Order Preview -->
                             <div class="alert alert-light mb-3" id="orderPreview">
                                 <small>
-                                    <strong>Estimated Cost:</strong>
-                                    <span id="estimatedCost">—</span>
+                                    <strong>Estimated <span id="amountLabel">Cost</span>:</strong>
+                                    <span id="estimatedAmount">—</span>
                                 </small>
                             </div>
                             
@@ -332,4 +332,9 @@
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
 <script src="{% static 'market/js/asset_performance.js' %}"></script>
 <script src="{% static 'market/js/asset_detail.js' %}"></script>
+
+<script>
+    // DEBUG STATEMENT - Remove or comment out in production
+    console.log("Price last updated at: {{ asset.last_price_update|date:'Y-m-d H:i:s' }}");
+</script>
 {% endblock %}

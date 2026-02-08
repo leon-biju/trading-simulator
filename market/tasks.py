@@ -6,7 +6,7 @@ from django.utils import timezone
 from market.models import Asset, Currency, Exchange, FXRate
 from config.constants import MARKET_DATA_MODE
 
-from .services.simulation import update_stock_prices_simulation
+from .services.simulation import update_asset_prices_simulation
 from .services.fx import update_currency_prices
 from .api_access import get_currency_layer_api_data
 
@@ -29,7 +29,7 @@ def update_asset_data() -> str:
     
     if MARKET_DATA_MODE == 'SIMULATION':
         # update assets
-        update_stock_prices_simulation(assets_to_update)
+        update_asset_prices_simulation(assets_to_update)
         return f"Updated simulated prices for {len(assets_to_update)} assets."
     else:
         # update assets

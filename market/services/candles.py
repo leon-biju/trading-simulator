@@ -7,33 +7,28 @@ from django.utils import timezone
 from ..models import Asset, PriceCandle
 
 
-def get_asset_timezone(asset: Asset) -> datetime.tzinfo:
+def get_asset_timezone(asset: Asset) -> ZoneInfo:
     try:
         return ZoneInfo(asset.exchange.timezone)
     except Exception:
-        return datetime.timezone.utc
-
-
-def _to_local_date(ts: datetime.datetime, tz: datetime.tzinfo) -> datetime.date:
-    if timezone.is_naive(ts):
-        ts = timezone.make_aware(ts, datetime.timezone.utc)
-    try:
-        local_ts = ts.astimezone(tz)
-    except Exception:
-        local_ts = ts
-    return local_ts.date()
+        return ZoneInfo("UTC")
 
 
 def _floor_time_to_interval(
-    ts: datetime.datetime,
-    *,
+    dt: datetime.datetime,
     interval_minutes: int,
+    tz: ZoneInfo,
 ) -> datetime.datetime:
-    total_minutes = ts.hour * 60 + ts.minute
+    """
+    Floor a datetime to the start of its interval bucket in the given timezone.
+    Returns the bucket start time in UTC.
+    """
+    local_dt = dt.astimezone(tz)
+    midnight = local_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    total_minutes = int((local_dt - midnight).total_seconds() // 60)
     bucket_minutes = (total_minutes // interval_minutes) * interval_minutes
-    bucket_hour = bucket_minutes // 60
-    bucket_minute = bucket_minutes % 60
-    return ts.replace(hour=bucket_hour, minute=bucket_minute, second=0, microsecond=0)
+    floored_local = midnight + datetime.timedelta(minutes=bucket_minutes)
+    return floored_local.astimezone(datetime.timezone.utc)
 
 
 def get_candles_for_range(
@@ -64,55 +59,72 @@ def get_candles_for_range(
 
 def _get_bucket_start(
     asset: Asset,
-    *,
     ts: datetime.datetime,
     interval_minutes: int,
 ) -> datetime.datetime:
+    """
+    Get the bucket start time for a given timestamp and interval.
+    """
     tz = get_asset_timezone(asset)
-    local_ts = ts
-    if timezone.is_naive(local_ts):
-        local_ts = timezone.make_aware(local_ts, datetime.timezone.utc)
-
-    local_ts = local_ts.astimezone(tz)
-
-    bucket_start_local = _floor_time_to_interval(local_ts, interval_minutes=interval_minutes)
-    return bucket_start_local.astimezone(datetime.timezone.utc)
+    if timezone.is_naive(ts):
+        ts = timezone.make_aware(ts, datetime.timezone.utc)
+    return _floor_time_to_interval(ts, interval_minutes, tz)
 
 
 def upsert_price_candle(
     asset: Asset,
-    *,
-    ts: datetime.datetime,
-    price: Decimal,
     interval_minutes: int,
-    source: str,
-) -> None:
-    start_at = _get_bucket_start(asset, ts=ts, interval_minutes=interval_minutes)
+    open_price: Decimal,
+    high_price: Decimal,
+    low_price: Decimal,
+    close_price: Decimal,
+    volume: int,
+    ts: datetime.datetime | None = None,
+) -> PriceCandle:
+    """
+    Create or update a price candle for the given asset and interval.
+
+    For new candles: uses the provided OHLC values.
+    For existing candles: preserves open, updates high/low/close, adds volume.
+
+    Args:
+        asset: The asset to create/update candle for
+        interval_minutes: Candle interval (5, 60, 1440)
+        open_price: Opening price for this tick
+        high_price: High price for this tick
+        low_price: Low price for this tick
+        close_price: Closing price for this tick
+        volume: Volume for this tick
+        ts: Timestamp for the candle (defaults to now)
+
+    Returns:
+        The created or updated PriceCandle
+    """
+    if ts is None:
+        ts = timezone.now()
+
+    candle_start = _get_bucket_start(asset, ts, interval_minutes)
 
     candle, created = PriceCandle.objects.get_or_create(
         asset=asset,
         interval_minutes=interval_minutes,
-        start_at=start_at,
+        start_at=candle_start,
         defaults={
-            "open_price": price,
-            "high_price": price,
-            "low_price": price,
-            "close_price": price,
-            "volume": 1,
-            "source": source,
+            "open_price": open_price,
+            "high_price": high_price,
+            "low_price": low_price,
+            "close_price": close_price,
+            "volume": volume,
+            "source": "SIMULATION",
         },
     )
 
     if not created:
-        candle.high_price = max(candle.high_price, price)
-        candle.low_price = min(candle.low_price, price)
-        candle.close_price = price
-        candle.volume = candle.volume + 1
-        candle.source = source
-        candle.save(update_fields=[
-            "high_price",
-            "low_price",
-            "close_price",
-            "volume",
-            "source",
-        ])
+        # Aggregate: expand high/low range, update close, accumulate volume
+        candle.high_price = max(candle.high_price, high_price)
+        candle.low_price = min(candle.low_price, low_price)
+        candle.close_price = close_price
+        candle.volume += volume
+        candle.save(update_fields=["high_price", "low_price", "close_price", "volume"])
+
+    return candle

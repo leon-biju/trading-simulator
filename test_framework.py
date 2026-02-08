@@ -96,9 +96,9 @@ def setup_stock_assets() -> dict[str, Any]:
     for stock_data in stocks_data:
         stock, created = Asset.objects.get_or_create(
             ticker=stock_data["symbol"],
+            exchange=stock_data["exchange"],
             defaults={
                 "name": stock_data["name"],
-                "exchange": stock_data["exchange"],
                 "asset_type": "STOCK",
                 "is_active": stock_data["is_active"],
                 "currency": Currency.objects.get(code="USD"),  # Assuming USD

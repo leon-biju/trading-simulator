@@ -60,11 +60,34 @@ class Command(BaseCommand):
         assets = []
         missing_tickers = []
         for ticker in tickers:
-            asset = Asset.objects.select_related("currency", "exchange").filter(ticker=ticker).first()
-            if asset is None:
+            matching_assets = list(
+                Asset.objects.select_related("currency", "exchange").filter(ticker=ticker)
+            )
+            if not matching_assets:
                 missing_tickers.append(ticker)
+            elif len(matching_assets) == 1:
+                assets.append(matching_assets[0])
             else:
-                assets.append(asset)
+                # Multiple assets with same ticker but different exchanges
+                exchange_codes = [a.exchange.code for a in matching_assets]
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Multiple assets found for ticker '{ticker}'."
+                    )
+                )
+                exchange_input = input(
+                    f"Enter the exchange the asset is on ({', '.join(exchange_codes)}): "
+                ).strip().upper()
+                selected_asset = next(
+                    (a for a in matching_assets if a.exchange.code.upper() == exchange_input),
+                    None,
+                )
+                if selected_asset is None:
+                    raise CommandError(
+                        f"Invalid exchange '{exchange_input}' for ticker '{ticker}'. "
+                        f"Valid options: {', '.join(exchange_codes)}"
+                    )
+                assets.append(selected_asset)
 
         if missing_tickers:
             raise CommandError(

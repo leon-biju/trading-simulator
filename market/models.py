@@ -15,6 +15,8 @@ class Exchange(models.Model):
     close_time = models.TimeField()
 
     def is_currently_open(self) -> bool:
+        if self.code == "247EX":
+            return True
 
         utc_now = timezone.now()
         
@@ -132,6 +134,14 @@ class Asset(models.Model):
             if latest_candle is not None:
                 return latest_candle.close_price
 
+        return None
+
+    def last_price_update(self) -> datetime.datetime | None:
+        latest_candle = PriceCandle.objects.filter(
+            asset=self,
+        ).order_by("-start_at").first()
+        if latest_candle is not None:
+            return latest_candle.start_at
         return None
 
     def __str__(self) -> str:
