@@ -136,6 +136,14 @@ class Asset(models.Model):
 
         return None
 
+    def last_price_update(self) -> datetime.datetime | None:
+        latest_candle = PriceCandle.objects.filter(
+            asset=self,
+        ).order_by("-start_at").first()
+        if latest_candle is not None:
+            return latest_candle.start_at
+        return None
+
     def __str__(self) -> str:
         return f"{self.ticker} on {self.exchange.code}"
 
