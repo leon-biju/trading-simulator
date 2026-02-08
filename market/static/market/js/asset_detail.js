@@ -8,7 +8,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const sideSell = document.getElementById('sideSell');
     const submitBtn = document.getElementById('submitBtn');
     const submitBtnText = document.getElementById('submitBtnText');
-    const estimatedCost = document.getElementById('estimatedCost');
+    const estimatedAmount = document.getElementById('estimatedAmount');
+    const amountLabel = document.getElementById('amountLabel');
+    
     
     const currentPrice = JSON.parse(document.getElementById('current_price').textContent);
     const currencyCode = JSON.parse(document.getElementById('currency_code').textContent);
@@ -35,9 +37,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isBuy) {
             submitBtn.classList.add('btn-success');
             submitBtnText.textContent = 'Place Buy Order';
+            amountLabel.textContent = 'Cost';
+
         } else {
             submitBtn.classList.add('btn-danger');
             submitBtnText.textContent = 'Place Sell Order';
+            amountLabel.textContent = 'Proceeds';
         }
         updateEstimate();
     }
@@ -57,21 +62,20 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (isBuy) {
                 const totalWithFee = (parseFloat(total) + parseFloat(fee)).toFixed(2);
-                estimatedCost.innerHTML = `${currencyCode} ${total} + ${currencyCode} ${fee} fee = <strong>${currencyCode} ${totalWithFee}</strong>`;
+                estimatedAmount.innerHTML = `${currencyCode} ${total} + ${currencyCode} ${fee} fee = <strong>${currencyCode} ${totalWithFee}</strong>`;
                 
                 if (parseFloat(totalWithFee) > availableBalance) {
-                    estimatedCost.innerHTML += ' <span class="text-danger">(Insufficient funds)</span>';
+                    estimatedAmount.innerHTML += ' <span class="text-danger">(Insufficient funds)</span>';
                 }
             } else {
                 const netProceeds = (parseFloat(total) - parseFloat(fee)).toFixed(2);
-                estimatedCost.innerHTML = `${currencyCode} ${total} - ${currencyCode} ${fee} fee = <strong>${currencyCode} ${netProceeds}</strong>`;
-                
+                estimatedAmount.innerHTML = `${currencyCode} ${total} - ${currencyCode} ${fee} fee = <strong>${currencyCode} ${netProceeds}</strong>`;
                 if (quantity > availableQuantity) {
-                    estimatedCost.innerHTML += ' <span class="text-danger">(Insufficient holdings)</span>';
+                    estimatedAmount.innerHTML += ' <span class="text-danger">(Insufficient holdings)</span>';
                 }
             }
         } else {
-            estimatedCost.textContent = '—';
+            estimatedAmount.textContent = '—';
         }
     }
     
