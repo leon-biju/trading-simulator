@@ -29,4 +29,9 @@ urlpatterns = [
         views_api.get_wallet_balance, 
         name='api_get_wallet'
     ),
+    path(
+        'api/portfolio-history/',
+        views_api.portfolio_history_api,
+        name='api_portfolio_history'
+    ),
 ]

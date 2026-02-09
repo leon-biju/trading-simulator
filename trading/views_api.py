@@ -7,6 +7,8 @@ from market.models import Asset
 from wallets.models import Wallet
 from trading.models import Position
 
+from trading.services.portfolio import get_portfolio_history
+
 @login_required
 @require_GET
 def get_position_for_stock(request: HttpRequest, exchange_code: str, asset_symbol: str) -> JsonResponse:
@@ -55,3 +57,24 @@ def get_wallet_balance(request: HttpRequest, currency_code: str) -> JsonResponse
             'pending_balance': '0',
             'symbol': currency_code,
         })
+
+
+@login_required
+@require_GET
+def portfolio_history_api(request: HttpRequest) -> JsonResponse:
+    """API endpoint to get user's portfolio history for charting."""
+    assert request.user.id is not None, "Huh, shouldn't get here"  # For mypy
+    
+    history = get_portfolio_history(request.user.id)
+    
+    data = [
+        {
+            'date': snapshot.date.isoformat(),
+            'total_value': str(snapshot.total_value),
+            'total_cost': str(snapshot.total_cost),
+            'cash_balance': str(snapshot.cash_balance),
+        }
+        for snapshot in history
+    ]
+    
+    return JsonResponse({'history': data})
