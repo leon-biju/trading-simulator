@@ -1,34 +1,32 @@
 from django.urls import path
-from . import views
+from . import views_ui, views_api
 
 urlpatterns = [
     # Order management
-    path('order/<int:order_id>/cancel/', views.cancel_order_view, name='cancel_order'),
-
-
+    path('order/<int:order_id>/cancel/', views_ui.cancel_order_view, name='cancel_order'),
     # Order placement
     path(
         'order/<str:exchange_code>/<str:asset_symbol>/', 
-        views.place_order_view, 
+        views_ui.place_order_view, 
         name='place_order'
     ),
         
     # History views
-    path('orders/', views.order_history_view, name='order_history'),
-    path('trades/', views.trade_history_view, name='trade_history'),
+    path('orders/', views_ui.order_history_view, name='order_history'),
+    path('trades/', views_ui.trade_history_view, name='trade_history'),
     
     # Portfolio
-    path('portfolio/', views.portfolio_view, name='portfolio'),
+    path('portfolio/', views_ui.portfolio_view, name='portfolio'),
     
     # API endpoints for dynamic form updates
     path(
         'api/position/<str:exchange_code>/<str:asset_symbol>/', 
-        views.get_position_for_stock, 
+        views_api.get_position_for_stock, 
         name='api_get_position'
     ),
     path(
         'api/wallet/<str:currency_code>/', 
-        views.get_wallet_balance, 
+        views_api.get_wallet_balance, 
         name='api_get_wallet'
     ),
 ]

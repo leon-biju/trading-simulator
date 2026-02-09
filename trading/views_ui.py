@@ -1,18 +1,17 @@
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST, require_GET
 
-from trading.models import Order, OrderStatus, Trade, Position
+from trading.models import Order, OrderStatus, Trade
 from trading.forms import PlaceOrderForm
 
 from trading.services.orders import  place_order, cancel_order
 from trading.services.queries import get_user_positions
 
 from market.models import Asset
-from wallets.models import Wallet
 
 
 @login_required
@@ -161,53 +160,3 @@ def portfolio_view(request: HttpRequest) -> HttpResponse:
         'total_cost': total_cost,
         'total_pnl': total_value - total_cost if total_value else None,
     })
-
-
-@login_required
-@require_GET
-def get_position_for_stock(request: HttpRequest, exchange_code: str, asset_symbol: str) -> JsonResponse:
-    """API endpoint to get user's position for a specific asset."""
-    asset = get_object_or_404(
-        Asset.objects.select_related('exchange'),
-        exchange__code=exchange_code,
-        ticker=asset_symbol,
-    )
-    
-    try:
-        position = Position.objects.get(user_id=request.user.id, asset=asset)
-        return JsonResponse({
-            'has_position': True,
-            'quantity': str(position.quantity),
-            'available_quantity': str(position.available_quantity),
-            'average_cost': str(position.average_cost),
-        })
-    except Position.DoesNotExist:
-        return JsonResponse({
-            'has_position': False,
-            'quantity': '0',
-            'available_quantity': '0',
-            'average_cost': '0',
-        })
-
-
-@login_required
-@require_GET
-def get_wallet_balance(request: HttpRequest, currency_code: str) -> JsonResponse:
-    """API endpoint to get user's wallet balance for a specific currency."""
-    try:
-        wallet = Wallet.objects.get(user_id=request.user.id, currency__code=currency_code)
-        return JsonResponse({
-            'has_wallet': True,
-            'balance': str(wallet.balance),
-            'available_balance': str(wallet.available_balance),
-            'pending_balance': str(wallet.pending_balance),
-            'symbol': wallet.currency.code,
-        })
-    except Wallet.DoesNotExist:
-        return JsonResponse({
-            'has_wallet': False,
-            'balance': '0',
-            'available_balance': '0',
-            'pending_balance': '0',
-            'symbol': currency_code,
-        })
