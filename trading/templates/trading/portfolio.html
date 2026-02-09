@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% load humanize %}
+{% load static %}
 
 {% block title %}Portfolio{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -14,6 +19,32 @@
             <a href="{% url 'trade_history' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left-right me-1"></i>Trade History
             </a>
+        </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Portfolio Performance</h5>
+            <div class="btn-group btn-group-sm" role="group" id="chart-range-selector">
+                <button type="button" class="btn btn-outline-secondary" data-range="1W">1W</button>
+                <button type="button" class="btn btn-outline-secondary active" data-range="1M">1M</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="3M">3M</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="1Y">1Y</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="ALL">ALL</button>
+            </div>
+        </div>
+        <div class="card-body" style="min-height: 300px;">
+            <canvas id="portfolioChart"></canvas>
+            <div id="chart-loading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <div id="chart-empty" class="text-center py-5" style="display: none;">
+                <i class="bi bi-graph-up text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3 mb-0">No portfolio history yet. Check back tomorrow!</p>
+            </div>
         </div>
     </div>
 
@@ -136,4 +167,8 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/portfolio_chart.js' %}"></script>
 {% endblock %}

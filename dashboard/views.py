@@ -8,7 +8,7 @@ from django.views.decorators.http import require_GET
 from accounts.models import Profile
 from wallets.models import Wallet
 from trading.models import Order, OrderStatus, Trade
-from trading.services import get_user_positions
+from trading.services.queries import get_user_positions
 from market.models import Currency, FXRate
 
 @login_required

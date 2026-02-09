@@ -18,12 +18,11 @@ from django.contrib.auth import get_user_model
 
 from market.models import Exchange
 from trading.models import OrderSide, OrderStatus, OrderType, Position, Trade
-from trading.services import (
-    place_order,
-    cancel_order,
-    execute_pending_order,
-    TRADING_FEE_PERCENTAGE,
-)
+
+from trading.services.orders import  place_order, cancel_order
+from trading.services.utils import TRADING_FEE_PERCENTAGE
+from trading.services.execution import execute_order, execute_pending_order
+
 from accounts.models import CustomUser
 from wallets.models import Wallet, Transaction
 

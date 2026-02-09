@@ -22,14 +22,12 @@ from django.utils import timezone
 from accounts.models import CustomUser
 from market.models import Exchange, PriceCandle
 from trading.models import OrderSide, OrderType, OrderStatus, Position, Trade
-from trading.services import (
-    place_order,
-    cancel_order,
-    execute_pending_order,
-    get_user_pending_orders,
-    get_user_positions,
-    TRADING_FEE_PERCENTAGE,
-)
+
+from trading.services.orders import place_order, cancel_order
+from trading.services.execution import execute_pending_order
+from trading.services.queries import get_user_pending_orders, get_user_positions
+from trading.services.utils import TRADING_FEE_PERCENTAGE
+
 from wallets.models import Wallet, Transaction
 
 
