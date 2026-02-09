@@ -11,12 +11,13 @@
         if (ctx) ctx.style.display = 'none';
 
         try {
-            const response = await fetch(`{% url 'api_portfolio_history' %}?range=${range}`);
+            const response = await fetch(`/trading/api/portfolio-history/?range=${range}`);
             const data = await response.json();
 
             loadingEl.style.display = 'none';
 
             if (!data.labels || data.labels.length === 0) {
+                console.warn('No portfolio history data available');
                 emptyEl.style.display = 'block';
                 return;
             }
@@ -31,6 +32,7 @@
     }
 
     function renderChart(data) {
+        console.log('Rendering chart with data:', data);
         if (chart) {
             chart.destroy();
         }
@@ -111,7 +113,8 @@
                                 return new Intl.NumberFormat('en-GB', {
                                     style: 'currency',
                                     currency: data.currency || 'GBP',
-                                    notation: 'compact'
+                                    currencyDisplay: 'code',
+                                    notation: 'standard',
                                 }).format(value);
                             }
                         }

@@ -65,16 +65,39 @@ def portfolio_history_api(request: HttpRequest) -> JsonResponse:
     """API endpoint to get user's portfolio history for charting."""
     assert request.user.id is not None, "Huh, shouldn't get here"  # For mypy
     
-    history = get_portfolio_history(request.user.id)
+    # Parse range parameter (default 1M = ~30 days)
+    range_param = request.GET.get('range', '1M')
+    days_map = {
+        '1W': 7,
+        '1M': 30,
+        '3M': 90,
+        '6M': 180,
+        '1Y': 365,
+        'ALL': None,
+    }
+    days = days_map.get(range_param, 30)
     
-    data = [
-        {
-            'date': snapshot.date.isoformat(),
-            'total_value': str(snapshot.total_value),
-            'total_cost': str(snapshot.total_cost),
-            'cash_balance': str(snapshot.cash_balance),
-        }
-        for snapshot in history
-    ]
+    history = get_portfolio_history(request.user.id, days=days)
     
-    return JsonResponse({'history': data})
+    # Transform data into format expected by Chart.js
+    labels = []
+    total_assets = []
+    portfolio_value = []
+    cash_balance = []
+    
+    for snapshot in history:
+        labels.append(snapshot.date.strftime('%d %b'))
+        # Total assets = portfolio value + cash
+        total_assets.append(float(snapshot.total_value + snapshot.cash_balance))
+        portfolio_value.append(float(snapshot.total_value))
+        cash_balance.append(float(snapshot.cash_balance))
+    
+    return JsonResponse({
+        'labels': labels,
+        'datasets': {
+            'total_assets': total_assets,
+            'portfolio_value': portfolio_value,
+            'cash_balance': cash_balance,
+        },
+        'currency': 'USD',  # TODO: Get from user preferences or base currency
+    })
