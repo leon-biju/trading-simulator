@@ -7,11 +7,10 @@ from django.views.decorators.http import require_POST, require_GET
 
 from trading.models import Order, OrderStatus, Trade, Position
 from trading.forms import PlaceOrderForm
-from trading.services import (
-    place_order,
-    cancel_order,
-    get_user_positions,
-)
+
+from trading.services.orders import  place_order, cancel_order
+from trading.services.queries import get_user_positions
+
 from market.models import Asset
 from wallets.models import Wallet
 

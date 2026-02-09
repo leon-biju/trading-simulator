@@ -7,6 +7,12 @@ from celery import shared_task
 import logging
 
 from market.models import Exchange
+from trading.models import Order, OrderStatus, OrderType
+
+from trading.services.execution import execute_pending_order
+from trading.services.queries import get_pending_orders_for_exchange
+
+
 
 
 logger = logging.getLogger(__name__)
@@ -26,7 +32,6 @@ def process_pending_orders_for_exchange(exchange_code: str) -> dict[str, int]:
     Returns:
         dict with counts of executed, failed, and skipped orders
     """
-    from trading.services import get_pending_orders_for_exchange, execute_pending_order
     
     results = {
         'executed': 0,
@@ -89,8 +94,6 @@ def check_limit_orders() -> dict[str, int]:
     
     TODO: Optimize by only checking orders for assets whose prices changed.
     """
-    from trading.models import Order, OrderStatus, OrderType
-    from trading.services import execute_pending_order
     
     results = {
         'checked': 0,
