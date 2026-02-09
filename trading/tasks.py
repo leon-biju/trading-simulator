@@ -11,6 +11,7 @@ from trading.models import Order, OrderStatus, OrderType
 
 from trading.services.execution import execute_pending_order
 from trading.services.queries import get_pending_orders_for_exchange
+from trading.services.portfolio import snapshot_all_user_portfolios
 
 
 
@@ -117,5 +118,23 @@ def check_limit_orders() -> dict[str, int]:
         except Exception as e:
             results['failed'] += 1
             logger.error(f"Failed to execute limit order {order.id}: {str(e)}")
+    
+    return results
+
+
+@shared_task  # type: ignore[untyped-decorator]
+def snapshot_all_portfolios() -> dict[str, int]:
+    """
+    Create daily portfolio snapshots for all users.
+    
+    This task should be scheduled to run once daily (e.g., end of day)
+    to capture the portfolio value for historical tracking.
+    
+    Returns:
+        dict with counts of successful and failed snapshots
+    """    
+    logger.info("Starting daily portfolio snapshot task")
+    results = snapshot_all_user_portfolios()
+    logger.info(f"Portfolio snapshot complete: {results}")
     
     return results
