@@ -299,57 +299,65 @@ class Trade(models.Model):
         
 
 
-class PositionSnapshot(models.Model):
+class PortfolioSnapshot(models.Model):
     """
-    Optional: Historical snapshot of position state for analytics and reporting.
+    Daily snapshot of a user's total portfolio value for historical tracking.
     
-    Service Layer Responsibilities (in services.py):
-    - Create snapshot after each position-changing event (trade execution)
-    - Fetch current market_price from PriceHistory
-    - Calculate unrealized_pnl for the snapshot
-    - Use for portfolio performance charts, P&L history, etc.
+    Stores the total portfolio value converted to the base currency,
+    enabling portfolio performance charts over time.
     """
-    position = models.ForeignKey(
-        Position,
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='snapshots'
+        related_name='portfolio_snapshots'
     )
-    quantity = models.DecimalField(
-        max_digits=20,
-        decimal_places=8
+    date = models.DateField(
+        db_index=True,
+        help_text="Date of the snapshot"
     )
-    average_cost = models.DecimalField(
-        max_digits=20,
-        decimal_places=8
-    )
-    realized_pnl = models.DecimalField(
-        max_digits=20,
-        decimal_places=2
-    )
-    market_price = models.DecimalField(
-        max_digits=20,
-        decimal_places=8,
-        null=True,
-        blank=True,
-        help_text="Market price at time of snapshot"
-    )
-    unrealized_pnl = models.DecimalField(
+    total_value = models.DecimalField(
         max_digits=20,
         decimal_places=2,
-        null=True,
-        blank=True,
-        help_text="Calculated unrealized P&L at snapshot time"
+        default=Decimal('0'),
+        help_text="Total portfolio value (positions) in base currency"
     )
-    snapshot_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    total_cost = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=Decimal('0'),
+        help_text="Total cost basis of all positions in base currency"
+    )
+    cash_balance = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=Decimal('0'),
+        help_text="Total cash across all wallets in base currency"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-snapshot_at']
-        indexes = [
-            models.Index(fields=['position', '-snapshot_at']),
+        ordering = ['-date']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'date'],
+                name='unique_user_portfolio_snapshot_per_day'
+            )
         ]
-        verbose_name = 'Position Snapshot'
-        verbose_name_plural = 'Position Snapshots'
+        indexes = [
+            models.Index(fields=['user', '-date']),
+        ]
+        verbose_name = 'Portfolio Snapshot'
+        verbose_name_plural = 'Portfolio Snapshots'
 
     def __str__(self) -> str:
-        return f"{self.position.asset.ticker}: {self.quantity} @ {self.snapshot_at.strftime('%Y-%m-%d %H:%M')}"
+        return f"{self.user.email}: {self.total_value} on {self.date}"
 
+    @property
+    def total_assets(self) -> Decimal:
+        """Total assets = portfolio value + cash."""
+        return self.total_value + self.cash_balance
+
+    @property
+    def unrealized_pnl(self) -> Decimal:
+        """Unrealized P&L = current value - cost basis."""
+        return self.total_value - self.total_cost
