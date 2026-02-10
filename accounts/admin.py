@@ -7,7 +7,7 @@ from .models import CustomUser, Profile
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'created_on')
+    list_display = ('user', 'created_on', 'home_currency')
     search_fields = ('user__username',)
 
 @admin.register(CustomUser)

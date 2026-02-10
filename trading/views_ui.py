@@ -12,6 +12,22 @@ from trading.services.orders import  place_order, cancel_order
 from trading.services.queries import get_user_positions
 
 from market.models import Asset
+from market.services.fx import get_fx_conversion
+
+
+def _convert_to_home(from_currency_code: str, home_currency_code: str, amount: Decimal | None) -> Decimal | None:
+    """Convert an amount from an asset's native currency to the user's home currency."""
+    if amount is None:
+        return None
+    if from_currency_code == home_currency_code:
+        return amount
+    _, converted = get_fx_conversion(
+        from_currency_code=from_currency_code,
+        to_currency_code=home_currency_code,
+        from_amount=amount,
+        to_amount=None,
+    )
+    return converted
 
 
 @login_required
@@ -113,10 +129,31 @@ def trade_history_view(request: HttpRequest) -> HttpResponse:
     """Display user's trade history."""
     trades = Trade.objects.filter(
         user_id=request.user.id
-    ).select_related('asset', 'order', 'fee_currency').order_by('-executed_at')[:100]
+    ).select_related('asset', 'order', 'fee_currency', 'asset__currency').order_by('-executed_at')[:100]
     
+    from accounts.models import Profile
+    profile = Profile.objects.get(user_id=request.user.id)
+    home_currency = profile.home_currency
+    home_code = home_currency.code
+
+    enriched_trades = []
+    for trade in trades:
+        asset_currency_code = trade.asset.currency.code
+        price_home = _convert_to_home(asset_currency_code, home_code, trade.price)
+        total_value_home = _convert_to_home(asset_currency_code, home_code, trade.total_value)
+        fee_home = _convert_to_home(trade.fee_currency.code, home_code, trade.fee)
+        net_amount_home = _convert_to_home(asset_currency_code, home_code, trade.net_amount)
+        enriched_trades.append({
+            'trade': trade,
+            'price': price_home,
+            'total_value': total_value_home,
+            'fee': fee_home,
+            'net_amount': net_amount_home,
+        })
+
     return render(request, 'trading/trade_history.html', {
-        'trades': trades,
+        'trades': enriched_trades,
+        'home_currency': home_currency,
     })
 
 
@@ -128,21 +165,35 @@ def portfolio_view(request: HttpRequest) -> HttpResponse:
         return redirect('login')  # Redundant but mypy is being pedantic
     positions = get_user_positions(request.user.id)
     
-    # Enrich positions with current price and P&L data
+    home_currency = request.user.home_currency
+    home_code = home_currency.code
+
+    # Enrich positions with current price and P&L data, converted to home currency
     enriched_positions = []
     total_value = Decimal('0')
     total_cost = Decimal('0')
     
     for position in positions:
+        asset_currency_code = position.asset.currency.code
         current_price = position.asset.get_latest_price()
         unrealized_pnl = position.calculate_unrealized_pnl()
         current_value = (position.quantity * current_price) if current_price else None
         
+        # Convert per-position values to home currency for display
+        current_value_home = _convert_to_home(asset_currency_code, home_code, current_value)
+        unrealized_pnl_home = _convert_to_home(asset_currency_code, home_code, unrealized_pnl)
+        cost_basis_home = _convert_to_home(asset_currency_code, home_code, position.total_cost_basis)
+        avg_cost_home = _convert_to_home(asset_currency_code, home_code, position.average_cost)
+        current_price_home = _convert_to_home(asset_currency_code, home_code, current_price)
+        realized_pnl_home = _convert_to_home(asset_currency_code, home_code, position.realized_pnl)
+
         enriched_positions.append({
             'position': position,
-            'current_price': current_price,
-            'current_value': current_value,
-            'unrealized_pnl': unrealized_pnl,
+            'current_price': current_price_home,
+            'current_value': current_value_home,
+            'unrealized_pnl': unrealized_pnl_home,
+            'avg_cost': avg_cost_home,
+            'realized_pnl': realized_pnl_home,
             'pnl_percent': (
                 (unrealized_pnl / position.total_cost_basis * 100)
                 if unrealized_pnl and position.total_cost_basis > 0 
@@ -150,13 +201,17 @@ def portfolio_view(request: HttpRequest) -> HttpResponse:
             ),
         })
         
-        if current_value:
-            total_value += current_value
-        total_cost += position.total_cost_basis
+        if current_value_home:
+            total_value += current_value_home
+        if cost_basis_home:
+            total_cost += cost_basis_home
     
+    total_pnl = total_value - total_cost if total_value else None
+
     return render(request, 'trading/portfolio.html', {
         'positions': enriched_positions,
         'total_value': total_value,
         'total_cost': total_cost,
-        'total_pnl': total_value - total_cost if total_value else None,
+        'total_pnl': total_pnl,
+        'home_currency': home_currency,
     })

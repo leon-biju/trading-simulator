@@ -90,12 +90,8 @@ def get_fx_conversion(
         raise LookupError(f"Unsupported currency pair: {from_currency_code}{to_currency_code}")
 
     if from_amount is not None:
-        if from_amount < 0:
-            raise ValueError("from_amount must be >= 0")
         return from_amount, round_to_two_dp(from_amount * exchange_rate)
 
     assert to_amount is not None
 
-    if to_amount < 0:
-        raise ValueError("to_amount must be >= 0")
     return round_to_two_dp(to_amount / exchange_rate), to_amount

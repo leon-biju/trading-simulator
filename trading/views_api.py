@@ -3,7 +3,9 @@ from django.http import JsonResponse, HttpRequest
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 
-from market.models import Asset
+from accounts.models import Profile
+from market.models import Asset, Currency
+from market.services.fx import get_fx_rate
 from wallets.models import Wallet
 from trading.models import Position
 
@@ -79,6 +81,18 @@ def portfolio_history_api(request: HttpRequest) -> JsonResponse:
     
     history = get_portfolio_history(request.user.id, days=days)
     
+    # Determine conversion rate from base currency to user's home currency
+    profile = Profile.objects.get(user_id=request.user.id)
+    home_currency = profile.home_currency
+    home_code = home_currency.code
+    base_currency = Currency.objects.filter(is_base=True).first()
+    
+    fx_multiplier = 1.0
+    if base_currency and base_currency.code != home_code:
+        rate = get_fx_rate(base_currency.code, home_code)
+        if rate is not None:
+            fx_multiplier = float(rate)
+
     # Transform data into format expected by Chart.js
     labels = []
     total_assets = []
@@ -87,10 +101,10 @@ def portfolio_history_api(request: HttpRequest) -> JsonResponse:
     
     for snapshot in history:
         labels.append(snapshot.date.strftime('%d %b'))
-        # Total assets = portfolio value + cash
-        total_assets.append(float(snapshot.total_value + snapshot.cash_balance))
-        portfolio_value.append(float(snapshot.total_value))
-        cash_balance.append(float(snapshot.cash_balance))
+        # Total assets = portfolio value + cash, converted to home currency
+        total_assets.append(float(snapshot.total_value + snapshot.cash_balance) * fx_multiplier)
+        portfolio_value.append(float(snapshot.total_value) * fx_multiplier)
+        cash_balance.append(float(snapshot.cash_balance) * fx_multiplier)
     
     return JsonResponse({
         'labels': labels,
@@ -99,5 +113,5 @@ def portfolio_history_api(request: HttpRequest) -> JsonResponse:
             'portfolio_value': portfolio_value,
             'cash_balance': cash_balance,
         },
-        'currency': 'USD',  # TODO: Get from user preferences or base currency
+        'currency': home_code,
     })

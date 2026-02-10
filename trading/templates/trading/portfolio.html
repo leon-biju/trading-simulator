@@ -57,7 +57,7 @@
                     <h6 class="card-subtitle mb-2 text-muted">Total Value</h6>
                     <h4 class="card-title mb-0">
                         {% if total_value %}
-                            {{ total_value|floatformat:2|intcomma }}
+                            {{ total_value|floatformat:2|intcomma }} {{ home_currency.code }}
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
@@ -69,7 +69,7 @@
             <div class="card bg-light">
                 <div class="card-body">
                     <h6 class="card-subtitle mb-2 text-muted">Total Cost</h6>
-                    <h4 class="card-title mb-0">{{ total_cost|floatformat:2|intcomma }}</h4>
+                    <h4 class="card-title mb-0">{{ total_cost|floatformat:2|intcomma }} {{ home_currency.code }}</h4>
                 </div>
             </div>
         </div>
@@ -79,7 +79,7 @@
                     <h6 class="card-subtitle mb-2 text-muted">Unrealized P&L</h6>
                     <h4 class="card-title mb-0 {% if total_pnl > 0 %}text-success{% elif total_pnl < 0 %}text-danger{% endif %}">
                         {% if total_pnl %}
-                            {% if total_pnl > 0 %}+{% endif %}{{ total_pnl|floatformat:2|intcomma }}
+                            {% if total_pnl > 0 %}+{% endif %}{{ total_pnl|floatformat:2|intcomma }} {{ home_currency.code }}
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
@@ -121,18 +121,18 @@
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            {{ item.position.average_cost|floatformat:2|intcomma }} {{ item.position.asset.currency }}
+                            {{ item.avg_cost|floatformat:2|intcomma }} {{ home_currency.code }}
                         </td>
                         <td class="text-end">
                             {% if item.current_price %}
-                                {{ item.current_price|floatformat:2|intcomma }} {{ item.position.asset.currency }}
+                                {{ item.current_price|floatformat:2|intcomma }} {{ home_currency.code }}
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
                             {% if item.current_value %}
-                                {{ item.current_value|floatformat:2|intcomma }} {{ item.position.asset.currency }}
+                                {{ item.current_value|floatformat:2|intcomma }} {{ home_currency.code }}
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
@@ -150,8 +150,8 @@
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            <span class="{% if item.position.realized_pnl > 0 %}text-success{% elif item.position.realized_pnl < 0 %}text-danger{% endif %}">
-                                {% if item.position.realized_pnl > 0 %}+{% endif %}{{ item.position.realized_pnl|floatformat:2|intcomma }}
+                            <span class="{% if item.realized_pnl > 0 %}text-success{% elif item.realized_pnl < 0 %}text-danger{% endif %}">
+                                {% if item.realized_pnl > 0 %}+{% endif %}{{ item.realized_pnl|floatformat:2|intcomma }} {{ home_currency.code }}
                             </span>
                         </td>
                     </tr>

@@ -1,12 +1,12 @@
 .card-hover {
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+    transition: transform 0.1s, box-shadow 0.1s, background-color 0.1s;
     text-decoration: none;
     color: inherit;
     display: block;
 }
 .card-hover:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     background-color: #f8f9fa;
     text-decoration: none;
