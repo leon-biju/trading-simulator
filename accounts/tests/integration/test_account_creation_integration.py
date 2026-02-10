@@ -23,6 +23,7 @@ def test_weak_password_reject(password, expected, market_data):
         "email": "testuser@example.com",
         "password1": password,
         "password2": password,
+        "home_currency": market_data["currencies"]["USD"].id,
     })
     assert form.is_valid() == expected
 
@@ -42,6 +43,7 @@ def test_password_confirmation(password1, password2, expected, market_data):
         "email": "testuser@example.com",
         "password1": password1,
         "password2": password2,
+        "home_currency": market_data["currencies"]["USD"].id,
     })
     assert form.is_valid() == expected
 
@@ -60,6 +62,7 @@ def test_cannot_create_account_with_existing_username(market_data):
         "email": "test_second@example.com",
         "password1": "AnotherStrongPasswd!123",
         "password2": "AnotherStrongPasswd!123",
+        "home_currency": market_data["currencies"]["USD"].id,
     })
     assert not form.is_valid()
     assert "username" in form.errors
@@ -79,6 +82,7 @@ def test_cannot_create_account_with_existing_email(market_data):
         "email": "testemail@example.com",
         "password1": "AnotherStrongPasswd!123",
         "password2": "AnotherStrongPasswd!123",
+        "home_currency": market_data["currencies"]["USD"].id,
     })
     assert not form.is_valid()
     assert "email" in form.errors
@@ -93,6 +97,7 @@ def test_password_is_hashed(market_data):
         "email": "testemail_hashed@example.com",
         "password1": raw_password,
         "password2": raw_password,
+        "home_currency": market_data["currencies"]["USD"].id,
     })
     assert form.is_valid()
     user = form.save()
