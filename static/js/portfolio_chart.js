@@ -43,31 +43,13 @@
                 labels: data.labels,
                 datasets: [
                     {
-                        label: 'Total Assets',
+                        label: 'Portfolio Value',
                         data: data.datasets.total_assets,
                         borderColor: 'rgb(13, 110, 253)',
                         backgroundColor: 'rgba(13, 110, 253, 0.1)',
                         fill: true,
                         tension: 0.3,
                         pointRadius: data.labels.length > 30 ? 0 : 3,
-                    },
-                    {
-                        label: 'Portfolio Value',
-                        data: data.datasets.portfolio_value,
-                        borderColor: 'rgb(25, 135, 84)',
-                        backgroundColor: 'transparent',
-                        borderDash: [5, 5],
-                        tension: 0.3,
-                        pointRadius: 0,
-                    },
-                    {
-                        label: 'Cash',
-                        data: data.datasets.cash_balance,
-                        borderColor: 'rgb(108, 117, 125)',
-                        backgroundColor: 'transparent',
-                        borderDash: [2, 2],
-                        tension: 0.3,
-                        pointRadius: 0,
                     }
                 ]
             },
@@ -80,7 +62,7 @@
                 },
                 plugins: {
                     legend: {
-                        position: 'bottom',
+                        display: false,
                     },
                     tooltip: {
                         callbacks: {

@@ -103,13 +103,17 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
     total_pnl = total_value - total_cost if total_value else None
     pnl_percent = (total_pnl / total_cost * 100) if total_pnl and total_cost > 0 else None
 
+    # Portfolio value = investments + cash
+    portfolio_value = total_value + total_cash
+
     return render(request, "dashboard/dashboard.html", {
         "profile": profile, 
         "wallets": wallets,
         "pending_orders": pending_orders,
         "recent_trades": recent_trades,
         "positions": enriched_positions,
-        "total_value": total_value,
+        "portfolio_value": portfolio_value,
+        "total_investments": total_value,
         "total_cost": total_cost,
         "total_pnl": total_pnl,
         "pnl_percent": pnl_percent,

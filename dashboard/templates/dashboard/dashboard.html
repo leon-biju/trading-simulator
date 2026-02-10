@@ -24,11 +24,7 @@
             <div class="col">
                 <h6 class="text-muted mb-1">Portfolio Value</h6>
                 <h2 class="mb-0 d-inline">
-                    {% if total_value %}
-                        {{ total_value|floatformat:2|intcomma }}
-                    {% else %}
-                        0.00
-                    {% endif %}
+                    {{ portfolio_value|floatformat:2|intcomma }}
                     {% if home_currency %}{{ home_currency.code }}{% endif %}
                 </h2>
                 {% if total_pnl %}
@@ -47,7 +43,7 @@
 <!-- Chart Section -->
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Portfolio Performance</h5>
+        <h5 class="mb-0">Portfolio Value</h5>
         <div class="btn-group btn-group-sm" role="group" id="chart-range-selector">
             <button type="button" class="btn btn-outline-secondary" data-range="1W">1W</button>
             <button type="button" class="btn btn-outline-secondary active" data-range="1M">1M</button>
@@ -70,27 +66,15 @@
     </div>
 </div>
 
-<!-- Cash & Summary Row -->
+<!-- Investments & Cash Row -->
 <div class="row mb-4">
-    <div class="col-md-4">
+    <div class="col-md-6">
         <div class="card h-100">
             <div class="card-body">
-                <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-piggy-bank me-1"></i>Total Assets</h6>
+                <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-graph-up-arrow me-1"></i>Investments</h6>
                 <h4 class="card-title mb-0">
-                    {{ total_cash|add:total_value|floatformat:2|intcomma }}
-                    {% if home_currency %}{{ home_currency.code }}{% endif %}
-                </h4>
-                <small class="text-muted">Cash + Current Holdings</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-graph-up-arrow me-1"></i>Invested</h6>
-                <h4 class="card-title mb-0">
-                    {% if total_value %}
-                        {{ total_value|floatformat:2|intcomma }}
+                    {% if total_investments %}
+                        {{ total_investments|floatformat:2|intcomma }}
                     {% else %}
                         0.00
                     {% endif %}
@@ -100,7 +84,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-6">
         <div class="card h-100">
             <div class="card-body">
                 <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-cash-stack me-1"></i>Cash</h6>
