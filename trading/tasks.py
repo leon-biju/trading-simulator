@@ -86,14 +86,18 @@ def schedule_market_open_tasks() -> str:
 
 
 @shared_task  # type: ignore[untyped-decorator]
-def check_limit_orders() -> dict[str, int]:
+def check_limit_orders_for_assets(asset_ids: list[int]) -> dict[str, int]:
     """
-    Check all pending LIMIT orders to see if their price conditions are now met.
+    Check pending LIMIT orders for specific assets to see if they can be executed.
     
-    This can be called after price updates to check if any limit orders
-    should be executed.
+    This can be called after price updates for specific assets to check if any
+    limit orders should be executed based on the new prices.
     
-    TODO: Optimize by only checking orders for assets whose prices changed.
+    Args:
+        asset_ids: List of asset IDs that were updated
+        
+    Returns:
+        dict with counts of checked, executed, and failed orders
     """
     
     results = {
@@ -102,10 +106,11 @@ def check_limit_orders() -> dict[str, int]:
         'failed': 0,
     }
     
-    # Get all pending LIMIT orders
+    # Get all pending LIMIT orders for the specified assets
     limit_orders = Order.objects.filter(
         status=OrderStatus.PENDING,
         order_type=OrderType.LIMIT,
+        asset_id__in=asset_ids,
     ).order_by('created_at')
     
     for order in limit_orders:

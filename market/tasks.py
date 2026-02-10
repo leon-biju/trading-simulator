@@ -10,6 +10,8 @@ from .services.simulation import update_asset_prices_simulation
 from .services.fx import update_currency_prices
 from .api_access import get_currency_layer_api_data
 
+from trading.tasks import check_limit_orders_for_assets
+
 @shared_task # type: ignore[untyped-decorator]
 def update_asset_data() -> str:
     """
@@ -29,7 +31,8 @@ def update_asset_data() -> str:
     
     if MARKET_DATA_MODE == 'SIMULATION':
         # update assets
-        update_asset_prices_simulation(assets_to_update)
+        asset_ids = list(assets_to_update.values_list("id", flat=True))
+        check_limit_orders_for_assets.delay(asset_ids)
         return f"Updated simulated prices for {len(assets_to_update)} assets."
     else:
         # update assets
@@ -59,13 +62,3 @@ def update_currency_data() -> dict[str, int] | str:
     count = update_currency_prices(json_data)
 
     return {"rows_inserted": count}
-
-
-
-def aggregate_asset_prices() -> str:
-    """
-    Aggregates intraday asset prices into daily candles.
-    """
-    # Placeholder implementation
-    return "Asset price aggregation not implemented yet."
-
