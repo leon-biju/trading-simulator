@@ -34,40 +34,40 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for trade in trades %}
+                    {% for item in trades %}
                     <tr>
                         <td>
-                            <small class="text-muted">{{ trade.executed_at|date:"M d, Y H:i:s" }}</small>
+                            <small class="text-muted">{{ item.trade.executed_at|date:"M d, Y H:i:s" }}</small>
                         </td>
                         <td>
-                            <a href="{% url 'asset_detail' trade.asset.exchange.code trade.asset.ticker %}"
+                            <a href="{% url 'asset_detail' item.trade.asset.exchange.code item.trade.asset.ticker %}"
                                class="text-decoration-none fw-bold">
-                                {{ trade.asset.ticker }}
+                                {{ item.trade.asset.ticker }}
                             </a>
-                            <br><small class="text-muted">{{ trade.asset.name }}</small>
+                            <br><small class="text-muted">{{ item.trade.asset.name }}</small>
                         </td>
                         <td>
-                            {% if trade.side == 'BUY' %}
+                            {% if item.trade.side == 'BUY' %}
                                 <span class="badge bg-success">BUY</span>
                             {% else %}
                                 <span class="badge bg-danger">SELL</span>
                             {% endif %}
                         </td>
-                        <td class="text-end">{{ trade.quantity|floatformat:4 }}</td>
+                        <td class="text-end">{{ item.trade.quantity|floatformat:4 }}</td>
                         <td class="text-end">
-                            {{ trade.asset.currency.code }} {{ trade.price|floatformat:2|intcomma }}
+                            {{ home_currency.code }} {{ item.price|floatformat:2|intcomma }}
                         </td>
                         <td class="text-end">
-                            {{ trade.asset.currency.code }} {{ trade.total_value|floatformat:2|intcomma }}
+                            {{ home_currency.code }} {{ item.total_value|floatformat:2|intcomma }}
                         </td>
                         <td class="text-end">
-                            <small class="text-muted">{{ trade.fee_currency.code }} {{ trade.fee|floatformat:2 }}</small>
+                            <small class="text-muted">{{ home_currency.code }} {{ item.fee|floatformat:2 }}</small>
                         </td>
                         <td class="text-end">
-                            {% if trade.side == 'BUY' %}
-                                <span class="text-danger">-{{ trade.asset.currency.code }} {{ trade.net_amount|floatformat:2|intcomma }}</span>
+                            {% if item.trade.side == 'BUY' %}
+                                <span class="text-danger">-{{ home_currency.code }} {{ item.net_amount|floatformat:2|intcomma }}</span>
                             {% else %}
-                                <span class="text-success">+{{ trade.asset.currency.code }} {{ trade.net_amount|floatformat:2|intcomma }}</span>
+                                <span class="text-success">+{{ home_currency.code }} {{ item.net_amount|floatformat:2|intcomma }}</span>
                             {% endif %}
                         </td>
                     </tr>
