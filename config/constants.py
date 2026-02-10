@@ -1,8 +1,9 @@
 import os
+from decimal import Decimal
 # Application specific constants
 
 # Application specific settings
-STARTING_BALANCE = 100_000.00 #gbp
+STARTING_BALANCE = Decimal("100000.00") # in server base currency
 MARKET_DATA_MODE = os.getenv("MARKET_DATA_MODE", "SIMULATION").upper()  # live or simulation
 
 # # Check that previous price history mode is valid
