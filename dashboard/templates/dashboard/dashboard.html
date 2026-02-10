@@ -29,7 +29,7 @@
                     {% else %}
                         0.00
                     {% endif %}
-                    {% if base_currency %}{{ base_currency.code }}{% endif %}
+                    {% if home_currency %}{{ home_currency.code }}{% endif %}
                 </h2>
                 {% if total_pnl %}
                     <span class="ms-2 {% if total_pnl > 0 %}text-success{% elif total_pnl < 0 %}text-danger{% endif %}">
@@ -78,7 +78,7 @@
                 <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-piggy-bank me-1"></i>Total Assets</h6>
                 <h4 class="card-title mb-0">
                     {{ total_cash|add:total_value|floatformat:2|intcomma }}
-                    {% if base_currency %}{{ base_currency.code }}{% endif %}
+                    {% if home_currency %}{{ home_currency.code }}{% endif %}
                 </h4>
                 <small class="text-muted">Cash + Current Holdings</small>
             </div>
@@ -94,7 +94,7 @@
                     {% else %}
                         0.00
                     {% endif %}
-                    {% if base_currency %}{{ base_currency.code }}{% endif %}
+                    {% if home_currency %}{{ home_currency.code }}{% endif %}
                 </h4>
                 <small class="text-muted">Current holdings value</small>
             </div>
@@ -106,7 +106,7 @@
                 <h6 class="card-subtitle mb-2 text-muted"><i class="bi bi-cash-stack me-1"></i>Cash</h6>
                 <h4 class="card-title mb-0">
                     {{ total_cash|floatformat:2|intcomma }}
-                    {% if base_currency %}{{ base_currency.code }}{% endif %}
+                    {% if home_currency %}{{ home_currency.code }}{% endif %}
                 </h4>
                 <small class="text-muted">Total across all wallets</small>
             </div>
@@ -150,18 +150,18 @@
                         {% endif %}
                     </td>
                     <td class="text-end">
-                        {{ item.position.average_cost|floatformat:2|intcomma }} {{ item.position.asset.currency }}
+                        {{ item.avg_cost|floatformat:2|intcomma }} {{ home_currency.code }}
                     </td>
                     <td class="text-end">
                         {% if item.current_price %}
-                            {{ item.current_price|floatformat:2|intcomma }} {{ item.position.asset.currency }}
+                            {{ item.current_price|floatformat:2|intcomma }} {{ home_currency.code }}
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
                     <td class="text-end">
                         {% if item.current_value %}
-                            {{ item.current_value|floatformat:2|intcomma }} {{ item.position.asset.currency }}
+                            {{ item.current_value|floatformat:2|intcomma }} {{ home_currency.code }}
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
@@ -179,8 +179,8 @@
                         {% endif %}
                     </td>
                     <td class="text-end">
-                        <span class="{% if item.position.realized_pnl > 0 %}text-success{% elif item.position.realized_pnl < 0 %}text-danger{% endif %}">
-                            {% if item.position.realized_pnl > 0 %}+{% endif %}{{ item.position.realized_pnl|floatformat:2|intcomma }}
+                        <span class="{% if item.realized_pnl > 0 %}text-success{% elif item.realized_pnl < 0 %}text-danger{% endif %}">
+                            {% if item.realized_pnl > 0 %}+{% endif %}{{ item.realized_pnl|floatformat:2|intcomma }} {{ home_currency.code }}
                         </span>
                     </td>
                 </tr>
@@ -283,24 +283,24 @@
               </tr>
             </thead>
             <tbody>
-              {% for trade in recent_trades %}
+              {% for item in recent_trades %}
               <tr>
                 <td>
-                  <a href="{% url 'asset_detail' trade.asset.exchange.code trade.asset.ticker %}"
+                  <a href="{% url 'asset_detail' item.trade.asset.exchange.code item.trade.asset.ticker %}"
                      class="text-decoration-none fw-bold">
-                    {{ trade.asset.ticker }}
+                    {{ item.trade.asset.ticker }}
                   </a>
                 </td>
                 <td>
-                  {% if trade.side == 'BUY' %}
+                  {% if item.trade.side == 'BUY' %}
                     <span class="badge bg-success">BUY</span>
                   {% else %}
                     <span class="badge bg-danger">SELL</span>
                   {% endif %}
                 </td>
-                <td>{{ trade.quantity|floatformat:2 }}</td>
-                <td>{{ trade.price|floatformat:2 }}</td>
-                <td><small class="text-muted">{{ trade.executed_at|timesince }} ago</small></td>
+                <td>{{ item.trade.quantity|floatformat:2 }}</td>
+                <td>{{ item.price|floatformat:2 }} {{ home_currency.code }}</td>
+                <td><small class="text-muted">{{ item.trade.executed_at|timesince }} ago</small></td>
               </tr>
               {% endfor %}
             </tbody>
