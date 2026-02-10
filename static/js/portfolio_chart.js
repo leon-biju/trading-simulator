@@ -48,8 +48,8 @@
                         borderColor: 'rgb(13, 110, 253)',
                         backgroundColor: 'rgba(13, 110, 253, 0.1)',
                         fill: true,
-                        tension: 0.3,
-                        pointRadius: data.labels.length > 30 ? 0 : 3,
+                        tension: 0.0,
+                        pointRadius: 0
                     }
                 ]
             },
