@@ -3,7 +3,7 @@ import logging
 import datetime
 from django.utils import timezone
 
-from market.models import Asset, Currency, Exchange, FXRate
+from market.models import Asset, Currency, Exchange, FXRate, PriceCandle
 from config.constants import MARKET_DATA_MODE, FX_RATES_UPDATE_INTERVAL_MINUTES
 
 from .services.simulation import update_asset_prices_simulation
@@ -78,3 +78,43 @@ def update_currency_data() -> dict[str, int] | str:
     count = update_currency_prices(json_data)
 
     return {"rows_inserted": count}
+
+
+@shared_task  # type: ignore[untyped-decorator]
+def prune_old_price_data(days: int = 30) -> str:
+    """
+    Remove 5-min and 60-min price candles older than a certain number of days to keep the database size manageable.
+    Archiving is unnecessary since daily candles are retained anyway
+
+    Args:
+        days: Number of days to keep (default 30)
+        
+    Returns:
+        Summary string of how many records archived
+    """
+    cutoff_date = timezone.now() - datetime.timedelta(days=days)
+
+    logger.info(f"Pruning price candles older than {cutoff_date.date()} ({days} days)")
+
+    
+    # Remove 5-min candles
+    five_min_deleted, _ = PriceCandle.objects.filter(
+        start_at__lt=cutoff_date,
+        interval_minutes=5
+    ).delete()
+
+    # Remove 60-min candles
+    sixty_min_deleted, _ = PriceCandle.objects.filter(
+        start_at__lt=cutoff_date,
+        interval_minutes=60
+    ).delete()
+
+    summary = (
+        f"Pruned {five_min_deleted} 5-min candles and "
+        f"{sixty_min_deleted} 60-min candles older than {days} days"
+    )
+
+
+    logger.info(summary)
+
+    return summary

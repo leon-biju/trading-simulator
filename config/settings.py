@@ -202,5 +202,9 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'trading.tasks.expire_stale_orders',
         'schedule': 86400,  # 1 day in seconds
     },
+    'prune-old-price-data-daily': {
+        'task': 'market.tasks.prune_old_price_data',
+        'schedule': 86400,  # 1 day in seconds
+    },
 
 }
