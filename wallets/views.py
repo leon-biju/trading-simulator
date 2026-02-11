@@ -66,9 +66,9 @@ def wallet_detail(request: HttpRequest, currency_code: str) -> HttpResponse:
         target_currency=wallet.currency
     ).first()
     if latest_rate is not None:
-        fx_rate_update_timestamp = latest_rate.last_updated.strftime('%Y-%m-%d %H:%M:%S')
+        fx_last_updated = latest_rate.last_updated.strftime('%Y-%m-%d %H:%M:%S')
     else:
-        fx_rate_update_timestamp = None
+        fx_last_updated = None
     
     context = {
         'wallet': wallet,
@@ -76,7 +76,7 @@ def wallet_detail(request: HttpRequest, currency_code: str) -> HttpResponse:
         'user_other_wallets': user_other_wallets,
         'form': form,
         'fx_rates': json.dumps(serializable_fx_rates),
-        'fx_last_updated': fx_rate_update_timestamp,
+        'fx_last_updated': fx_last_updated,
     }
 
     return render(request, 'wallets/wallet_detail.html', context)
