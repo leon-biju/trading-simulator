@@ -67,7 +67,7 @@ def update_currency_data() -> dict[str, int] | str:
     # Check if data is fresh
     latest_fx_rate_timestamp = FXRate.objects.order_by("-last_updated").first()
     if latest_fx_rate_timestamp is not None:
-        if (timezone.now() - latest_fx_rate_timestamp.last_updated) < datetime.timedelta(minutes=FX_RATES_UPDATE_INTERVAL_MINUTES): #TODO: Make configurable
+        if (timezone.now() - latest_fx_rate_timestamp.last_updated) < datetime.timedelta(minutes=FX_RATES_UPDATE_INTERVAL_MINUTES):
             return f"Currency data is fresh (< {FX_RATES_UPDATE_INTERVAL_MINUTES} minutes). Skipping update."
 
     json_data = get_currency_layer_api_data()
