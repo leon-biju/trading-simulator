@@ -13,11 +13,9 @@ from trading.models import Order, OrderSide, OrderStatus, OrderType, Position, T
 from market.models import Asset
 from wallets.models import Wallet, Transaction
 
-from trading.services.utils import (
-    TRADING_FEE_PERCENTAGE,
-    round_to_two_dp,
-    round_to_eight_dp,
-)
+from trading.services.utils import round_to_two_dp, round_to_eight_dp
+
+from config.constants import TRADING_FEE_PERCENTAGE
 
 
 def _can_execute_immediately(asset: Asset) -> bool:

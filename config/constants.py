@@ -28,3 +28,4 @@ SIMULATION_MU = 0.08  # Annual Drift coefficient
 SIMULATION_SIGMA = 0.20  # Annual Volatility coefficient
 
 
+TRADING_FEE_PERCENTAGE = Decimal('0.001')
