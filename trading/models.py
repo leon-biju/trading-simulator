@@ -22,6 +22,7 @@ class OrderStatus(models.TextChoices):
     FILLED = 'FILLED', 'Filled'
     CANCELLED = 'CANCELLED', 'Cancelled'
     REJECTED = 'REJECTED', 'Rejected'
+    EXPIRED = 'EXPIRED', 'Expired'
 
 
 class Order(models.Model):

@@ -224,26 +224,11 @@ def cancel_order(order_id: int, user_id: int) -> Order:
             if order.status != OrderStatus.PENDING:
                 raise ValueError(f"Cannot cancel order with status {order.status}")
             
-            if order.side == OrderSide.BUY:
-                # Release reserved funds
-                wallet = Wallet.objects.select_for_update().get(
-                    user_id=user_id,
-                    currency=order.asset.currency
-                )
-                wallet.pending_balance -= order.reserved_amount
-                wallet.save(update_fields=['pending_balance', 'updated_at'])
-            else:
-                # Release reserved shares
-                position = Position.objects.select_for_update().get(
-                    user_id=user_id,
-                    asset=order.asset
-                )
-                position.pending_quantity -= order.quantity
-                position.save(update_fields=['pending_quantity', 'updated_at'])
+            # Release wallet/position reservations
+            release_order_reservation(order)
             
             order.status = OrderStatus.CANCELLED
             order.cancelled_at = timezone.now()
-            order.reserved_amount = Decimal('0')
             order.save(update_fields=['status', 'cancelled_at', 'reserved_amount', 'updated_at'])
             
             return order
@@ -252,3 +237,44 @@ def cancel_order(order_id: int, user_id: int) -> Order:
         raise LookupError("Order not found")
     except (Wallet.DoesNotExist, Position.DoesNotExist) as e:
         raise RuntimeError(f"Failed to release reservation: {str(e)}")
+
+
+def release_order_reservation(order: Order) -> None:
+    """
+    Release wallet or position reservations for a pending order.
+    
+    For BUY orders: releases pending_balance from the wallet.
+    For SELL orders: releases pending_quantity from the position.
+    Also resets the order's reserved_amount to zero.
+    
+    This function assumes it's called within a transaction.atomic() block
+    and that the order is already locked with select_for_update().
+    
+    Args:
+        order: The order whose reservations should be released.
+               Must be locked via select_for_update().
+    
+    Raises:
+        Wallet.DoesNotExist: If the wallet for the order doesn't exist
+        Position.DoesNotExist: If the position for a SELL order doesn't exist
+    """
+    if order.side == OrderSide.BUY:
+        # Release reserved funds
+        wallet = Wallet.objects.select_for_update().get(
+            user_id=order.user_id,
+            currency=order.asset.currency
+        )
+        wallet.pending_balance -= order.reserved_amount
+        wallet.save(update_fields=['pending_balance', 'updated_at'])
+    else:
+        # Release reserved shares
+        position = Position.objects.select_for_update().get(
+            user_id=order.user_id,
+            asset=order.asset
+        )
+        position.pending_quantity -= order.quantity
+        position.save(update_fields=['pending_quantity', 'updated_at'])
+    
+    # Reset the order's reserved amount
+    order.reserved_amount = Decimal('0')
+

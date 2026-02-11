@@ -16,8 +16,11 @@ MARKET_DATA_MODE = os.getenv("MARKET_DATA_MODE", "SIMULATION").upper()  # live o
 
 
 
-ASSETS_UPDATE_INTERVAL_MINUTES = 5  # Interval for market data updates (5 min)
+MARKET_TICK_INTERVAL_MINUTES = 5  # Interval for market ticks (5 min)
 FX_RATES_UPDATE_INTERVAL_MINUTES = 8 * 60  # Interval for FX rates updates (8hrs)
+
+# Order expiry
+ORDER_EXPIRY_DAYS = 30  # Pending orders older than this are expired
 
 # SImulation parameters
 SIMULATION_INITIAL_PRICE_RANGE = (50.0, 250.0)  # Initial price range
@@ -25,3 +28,4 @@ SIMULATION_MU = 0.08  # Annual Drift coefficient
 SIMULATION_SIGMA = 0.20  # Annual Volatility coefficient
 
 
+TRADING_FEE_PERCENTAGE = Decimal('0.001')

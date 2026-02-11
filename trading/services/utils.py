@@ -5,7 +5,6 @@ from decimal import Decimal, ROUND_HALF_UP
 
 
 # Fee percentage for trades (0.1%) TODO: Make configurable
-TRADING_FEE_PERCENTAGE = Decimal('0.001')
 
 
 def round_to_two_dp(value: Decimal) -> Decimal:

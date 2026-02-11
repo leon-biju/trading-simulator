@@ -181,21 +181,29 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
-from config.constants import ASSETS_UPDATE_INTERVAL_MINUTES, FX_RATES_UPDATE_INTERVAL_MINUTES
+from config.constants import MARKET_TICK_INTERVAL_MINUTES, FX_RATES_UPDATE_INTERVAL_MINUTES
 
 
 # Celery Beat Schedule
 CELERY_BEAT_SCHEDULE = {
-    f'update-market-every-{ASSETS_UPDATE_INTERVAL_MINUTES}-minutes': {
-        'task': 'market.tasks.update_asset_data',
-        'schedule': ASSETS_UPDATE_INTERVAL_MINUTES * 60
+    f'update-market-every-{MARKET_TICK_INTERVAL_MINUTES}-minutes': {
+        'task': 'market.tasks.market_tick',
+        'schedule': MARKET_TICK_INTERVAL_MINUTES * 60
     },
     f'update-fx-rates-every-{FX_RATES_UPDATE_INTERVAL_MINUTES}-minutes': {
-        'task': 'market.tasks.update_fx_rates',
+        'task': 'market.tasks.update_currency_data',
         'schedule': FX_RATES_UPDATE_INTERVAL_MINUTES * 60
     },
     'snapshot-portfolios-daily': {
         'task': 'trading.tasks.snapshot_all_portfolios',
+        'schedule': 86400,  # 1 day in seconds
+    },
+    'expire-stale-orders-daily': {
+        'task': 'trading.tasks.expire_stale_orders',
+        'schedule': 86400,  # 1 day in seconds
+    },
+    'prune-old-price-data-daily': {
+        'task': 'market.tasks.prune_old_price_data',
         'schedule': 86400,  # 1 day in seconds
     },
 

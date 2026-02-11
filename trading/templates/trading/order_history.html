@@ -73,6 +73,8 @@
                                 <span class="badge bg-secondary">Cancelled</span>
                             {% elif order.status == 'REJECTED' %}
                                 <span class="badge bg-danger">Rejected</span>
+                            {% elif order.status == 'EXPIRED' %}
+                                <span class="badge bg-secondary">Expired</span>
                             {% endif %}
                         </td>
                         <td>

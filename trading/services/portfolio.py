@@ -6,8 +6,10 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from trading.models import PortfolioSnapshot
-from market.models import Currency, FXRate
+from market.models import Currency
 from wallets.models import Wallet
+
+from market.services.fx import get_fx_conversion
 
 from trading.services.queries import get_user_positions
 from trading.services.utils import round_to_two_dp
@@ -49,38 +51,37 @@ def create_portfolio_snapshot(user_id: int) -> PortfolioSnapshot:
         position_value = position.quantity * current_price
         position_cost = position.total_cost_basis
         
-        # Convert to base currency if needed
-        asset_currency = position.asset.currency.code
-        if asset_currency != base_currency.code:
-            fx_rate = FXRate.objects.filter(
-                base_currency=base_currency,
-                target_currency=position.asset.currency,
-            ).first()
-            if fx_rate and fx_rate.rate > 0:
-                # Rate is base->target, so divide to convert target->base
-                position_value = round_to_two_dp(position_value / fx_rate.rate)
-                position_cost = round_to_two_dp(position_cost / fx_rate.rate)
+        # Convert to base currency
+        _, position_value_base = get_fx_conversion(
+            from_currency_code=position.asset.currency.code,
+            to_currency_code=base_currency.code,
+            from_amount=position_value,
+            to_amount=None
+        )
+
+        _, position_cost_base = get_fx_conversion(
+            from_currency_code=position.asset.currency.code,
+            to_currency_code=base_currency.code,
+            from_amount=position_cost,
+            to_amount=None
+        )
         
-        total_value += position_value
-        total_cost += position_cost
+        total_value += position_value_base
+        total_cost += position_cost_base
     
     # Calculate total cash balance across all wallets
     wallets = Wallet.objects.filter(user_id=user_id).select_related('currency')
     total_cash = Decimal('0')
     
     for wallet in wallets:
-        wallet_balance = wallet.balance
-        
-        # Convert to base currency if needed
-        if wallet.currency.code != base_currency.code:
-            fx_rate = FXRate.objects.filter(
-                base_currency=base_currency,
-                target_currency=wallet.currency,
-            ).first()
-            if fx_rate and fx_rate.rate > 0:
-                wallet_balance = round_to_two_dp(wallet_balance / fx_rate.rate)
-        
-        total_cash += wallet_balance
+        _, wallet_balance_base = get_fx_conversion(
+            from_currency_code=wallet.currency.code,
+            to_currency_code=base_currency.code,
+            from_amount=wallet.balance,
+            to_amount=None
+        )
+
+        total_cash += wallet_balance_base
     
     # Create or update the snapshot for today
     snapshot, _ = PortfolioSnapshot.objects.update_or_create(
@@ -121,7 +122,7 @@ def get_portfolio_history(
 
 def snapshot_all_user_portfolios() -> dict[str, int]:
     """
-    Create portfolio snapshots for all users with positions or wallets.
+    Create portfolio snapshots for all users
     
     Returns:
         dict with counts of successful and failed snapshots
@@ -133,12 +134,9 @@ def snapshot_all_user_portfolios() -> dict[str, int]:
         'failed': 0,
     }
     
-    # Get all users who have either positions or wallets
-    users_with_activity = User.objects.filter(
-        models.Q(positions__quantity__gt=0) | models.Q(wallets__isnull=False)
-    ).distinct()
+    users = User.objects.all()
     
-    for user in users_with_activity:
+    for user in users:
         try:
             create_portfolio_snapshot(user.id)
             results['success'] += 1

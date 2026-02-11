@@ -26,7 +26,7 @@ from trading.models import OrderSide, OrderType, OrderStatus, Position, Trade
 from trading.services.orders import place_order, cancel_order
 from trading.services.execution import execute_pending_order
 from trading.services.queries import get_user_pending_orders, get_user_positions
-from trading.services.utils import TRADING_FEE_PERCENTAGE
+from config.constants import TRADING_FEE_PERCENTAGE
 
 from wallets.models import Wallet, Transaction
 
