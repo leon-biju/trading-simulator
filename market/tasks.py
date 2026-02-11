@@ -4,7 +4,7 @@ import datetime
 from django.utils import timezone
 
 from market.models import Asset, Currency, Exchange, FXRate
-from config.constants import MARKET_DATA_MODE
+from config.constants import MARKET_DATA_MODE, FX_RATES_UPDATE_INTERVAL_MINUTES
 
 from .services.simulation import update_asset_prices_simulation
 from .services.fx import update_currency_prices
@@ -67,8 +67,8 @@ def update_currency_data() -> dict[str, int] | str:
     # Check if data is fresh
     latest_fx_rate_timestamp = FXRate.objects.order_by("-last_updated").first()
     if latest_fx_rate_timestamp is not None:
-        if (timezone.now() - latest_fx_rate_timestamp.last_updated) < datetime.timedelta(hours=24): #TODO: Make configurable
-            return "Currency data is fresh. Skipping update."
+        if (timezone.now() - latest_fx_rate_timestamp.last_updated) < datetime.timedelta(minutes=FX_RATES_UPDATE_INTERVAL_MINUTES): #TODO: Make configurable
+            return f"Currency data is fresh (< {FX_RATES_UPDATE_INTERVAL_MINUTES} minutes). Skipping update."
 
     json_data = get_currency_layer_api_data()
 
