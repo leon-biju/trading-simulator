@@ -64,7 +64,7 @@ Duplicate `example.env` to `.env` and fill in the values. Do not change database
 docker-compose up --build --detach
 ```
 
-This starts 6 containers: `db` (Postgres), `redis`, `web` (Django on port 8000), `celery_worker`, `celery_beat`, and `pgadmin` (port 8080).
+This starts the following containers: `db` (Postgres), `redis`, `web` (Django on port 8000), `celery_worker`, `celery_beat`, and `pgadmin` (port 8080).
 
 ### 3. Run migrations
 
@@ -72,21 +72,21 @@ This starts 6 containers: `db` (Postgres), `redis`, `web` (Django on port 8000),
 docker-compose exec web python manage.py migrate
 ```
 
-### 4. Set up market data
+### 4. Set up market data and create admin account
 
 ```bash
 docker-compose exec web python manage.py setup_market_data
+docker-compose exec web python manage.py createsuperuser
 ```
 
-This interactive wizard lets you choose currencies, loads exchanges and assets from bundled JSON data, and seeds FX rates.
+The `setup_market_data` wizard lets you choose currencies, loads exchanges and assets from bundled JSON data ( stored in market/data), and sets up FX rates.
 
-### 5. Access the app
+### 5. Access the application locally
 
 - Application: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 - Admin: [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
 - pgAdmin: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
-Register a new account to get started. Each user receives a starting balance and wallets for all configured currencies.
 
 ---
 
@@ -99,8 +99,6 @@ docker-compose exec web pytest
 # Specific app
 docker-compose exec web pytest wallets/tests/
 
-# With coverage
-docker-compose exec web pytest --cov
 ```
 
 ---
@@ -108,17 +106,8 @@ docker-compose exec web pytest --cov
 ## Useful Commands
 
 ```bash
-# Set up market data
-docker-compose exec web python manage.py setup_market_data
-
-# Backfill price history for an asset
-docker-compose exec web python manage.py backfill_asset_history --ticker AAPL
-
-# Apply migrations
-docker-compose exec web python manage.py migrate
-
-# Type checking
-docker-compose exec web mypy .
+# Backfill price history for a specific list of assets
+docker-compose exec web python manage.py backfill_asset_history --ticker AAPL GOOGL PLTR
 ```
 
 ---
