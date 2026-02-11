@@ -3,9 +3,6 @@ import logging
 from celery import Celery
 from celery.signals import worker_ready
 
-from market.tasks import market_tick, update_currency_data
-from trading.tasks import expire_stale_orders, snapshot_all_portfolios
-
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
@@ -29,9 +26,10 @@ def on_startup(sender: object = None, **kwargs: object) -> None:
     """
     logger.info("Worker ready — running startup catch-up tasks.")
 
-    market_tick.delay()
-    update_currency_data.delay()
-    expire_stale_orders.delay()
-    snapshot_all_portfolios.delay()
+    # Use app.send_task() to avoid importing tasks before Django apps are ready
+    app.send_task('market.tasks.market_tick')
+    app.send_task('market.tasks.update_currency_data')
+    app.send_task('trading.tasks.expire_stale_orders')
+    app.send_task('trading.tasks.snapshot_all_portfolios')
 
     logger.info("Startup tasks dispatched.")
