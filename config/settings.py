@@ -181,14 +181,14 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
-from config.constants import ASSETS_UPDATE_INTERVAL_MINUTES, FX_RATES_UPDATE_INTERVAL_MINUTES
+from config.constants import MARKET_TICK_INTERVAL_MINUTES, FX_RATES_UPDATE_INTERVAL_MINUTES
 
 
 # Celery Beat Schedule
 CELERY_BEAT_SCHEDULE = {
-    f'update-market-every-{ASSETS_UPDATE_INTERVAL_MINUTES}-minutes': {
-        'task': 'market.tasks.update_asset_data',
-        'schedule': ASSETS_UPDATE_INTERVAL_MINUTES * 60
+    f'update-market-every-{MARKET_TICK_INTERVAL_MINUTES}-minutes': {
+        'task': 'market.tasks.market_tick',
+        'schedule': MARKET_TICK_INTERVAL_MINUTES * 60
     },
     f'update-fx-rates-every-{FX_RATES_UPDATE_INTERVAL_MINUTES}-minutes': {
         'task': 'market.tasks.update_currency_data',
