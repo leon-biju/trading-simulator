@@ -5,6 +5,8 @@ Handles scheduled order processing, particularly for pending orders when markets
 """
 from celery import shared_task
 import logging
+from django.utils import timezone
+import datetime
 
 from market.models import Exchange
 from trading.models import Order, OrderStatus, OrderType
@@ -143,3 +145,35 @@ def snapshot_all_portfolios() -> dict[str, int]:
     logger.info(f"Portfolio snapshot complete: {results}")
     
     return results
+
+
+@shared_task  # type: ignore[untyped-decorator]
+def expire_stale_orders(max_age_days: int = 30) -> dict[str, int]:
+    """
+    Expire orders that have been pending for too long.
+    
+    This task should be scheduled to run periodically (e.g., daily) to clean up
+    old pending orders that are unlikely to be filled.
+    
+    Args:
+        max_age_days: The maximum age of pending orders in days before they are expired
+    Returns:
+        dict with counts of expired and remaining pending orders
+    """
+    cutoff_date = timezone.now() - datetime.timedelta(days=max_age_days)
+    stale_orders = Order.objects.filter(
+        status=OrderStatus.PENDING,
+        created_at__lt=cutoff_date,
+    )
+    
+    count_expired = stale_orders.count()
+    stale_orders.update(status=OrderStatus.EXPIRED)
+    
+    remaining_pending = Order.objects.filter(status=OrderStatus.PENDING).count()
+    
+    logger.info(f"Expired {count_expired} stale orders. Remaining pending orders: {remaining_pending}")
+    
+    return {
+        'expired': count_expired,
+        'remaining_pending': remaining_pending,
+    }

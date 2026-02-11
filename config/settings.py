@@ -198,5 +198,9 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'trading.tasks.snapshot_all_portfolios',
         'schedule': 86400,  # 1 day in seconds
     },
+    'expire-stale-orders-daily': {
+        'task': 'trading.tasks.expire_stale_orders',
+        'schedule': 86400,  # 1 day in seconds
+    },
 
 }
