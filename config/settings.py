@@ -191,7 +191,7 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': ASSETS_UPDATE_INTERVAL_MINUTES * 60
     },
     f'update-fx-rates-every-{FX_RATES_UPDATE_INTERVAL_MINUTES}-minutes': {
-        'task': 'market.tasks.update_fx_rates',
+        'task': 'market.tasks.update_currency_data',
         'schedule': FX_RATES_UPDATE_INTERVAL_MINUTES * 60
     },
     'snapshot-portfolios-daily': {
