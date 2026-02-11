@@ -6,6 +6,7 @@ Handles scheduled order processing, particularly for pending orders when markets
 from celery import shared_task
 import logging
 from django.utils import timezone
+from django.db import transaction
 import datetime
 
 from market.models import Exchange
@@ -14,6 +15,9 @@ from trading.models import Order, OrderStatus, OrderType
 from trading.services.execution import execute_pending_order
 from trading.services.queries import get_pending_orders_for_exchange
 from trading.services.portfolio import snapshot_all_user_portfolios
+from trading.services.orders import release_order_reservation
+
+from config.constants import ORDER_EXPIRY_DAYS
 
 
 
@@ -148,32 +152,57 @@ def snapshot_all_portfolios() -> dict[str, int]:
 
 
 @shared_task  # type: ignore[untyped-decorator]
-def expire_stale_orders(max_age_days: int = 30) -> dict[str, int]:
+def expire_stale_orders(max_age_days: int = ORDER_EXPIRY_DAYS) -> dict[str, int]:
     """
-    Expire orders that have been pending for too long.
+    Expire pending orders older than max_age_days, releasing reserved funds/shares.
     
-    This task should be scheduled to run periodically (e.g., daily) to clean up
-    old pending orders that are unlikely to be filled.
+    Scheduled daily via Beat. Iterates stale orders individually so that
+    wallet pending_balance and position pending_quantity are correctly unwound,
+    rather than doing a bulk status update.
     
     Args:
-        max_age_days: The maximum age of pending orders in days before they are expired
+        max_age_days: Orders pending longer than this are expired.
+        
     Returns:
-        dict with counts of expired and remaining pending orders
+        dict with counts of expired, failed, and remaining pending orders
     """
     cutoff_date = timezone.now() - datetime.timedelta(days=max_age_days)
     stale_orders = Order.objects.filter(
         status=OrderStatus.PENDING,
         created_at__lt=cutoff_date,
-    )
+    ).select_related('asset', 'asset__currency').order_by('created_at')
     
-    count_expired = stale_orders.count()
-    stale_orders.update(status=OrderStatus.EXPIRED)
-    
-    remaining_pending = Order.objects.filter(status=OrderStatus.PENDING).count()
-    
-    logger.info(f"Expired {count_expired} stale orders. Remaining pending orders: {remaining_pending}")
-    
-    return {
-        'expired': count_expired,
-        'remaining_pending': remaining_pending,
+    results: dict[str, int] = {
+        'expired': 0,
+        'failed': 0,
     }
+    
+    for order in stale_orders:
+        try:
+            with transaction.atomic():
+                order_locked = Order.objects.select_for_update().get(pk=order.id)
+
+                # Skip if no longer pending (raced with execution or manual cancel)
+                if order_locked.status != OrderStatus.PENDING:
+                    continue
+
+                # Release wallet/position reservations
+                release_order_reservation(order_locked)
+
+                order_locked.status = OrderStatus.EXPIRED
+                order_locked.save(update_fields=['status', 'reserved_amount', 'updated_at'])
+
+            results['expired'] += 1
+            logger.info(f"Expired stale order {order.id} (created {order.created_at})")
+
+        except Exception as e:
+            results['failed'] += 1
+            logger.error(f"Failed to expire order {order.id}: {str(e)}")
+    
+    remaining = Order.objects.filter(status=OrderStatus.PENDING).count()
+    logger.info(
+        f"Stale-order sweep complete: {results['expired']} expired, "
+        f"{results['failed']} failed, {remaining} still pending."
+    )
+    results['remaining_pending'] = remaining
+    return results
