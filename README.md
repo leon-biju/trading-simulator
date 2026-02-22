@@ -29,6 +29,37 @@ Exchanges and Assets are stored in `market/data/` as jsons, and are fully custom
 
 ---
 
+## Price Simulation Model
+
+The market engine uses **Geometric Brownian Motion (GBM)** to simulate realistic asset price movements. GBM is the same stochastic process that the Black-Scholes option pricing model uses, and it ensures prices are always positive and follows the log-normal distribution observed in real markets.
+
+The continuous-time GBM stochastic differential equation is:
+
+$$dS = \mu\, S\, dt + \sigma\, S\, dW$$
+
+
+where $S$ is the asset price, $\mu$ is the annualised drift (expected return), $\sigma$ is the annualised volatility, and $dW$ is a Wiener process increment.
+
+For discrete simulation steps the exact solution is used:
+
+$$S_{t+\Delta t} = S_t \exp\!\left[\left(\mu - \tfrac{\sigma^2}{2}\right)\Delta t + \sigma\,\sqrt{\Delta t}\;Z\right]$$
+
+where $\Delta t$ is the time step expressed in years and $Z \sim \mathcal{N}(0,1)$ is a standard normal random variable.
+
+In code (`market/services/simulation.py`) the two terms are computed as:
+
+| Symbol | Code | Meaning |
+|---|---|---|
+| $\left(\mu - \frac{\sigma^2}{2}\right)\Delta t$ | `drift` | Deterministic drift component (risk-adjusted) |
+| $\sigma\sqrt{\Delta t}\;Z$ | `shock` | Random volatility component |
+
+The $-\frac{\sigma^2}{2}$ correction  comes from [Itô's lemma](https://en.wikipedia.org/wiki/It%C3%B4%27s_lemma#Geometric_Brownian_motion)
+
+Each tick, the simulation generates synthetic OHLC (open/high/low/close) candles at 5-minute, 60-minute, and daily intervals by drawing an independent $Z \sim \mathcal{N}(0,1)$ for each of the four prices.
+*(Open and close are bounded by high and low, and high $\ge$ low)*
+
+---
+
 ## Tech Stack
 
 | | |
