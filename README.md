@@ -35,23 +35,31 @@ The market engine uses **Geometric Brownian Motion (GBM)** to simulate realistic
 
 The continuous-time GBM stochastic differential equation is:
 
-$$dS = \mu\, S\, dt + \sigma\, S\, dW$$
+$$
+dS = \mu S dt + \sigma S dW
+$$
 
+Where:
+* $S$: Asset price
+* $\mu$: Annualised drift (expected return)
+* $dW$: Wiener process increment
 
-where $S$ is the asset price, $\mu$ is the annualised drift (expected return), $\sigma$ is the annualised volatility, and $dW$ is a Wiener process increment.
+To simulate discrete steps without [discretisation error](https://en.wikipedia.org/wiki/Discretization_error) the exact solution to the SDE derived via [Itô's lemma](https://en.wikipedia.org/wiki/It%C3%B4%27s_lemma#Geometric_Brownian_motion):
 
-For discrete simulation steps the exact solution is used:
+$$
+S_{t+\Delta t} = S_t \exp\left[\left(\mu - \tfrac{\sigma^2}{2}\right)\Delta t + \sigma\sqrt{\Delta t} Z\right]
+$$
 
-$$S_{t+\Delta t} = S_t \exp\!\left[\left(\mu - \tfrac{\sigma^2}{2}\right)\Delta t + \sigma\,\sqrt{\Delta t}\;Z\right]$$
-
-where $\Delta t$ is the time step expressed in years and $Z \sim \mathcal{N}(0,1)$ is a standard normal random variable.
+Where:
+* $\Delta t$: time step expressed in years
+* $Z$: standard normal random variable $Z \sim \mathcal{N}(0,1)$.
 
 In code (`market/services/simulation.py`) the two terms are computed as:
 
-| Symbol | Code | Meaning |
+| Component  | Mathematical Term | Description |
 |---|---|---|
-| $\left(\mu - \frac{\sigma^2}{2}\right)\Delta t$ | `drift` | Deterministic drift component (risk-adjusted) |
-| $\sigma\sqrt{\Delta t}\;Z$ | `shock` | Random volatility component |
+| Drift | $(μ−\frac{σ^2}{2}​)\Delta t$ | Deterministic risk-adjusted return |
+| Shock | $σ\sqrt{Δt}​Z$ | Random volatility component |
 
 The $-\frac{\sigma^2}{2}$ correction  comes from [Itô's lemma](https://en.wikipedia.org/wiki/It%C3%B4%27s_lemma#Geometric_Brownian_motion)
 
