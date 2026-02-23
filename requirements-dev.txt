@@ -1,12 +1,8 @@
 # More packages that are only needed for development and testing
--r requirements.txt
-certifi==2025.11.12
-charset-normalizer==3.4.4
 coverage==7.9.1
 django-stubs==5.2.9
 factory_boy==3.3.3
 Faker==37.4.0
-idna==3.11
 iniconfig==2.1.0
 librt==0.7.8
 mypy==1.19.1
@@ -18,8 +14,6 @@ Pygments==2.19.2
 pytest==8.4.1
 pytest-cov==6.2.1
 pytest-django==4.11.1
-requests==2.32.5
 setuptools==80.9.0
 types-PyYAML==6.0.12.20250915
 types-requests==2.32.4.20260107
-urllib3==2.5.0
