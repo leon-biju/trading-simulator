@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16-alpine
+    env_file: .env
+    volumes: [ "pgdata:/var/lib/postgresql/data" ]
+    ports: [ "5432:5432" ]
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    env_file: .env
+    ports: [ "8080:80" ]
+    depends_on: [ db ]
+
+  redis:
+    image: "redis:7-alpine"
+    ports: [ "6379:6379" ]
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file: .env
+    ports: [ "8000:8000" ]
+    depends_on: [ db, redis ]
+    volumes:
+      - .:/code 
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file: .env
+    depends_on: [ db, redis ]
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/code
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file: .env
+    depends_on: [ db, redis ]
+    
+    # important to remove old pid file to avoid startup issues
+    command: sh -c "rm -f ./celerybeat.pid &&
+             celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    volumes:
+      - .:/code
+
+volumes:
+  pgdata:

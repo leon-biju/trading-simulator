@@ -16,7 +16,9 @@ services:
     ports: [ "6379:6379" ]
 
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     env_file: .env
     ports: [ "8000:8000" ]
     depends_on: [ db, redis ]
@@ -24,7 +26,9 @@ services:
       - .:/code 
 
   celery_worker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     env_file: .env
     depends_on: [ db, redis ]
     command: celery -A config worker --loglevel=info
@@ -32,7 +36,9 @@ services:
       - .:/code
 
   celery_beat:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     env_file: .env
     depends_on: [ db, redis ]
     
