@@ -1,0 +1,16 @@
+FROM python:3.14-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+RUN adduser --disabled-password appuser
+WORKDIR /code
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+RUN python manage.py collectstatic --noinput
+
+RUN chown -R appuser:appuser /code
+USER appuser
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]

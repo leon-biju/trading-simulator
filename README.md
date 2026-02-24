@@ -97,7 +97,7 @@ git clone https://github.com/username/trading-simulator.git
 cd trading-simulator
 ```
 
-Duplicate `example.env` to `.env` and fill in the values. Do not change database credentials after the DB container has been created.
+Duplicate `example.env` to `.env.dev` and fill in the values. Do not change database credentials after the DB container has been created.
 
 ### 2. Build and start
 
