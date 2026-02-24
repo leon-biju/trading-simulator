@@ -1,13 +1,13 @@
 services:
   db:
     image: postgres:16-alpine
-    env_file: .env
+    env_file: .env.prod
     volumes: [ "pgdata:/var/lib/postgresql/data" ]
     ports: [ "5432:5432" ]
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    env_file: .env
+    env_file: .env.prod
     ports: [ "8080:80" ]
     depends_on: [ db ]
 
@@ -19,7 +19,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    env_file: .env
+    env_file: .env.prod
     ports: [ "8000:8000" ]
     depends_on: [ db, redis ]
     volumes:
@@ -29,7 +29,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    env_file: .env
+    env_file: .env.prod
     depends_on: [ db, redis ]
     command: celery -A config worker --loglevel=info
     volumes:
@@ -39,7 +39,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    env_file: .env
+    env_file: .env.prod
     depends_on: [ db, redis ]
     
     # important to remove old pid file to avoid startup issues

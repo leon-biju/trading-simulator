@@ -57,6 +57,6 @@ The project uses `pytest` for testing. Tests are located in each app's `tests/` 
 ## Code Conventions
 
 -   **Service Layer**: Encapsulate complex business logic within `services.py` files inside an app. This keeps views and models cleaner. For an example, see `apps/wallets/services.py`.
--   **Environment Variables**: All configuration, especially secrets and environment-specific settings, should be managed with environment variables. In local development, these are loaded from a `.env` file at the project root. Refer to `config/settings.py` to see how they are used.
+-   **Environment Variables**: All configuration, especially secrets and environment-specific settings, should be managed with environment variables. In local development, these are loaded from a `.env.dev`/`.env.prod` file at the project root. Refer to `config/settings.py` to see how they are used.
 -   **Modular Apps**: Continue the pattern of separating concerns into distinct Django apps within the `apps/` directory.
 -   **Templates**: Global templates are in the root `templates/` directory. App-specific templates are located in `apps/<app_name>/templates/`.

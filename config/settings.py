@@ -18,7 +18,7 @@ TESTING = os.getenv("TEST", "false").lower() == "true"
 
 if not TESTING:
     from dotenv import load_dotenv
-    load_dotenv('.env')
+    load_dotenv('.env.dev')
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
