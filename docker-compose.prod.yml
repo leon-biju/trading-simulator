@@ -15,7 +15,7 @@ services:
     expose: [ "8000" ]
     depends_on: [ db, redis ]
     volumes:
-      - static_files:/code/static
+      - static_files:/code/staticfiles
       - media_files:/code/media
 
   nginx:
@@ -23,7 +23,7 @@ services:
     ports: [ "80:80" ]
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_files:/code/static
+      - static_files:/code/staticfiles
       - media_files:/code/media
     depends_on: [ web ] 
 
