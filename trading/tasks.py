@@ -53,10 +53,16 @@ def process_pending_orders_for_exchange(exchange_code: str) -> dict[str, int]:
         'skipped': 0,
     }
     
-    pending_orders = get_pending_orders_for_exchange(exchange_code)
-    logger.info(f"Processing {len(pending_orders)} pending orders for exchange {exchange_code}")
+    # Count pending orders first (needed for logging), but process in chunks
+    pending_count = Order.objects.filter(
+        status=OrderStatus.PENDING,
+        asset__exchange__code=exchange_code,
+    ).count()
     
-    for order in pending_orders:
+    logger.info(f"Processing {pending_count} pending orders for exchange {exchange_code}")
+    
+    # Use iterator to process in chunks to reduce memory usage
+    for order in get_pending_orders_for_exchange(exchange_code):
         try:
             trade = execute_pending_order(order.id)
             if trade is not None:
