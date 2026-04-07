@@ -65,28 +65,32 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script_stop: true
-          script: |
-            cd ~/trading-simulator
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}::role/github-actions-deploy
+          aws-region: us-east-1
 
-            echo "--- Pulling latest code ---"
-            git pull origin master
+      - name: Fetch SSH key and deploy
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          aws ssm get-parameter \
+            --name /deploy/ec2-ssh-key \
+            --with-decryption \
+            --query 'Parameter.Value' \
+            --output text > /tmp/deploy_key
 
-            echo "--- Rebuilding containers ---"
-            docker compose -f docker-compose.prod.yml up --build -d
+          chmod 600 /tmp/deploy_key
 
-            echo "--- Running migrations ---"
-            docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+          ssh -o StrictHostKeyChecking=no \
+              -i /tmp/deploy_key \
+              "ubuntu@${EC2_HOST}" \
+              'bash -l /home/ubuntu/deploy.sh'
 
-            echo "--- Cleaning up old images ---"
-            docker image prune -f
-
-            echo "--- Deploy complete ---"
+          rm -f /tmp/deploy_key
