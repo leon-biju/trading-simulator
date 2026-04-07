@@ -90,7 +90,6 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no \
               -i /tmp/deploy_key \
-              "ubuntu@${EC2_HOST}" \
-              'bash -l /home/ubuntu/deploy.sh'
+              "ubuntu@${EC2_HOST}"
 
           rm -f /tmp/deploy_key
