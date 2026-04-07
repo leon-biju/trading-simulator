@@ -72,7 +72,7 @@ Each tick, the simulation generates synthetic OHLC (open/high/low/close) candles
 
 | | |
 |---|---|
-| **Backend** | Python 3.13, Django 5.2 |
+| **Backend** | Python 3.14, Django 5.2 |
 | **Database** | PostgreSQL 16 |
 | **Task Queue** | Celery 5.5 + Redis 7 |
 | **Frontend** | Django Templates, Bootstrap 5 |

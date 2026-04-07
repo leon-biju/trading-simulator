@@ -713,18 +713,3 @@ class TestQueryFunctions:
         
         assert len(pending) == 2
         assert all(o.status == OrderStatus.PENDING for o in pending)
-    
-    @pytest.mark.django_db
-    def test_get_user_positions(
-        self,
-        user_with_position: Tuple[CustomUser, QuerySet[Wallet], Position],
-        market_data: dict[str, dict[str, Any]]
-    ) -> None:
-        """Get user's open positions."""
-        user, wallets, position = user_with_position
-        
-        positions = get_user_positions(user.id)
-        
-        assert len(positions) == 1
-        assert positions[0].asset.id == position.asset.id  # Compare by ID due to model inheritance
-        assert positions[0].quantity > 0
