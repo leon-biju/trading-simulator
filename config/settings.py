@@ -166,16 +166,19 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 
 EMAIL_BACKEND   = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST      = os.getenv("DJANGO_EMAIL_HOST")
-EMAIL_PORT      = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
-EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD")
-EMAIL_USE_TLS   = os.getenv("DJANGO_EMAIL_USE_TLS", "true").lower() == "true"
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@localhost")
+EMAIL_HOST_PASSWORD = os.getenv("RESEND_API_KEY")
 
-if DEFAULT_FROM_EMAIL == "noreply@localhost":
-    print("WARNING: Using default from email address. Please set DEFAULT_FROM_EMAIL in production.")
+if EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
+    print("WARNING: Using console email backend. Emails will only print to console")
 
+if EMAIL_BACKEND == "django.core.mail.backends.smtp.EmailBackend" and not EMAIL_HOST_PASSWORD:
+    raise ValueError("RESEND_API_KEY must be set when using SMTP email backend")
+
+EMAIL_HOST = 'smtp.resend.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'resend'
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'noreply@tradingsimulator.app'
 
 
 CACHES = {
