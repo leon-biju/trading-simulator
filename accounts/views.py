@@ -2,8 +2,20 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import PasswordResetView
+from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 from .forms import SignUpForm, LoginForm
+
+
+@method_decorator(ratelimit(key='ip', rate='5/h', block=True), name='post')
+class CustomPasswordResetView(PasswordResetView):
+    template_name = 'accounts/password_reset/form.html'
+    email_template_name = 'accounts/password_reset/email.html'
+    subject_template_name = 'accounts/password_reset/subject.txt'
+    success_url = reverse_lazy('password_reset_done')
 
 
 def register_view(request: HttpRequest) -> HttpResponse:

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Check Your Email{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-body py-4">
+        <h4 class="card-title mb-3">Check your email</h4>
+        <p class="card-text text-muted">
+          If an account exists for that address, you'll receive a reset link shortly.
+          Check your spam folder if you don't see it within a few minutes.
+        </p>
+      </div>
+    </div>
+    <p class="mt-3"><a href="/accounts/login/">Back to login</a></p>
+  </div>
+</div>
+{% endblock %}

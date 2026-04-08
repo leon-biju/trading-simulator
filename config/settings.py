@@ -31,7 +31,7 @@ DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1").split(",")
 
-CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "https://127.0.0.1  ").split(",")
+CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "https://127.0.0.1").split(",")
 
 
 # Application definition
@@ -63,6 +63,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'csp.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -165,13 +166,29 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 
 EMAIL_BACKEND   = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST      = os.getenv("DJANGO_EMAIL_HOST")
-EMAIL_PORT      = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
-EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD")
-EMAIL_USE_TLS   = os.getenv("DJANGO_EMAIL_USE_TLS", "true").lower() == "true"
+EMAIL_HOST_PASSWORD = os.getenv("RESEND_API_KEY")
+
+if EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
+    print("WARNING: Using console email backend. Emails will only print to console")
+
+if EMAIL_BACKEND == "django.core.mail.backends.smtp.EmailBackend" and not EMAIL_HOST_PASSWORD:
+    raise ValueError("RESEND_API_KEY must be set when using SMTP email backend")
+
+EMAIL_HOST = 'smtp.resend.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'resend'
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'noreply@tradingsimulator.app'
 
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.getenv("REDIS_URL", 'redis://redis:6379/1'),
+    }
+}
+
+RATELIMIT_USE_CACHE = 'default'
 
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", 'redis://redis:6379/0')
@@ -180,6 +197,20 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'", "cdn.jsdelivr.net")
+CSP_STYLE_SRC = ("'self'", "cdn.jsdelivr.net")
+CSP_FONT_SRC = ("'self'", "cdn.jsdelivr.net")
+CSP_IMG_SRC = ("'self'", "data:")
 
 from config.constants import MARKET_TICK_INTERVAL_MINUTES, FX_RATES_UPDATE_INTERVAL_MINUTES
 
