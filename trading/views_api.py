@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpRequest
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
+from django_ratelimit.decorators import ratelimit
 
 from accounts.models import Profile
 from market.models import Asset, Currency
@@ -12,8 +13,11 @@ from trading.models import Position
 from trading.services.portfolio import get_portfolio_history
 
 @login_required
+@ratelimit(key='user', rate='60/m', block=False)
 @require_GET
 def get_position_for_stock(request: HttpRequest, exchange_code: str, asset_symbol: str) -> JsonResponse:
+    if getattr(request, 'limited', False):
+        return JsonResponse({'error': 'Rate limit exceeded'}, status=429)
     """API endpoint to get user's position for a specific asset."""
     asset = get_object_or_404(
         Asset.objects.select_related('exchange'),
@@ -39,8 +43,11 @@ def get_position_for_stock(request: HttpRequest, exchange_code: str, asset_symbo
 
 
 @login_required
+@ratelimit(key='user', rate='60/m', block=False)
 @require_GET
 def get_wallet_balance(request: HttpRequest, currency_code: str) -> JsonResponse:
+    if getattr(request, 'limited', False):
+        return JsonResponse({'error': 'Rate limit exceeded'}, status=429)
     """API endpoint to get user's wallet balance for a specific currency."""
     try:
         wallet = Wallet.objects.get(user_id=request.user.id, currency__code=currency_code)
@@ -62,8 +69,11 @@ def get_wallet_balance(request: HttpRequest, currency_code: str) -> JsonResponse
 
 
 @login_required
+@ratelimit(key='user', rate='20/m', block=False)
 @require_GET
 def portfolio_history_api(request: HttpRequest) -> JsonResponse:
+    if getattr(request, 'limited', False):
+        return JsonResponse({'error': 'Rate limit exceeded'}, status=429)
     """API endpoint to get user's portfolio history for charting."""
     assert request.user.id is not None, "Huh, shouldn't get here"  # For mypy
     

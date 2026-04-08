@@ -2,6 +2,7 @@ from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET
+from django_ratelimit.decorators import ratelimit
 import datetime
 from django.utils import timezone
 
@@ -23,8 +24,11 @@ RANGE_TO_DAYS = {
 }
 
 @login_required
+@ratelimit(key='user', rate='30/m', block=False)
 @require_GET
 def asset_performance_chart_data_view(request: HttpRequest, exchange_code: str, asset_symbol: str) -> JsonResponse:
+    if getattr(request, 'limited', False):
+        return JsonResponse({'error': 'Rate limit exceeded'}, status=429)
     asset = get_object_or_404(
         Asset,
         exchange__code=exchange_code,

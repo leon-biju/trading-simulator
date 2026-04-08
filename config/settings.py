@@ -173,6 +173,15 @@ EMAIL_USE_TLS   = os.getenv("DJANGO_EMAIL_USE_TLS", "true").lower() == "true"
 
 
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.getenv("REDIS_URL", 'redis://redis:6379/1'),
+    }
+}
+
+RATELIMIT_USE_CACHE = 'default'
+
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", 'redis://redis:6379/0')
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", 'redis://redis:6379/0')
