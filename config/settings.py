@@ -165,7 +165,7 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 
 
-EMAIL_BACKEND   = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_BACKEND   = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST_PASSWORD = os.getenv("RESEND_API_KEY")
 
 if EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
