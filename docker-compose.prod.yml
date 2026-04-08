@@ -17,12 +17,6 @@ services:
     volumes:
       - static_files:/code/staticfiles
       - media_files:/code/media
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
 
   nginx:
     image: nginx:alpine
@@ -34,9 +28,7 @@ services:
       - static_files:/code/staticfiles
       - media_files:/code/media
       - /etc/letsencrypt:/etc/letsencrypt:ro
-    depends_on:
-      web:
-        condition: service_healthy
+    depends_on: [ web ]
 
   celery_worker:
     build:
