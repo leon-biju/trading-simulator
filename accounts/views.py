@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta
+
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
@@ -5,9 +8,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetView
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
+from django.utils.timesince import timesince
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from .forms import SignUpForm, LoginForm
+
+_timeout_str = timesince(
+    datetime(2000, 1, 1),
+    datetime(2000, 1, 1) + timedelta(seconds=settings.PASSWORD_RESET_TIMEOUT),
+).split(",")[0]
 
 
 @method_decorator(ratelimit(key='ip', rate='5/h', block=True), name='post')
@@ -16,6 +25,7 @@ class CustomPasswordResetView(PasswordResetView):
     email_template_name = 'accounts/password_reset/email.html'
     subject_template_name = 'accounts/password_reset/subject.txt'
     success_url = reverse_lazy('password_reset_done')
+    extra_email_context = {'timeout_str': _timeout_str}
 
 
 def register_view(request: HttpRequest) -> HttpResponse:
