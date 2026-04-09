@@ -1,7 +1,9 @@
 # Trading Simulator
 
-A full-stack trading simulator built with Django, Celery, and PostgreSQL. Users receive virtual capital to trade equities across multiple global exchanges with simulated price movements, multi-currency wallets, live FX rates, and portfolio tracking.
+A full-stack trading simulator built with Django, Celery, and PostgreSQL. Users receive virtual capital to trade equities across multiple global exchanges, track their investments over time, and monitor performance through multi-currency wallets, live FX rates, and detailed portfolio analytics.
 Exchanges and Assets are stored in `market/data/` as jsons, and are fully customisable for the server admin.
+
+**Live deployment: [tradingsimulator.app](https://tradingsimulator.app/)**
 
 ---
 
