@@ -4,13 +4,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { AxiosError } from 'axios'
 import PageWrapper from '@/components/layout/PageWrapper'
-import { getWallet, fxTransfer } from '@/api/wallets'
+import { getWallet, getWallets, fxTransfer } from '@/api/wallets'
 import { getFxRates } from '@/api/market'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
-interface TransferForm {
-  to_currency: string
-  from_amount: string
+interface AddFundsForm {
+  from_currency: string
+  to_amount: string
 }
 
 export default function WalletDetailPage() {
@@ -32,15 +32,27 @@ export default function WalletDetailPage() {
     staleTime: 60_000,
   })
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<TransferForm>()
-  const toCurrency = watch('to_currency')
-  const fromAmount = watch('from_amount')
+  const { data: allWallets } = useQuery({
+    queryKey: ['wallets'],
+    queryFn: getWallets,
+    staleTime: 10_000,
+  })
 
-  const previewRate = (() => {
-    if (!fxRates || !currencyCode || !toCurrency || toCurrency === currencyCode) return null
-    const rate = fxRates.find(r => r.from_currency === currencyCode && r.to_currency === toCurrency)
-    if (!rate || !fromAmount || isNaN(parseFloat(fromAmount))) return null
-    return (parseFloat(fromAmount) * parseFloat(rate.rate)).toFixed(4)
+  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<AddFundsForm>()
+  const fromCurrency = watch('from_currency')
+  const toAmount = watch('to_amount')
+
+  // Estimate how much will be deducted from the source wallet
+  const previewDeduction = (() => {
+    if (!fxRates || !fromCurrency || !toAmount || isNaN(parseFloat(toAmount))) return null
+    const amt = parseFloat(toAmount)
+    // Direct rate: fromCurrency → currentWallet (e.g. USD→EUR = 0.9 means 1 USD = 0.9 EUR)
+    const direct = fxRates.find(r => r.from_currency === fromCurrency && r.to_currency === currencyCode)
+    if (direct) return (amt / parseFloat(direct.rate)).toFixed(4)
+    // Inverse rate: currentWallet → fromCurrency (e.g. EUR→USD = 1.11 means 1 EUR = 1.11 USD)
+    const inverse = fxRates.find(r => r.from_currency === currencyCode && r.to_currency === fromCurrency)
+    if (inverse) return (amt * parseFloat(inverse.rate)).toFixed(4)
+    return null
   })()
 
   const transferMutation = useMutation({
@@ -56,18 +68,16 @@ export default function WalletDetailPage() {
     },
   })
 
-  const onSubmit = (formData: TransferForm) => {
+  const onSubmit = (formData: AddFundsForm) => {
     setServerError(null)
     transferMutation.mutate({
-      from_currency: currencyCode!,
-      to_currency: formData.to_currency,
-      from_amount: formData.from_amount,
+      from_currency: formData.from_currency,
+      to_currency: currencyCode!,
+      to_amount: formData.to_amount,
     })
   }
 
-  const availableTargets = fxRates
-    ?.filter(r => r.from_currency === currencyCode)
-    .map(r => r.to_currency) ?? []
+  const otherWallets = allWallets?.filter(w => w.currency_code !== currencyCode) ?? []
 
   const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
 
@@ -100,41 +110,46 @@ export default function WalletDetailPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            {/* FX Convert */}
-            {availableTargets.length > 0 && (
+            {/* Add Funds */}
+            {otherWallets.length > 0 && (
               <div className="rounded-lg border border-edge bg-panel p-4">
-                <h2 className="mb-4 text-[11px] uppercase tracking-wider text-faint">Convert currency</h2>
+                <h2 className="mb-4 text-[11px] uppercase tracking-wider text-faint">Add funds</h2>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
                   <div>
+                    <label className="mb-1 block text-[11px] uppercase tracking-wider text-faint">From wallet</label>
+                    <select
+                      {...register('from_currency', { required: 'Select a wallet' })}
+                      className={inputCls}
+                    >
+                      <option value="">Select…</option>
+                      {otherWallets.map(w => (
+                        <option key={w.currency_code} value={w.currency_code}>
+                          {w.currency_code} ({formatCurrency(w.available_balance, w.currency_code)} available)
+                        </option>
+                      ))}
+                    </select>
+                    {errors.from_currency && <p className="mt-1 text-xs text-sell">{errors.from_currency.message}</p>}
+                  </div>
+
+                  <div>
                     <label className="mb-1 block text-[11px] uppercase tracking-wider text-faint">
-                      Amount ({currencyCode})
+                      Amount to add ({currencyCode})
                     </label>
                     <input
                       type="number" step="0.01" min="0.01" placeholder="0.00"
-                      {...register('from_amount', {
+                      {...register('to_amount', {
                         required: 'Amount is required',
                         min: { value: 0.01, message: 'Must be positive' },
                       })}
                       className={inputCls}
                     />
-                    {errors.from_amount && <p className="mt-1 text-xs text-sell">{errors.from_amount.message}</p>}
+                    {errors.to_amount && <p className="mt-1 text-xs text-sell">{errors.to_amount.message}</p>}
                   </div>
 
-                  <div>
-                    <label className="mb-1 block text-[11px] uppercase tracking-wider text-faint">To currency</label>
-                    <select
-                      {...register('to_currency', { required: 'Select a currency' })}
-                      className={inputCls}
-                    >
-                      <option value="">Select…</option>
-                      {availableTargets.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    {errors.to_currency && <p className="mt-1 text-xs text-sell">{errors.to_currency.message}</p>}
-                  </div>
-
-                  {previewRate && toCurrency && (
+                  {previewDeduction && fromCurrency && (
                     <div className="rounded border border-edge/50 bg-raised px-3 py-2 text-[11px] text-dim">
-                      ≈ <span className="tabular-nums text-bright">{formatCurrency(previewRate, toCurrency, 4)}</span>
+                      ≈ <span className="tabular-nums text-bright">{formatCurrency(previewDeduction, fromCurrency, 4)}</span>
+                      <span className="ml-1">deducted from {fromCurrency}</span>
                     </div>
                   )}
 
@@ -145,7 +160,7 @@ export default function WalletDetailPage() {
                     disabled={transferMutation.isPending}
                     className="w-full rounded bg-accent py-2 text-sm font-medium text-base transition hover:bg-accent/90 disabled:opacity-50"
                   >
-                    {transferMutation.isPending ? 'Converting…' : 'Convert'}
+                    {transferMutation.isPending ? 'Adding…' : 'Add funds'}
                   </button>
 
                   {transferMutation.isSuccess && (
@@ -156,7 +171,7 @@ export default function WalletDetailPage() {
             )}
 
             {/* Transactions */}
-            <div className={availableTargets.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}>
+            <div className={otherWallets.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}>
               <div className="rounded-lg border border-edge bg-panel">
                 <div className="border-b border-edge px-4 py-3">
                   <h2 className="text-[11px] uppercase tracking-wider text-faint">Transactions</h2>
