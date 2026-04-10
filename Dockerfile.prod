@@ -1,12 +1,28 @@
+# Stage 1: build React SPA
+FROM node:22-alpine AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+# Fail fast if Vite base path is misconfigured (assets must be under /static/)
+RUN grep -q '/static/assets' dist/index.html || \
+    (echo "ERROR: Vite base path misconfigured — dist/index.html does not reference /static/assets/" && exit 1)
+
+# Stage 2: Django app
 FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN adduser --disabled-password appuser
 WORKDIR /code
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+
+# Copy built React SPA into place for collectstatic
+COPY --from=frontend-builder /frontend/dist /code/frontend/dist
 
 RUN python manage.py collectstatic --noinput
 
