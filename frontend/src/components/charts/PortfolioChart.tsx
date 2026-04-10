@@ -32,12 +32,12 @@ export default function PortfolioChart() {
       {
         label: 'Total Assets',
         data: data?.datasets.total_assets ?? [],
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99,102,241,0.08)',
-        borderWidth: 2,
+        borderColor: '#06B6D4',
+        backgroundColor: 'rgba(6,182,212,0.06)',
+        borderWidth: 1.5,
         pointRadius: 0,
         fill: true,
-        tension: 0.3,
+        tension: 0,
       },
     ],
   }
@@ -45,37 +45,51 @@ export default function PortfolioChart() {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { mode: 'index' as const, intersect: false } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        mode: 'index' as const,
+        intersect: false,
+        backgroundColor: '#0F1520',
+        borderColor: '#1E2840',
+        borderWidth: 1,
+        titleColor: '#94A3B8',
+        bodyColor: '#E2E8F0',
+        padding: 10,
+      },
+    },
     scales: {
       x: {
-        grid: { color: 'rgba(255,255,255,0.04)' },
-        ticks: { color: '#64748b', font: { size: 11 } },
+        grid: { color: 'rgba(30,40,64,0.6)' },
+        ticks: { color: '#475569', font: { size: 11, family: 'IBM Plex Sans' as const } },
+        border: { color: 'transparent' },
       },
       y: {
-        grid: { color: 'rgba(255,255,255,0.04)' },
+        grid: { color: 'rgba(30,40,64,0.6)' },
         ticks: {
-          color: '#64748b',
-          font: { size: 11 },
+          color: '#475569',
+          font: { size: 11, family: 'IBM Plex Sans' as const },
           callback: (v: unknown) =>
-            `${data?.currency ?? ''} ${Number(v).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`,
+            data?.currency + ' ' + Number(v).toLocaleString('en-GB', { maximumFractionDigits: 0 }),
         },
+        border: { color: 'transparent' },
       },
     },
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-300">Portfolio value</span>
-        <div className="flex gap-1">
+    <div className="flex h-full flex-col">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[11px] font-medium text-faint uppercase tracking-wider">Portfolio value</span>
+        <div className="flex gap-0.5">
           {RANGES.map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
               className={`rounded px-2 py-0.5 text-xs transition ${
                 range === r
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-accent/15 text-accent font-medium'
+                  : 'text-faint hover:text-dim'
               }`}
             >
               {r}
@@ -83,13 +97,13 @@ export default function PortfolioChart() {
           ))}
         </div>
       </div>
-      <div className="h-48">
+      <div className="flex-1 min-h-0">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-500" />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge border-t-accent" />
           </div>
         ) : !data?.labels.length ? (
-          <div className="flex h-full items-center justify-center text-sm text-slate-500">
+          <div className="flex h-full items-center justify-center text-xs text-faint">
             No portfolio history yet
           </div>
         ) : (

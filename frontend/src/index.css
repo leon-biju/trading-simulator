@@ -1,4 +1,29 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@theme {
+  /* Surfaces */
+  --color-base:   #080D14;
+  --color-panel:  #0F1520;
+  --color-raised: #172030;
+  --color-edge:   #1E2840;
+
+  /* Brand accent — cyan */
+  --color-accent: #06B6D4;
+
+  /* Trading colours */
+  --color-buy:  #10B981;
+  --color-sell: #EF4444;
+
+  /* Text hierarchy */
+  --color-bright: #E2E8F0;
+  --color-dim:    #94A3B8;
+  --color-faint:  #475569;
+
+  /* Fonts */
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+}
 
 :root {
   color-scheme: dark;
@@ -6,12 +31,36 @@
 
 body {
   margin: 0;
-  background-color: #0f1117;
-  color: #e2e8f0;
-  font-family: system-ui, -apple-system, sans-serif;
+  background-color: #080D14;
+  color: #E2E8F0;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 #root {
   min-height: 100svh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E2840;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a3a5a;
+}
+
+/* Number formatting — mono for all tabular nums */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }

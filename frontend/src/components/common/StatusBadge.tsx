@@ -1,19 +1,19 @@
 const STATUS_STYLES: Record<string, string> = {
-  FILLED: 'bg-emerald-900/50 text-emerald-400',
-  PENDING: 'bg-yellow-900/50 text-yellow-400',
-  CANCELLED: 'bg-slate-800 text-slate-400',
-  REJECTED: 'bg-red-900/50 text-red-400',
-  EXPIRED: 'bg-slate-800 text-slate-500',
-  BUY: 'bg-emerald-900/50 text-emerald-400',
-  SELL: 'bg-red-900/50 text-red-400',
-  OPEN: 'bg-emerald-900/50 text-emerald-400',
-  CLOSED: 'bg-slate-800 text-slate-400',
+  FILLED:    'bg-buy/10 text-buy',
+  PENDING:   'bg-yellow-500/10 text-yellow-400',
+  CANCELLED: 'bg-raised text-faint',
+  REJECTED:  'bg-sell/10 text-sell',
+  EXPIRED:   'bg-raised text-faint',
+  BUY:       'bg-buy/10 text-buy',
+  SELL:      'bg-sell/10 text-sell',
+  OPEN:      'bg-buy/10 text-buy',
+  CLOSED:    'bg-raised text-dim',
 }
 
 export default function StatusBadge({ value }: { value: string }) {
-  const style = STATUS_STYLES[value] ?? 'bg-slate-800 text-slate-400'
+  const style = STATUS_STYLES[value] ?? 'bg-raised text-dim'
   return (
-    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${style}`}>
+    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium tracking-wide ${style}`}>
       {value}
     </span>
   )

@@ -15,7 +15,7 @@ export default function PnlBadge({ value, currency, percent, size = 'md' }: Prop
     <span className={`${cls} ${textSize} font-medium tabular-nums`}>
       {currency ? formatCurrency(value, currency) : value ?? '—'}
       {percent != null && (
-        <span className="ml-1.5 opacity-75">{formatPercent(percent)}</span>
+        <span className="ml-1.5 opacity-60">{formatPercent(percent)}</span>
       )}
     </span>
   )

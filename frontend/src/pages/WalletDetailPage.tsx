@@ -33,17 +33,14 @@ export default function WalletDetailPage() {
   })
 
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<TransferForm>()
-
   const toCurrency = watch('to_currency')
   const fromAmount = watch('from_amount')
 
-  // Compute preview rate
   const previewRate = (() => {
     if (!fxRates || !currencyCode || !toCurrency || toCurrency === currencyCode) return null
     const rate = fxRates.find(r => r.from_currency === currencyCode && r.to_currency === toCurrency)
     if (!rate || !fromAmount || isNaN(parseFloat(fromAmount))) return null
-    const result = parseFloat(fromAmount) * parseFloat(rate.rate)
-    return result.toFixed(4)
+    return (parseFloat(fromAmount) * parseFloat(rate.rate)).toFixed(4)
   })()
 
   const transferMutation = useMutation({
@@ -68,101 +65,91 @@ export default function WalletDetailPage() {
     })
   }
 
-  // Currencies available to transfer to (all FX-rate targets from this currency)
   const availableTargets = fxRates
     ?.filter(r => r.from_currency === currencyCode)
     .map(r => r.to_currency) ?? []
 
+  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
+
   return (
-    <PageWrapper title={wallet ? `${wallet.currency_name} wallet` : 'Wallet'}>
+    <PageWrapper>
       {isLoading ? (
         <div className="flex h-40 items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-500" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge border-t-accent" />
         </div>
       ) : wallet ? (
-        <div className="space-y-6">
+        <div>
+          {/* Header */}
+          <h1 className="mb-5 text-lg font-semibold text-bright">
+            {wallet.currency_name}
+            <span className="ml-2 text-sm font-normal text-faint">{wallet.currency_code}</span>
+          </h1>
+
           {/* Balance cards */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="mb-1 text-xs text-slate-500">Balance</p>
-              <p className="text-lg font-semibold text-white">
-                {formatCurrency(wallet.balance, wallet.currency_code)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="mb-1 text-xs text-slate-500">Available</p>
-              <p className="text-lg font-semibold text-white">
-                {formatCurrency(wallet.available_balance, wallet.currency_code)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="mb-1 text-xs text-slate-500">Reserved</p>
-              <p className="text-lg font-semibold text-slate-400">
-                {formatCurrency(wallet.pending_balance, wallet.currency_code)}
-              </p>
-            </div>
+          <div className="mb-5 grid grid-cols-3 gap-3">
+            {[
+              { label: 'Balance',   value: formatCurrency(wallet.balance,           wallet.currency_code) },
+              { label: 'Available', value: formatCurrency(wallet.available_balance,  wallet.currency_code) },
+              { label: 'Reserved',  value: formatCurrency(wallet.pending_balance,   wallet.currency_code) },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-lg border border-edge bg-panel px-4 py-3">
+                <p className="mb-1 text-[11px] uppercase tracking-wider text-faint">{label}</p>
+                <p className="text-base font-semibold tabular-nums text-bright">{value}</p>
+              </div>
+            ))}
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* FX Transfer form */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* FX Convert */}
             {availableTargets.length > 0 && (
-              <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-                <h2 className="mb-4 text-sm font-medium text-slate-300">Convert currency</h2>
+              <div className="rounded-lg border border-edge bg-panel p-4">
+                <h2 className="mb-4 text-[11px] uppercase tracking-wider text-faint">Convert currency</h2>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs text-slate-500">Amount ({currencyCode})</label>
+                    <label className="mb-1 block text-[11px] uppercase tracking-wider text-faint">
+                      Amount ({currencyCode})
+                    </label>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="0.00"
+                      type="number" step="0.01" min="0.01" placeholder="0.00"
                       {...register('from_amount', {
                         required: 'Amount is required',
                         min: { value: 0.01, message: 'Must be positive' },
                       })}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-indigo-500 focus:outline-none"
+                      className={inputCls}
                     />
-                    {errors.from_amount && (
-                      <p className="mt-1 text-xs text-red-400">{errors.from_amount.message}</p>
-                    )}
+                    {errors.from_amount && <p className="mt-1 text-xs text-sell">{errors.from_amount.message}</p>}
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs text-slate-500">To currency</label>
+                    <label className="mb-1 block text-[11px] uppercase tracking-wider text-faint">To currency</label>
                     <select
                       {...register('to_currency', { required: 'Select a currency' })}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                      className={inputCls}
                     >
                       <option value="">Select…</option>
-                      {availableTargets.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
+                      {availableTargets.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
-                    {errors.to_currency && (
-                      <p className="mt-1 text-xs text-red-400">{errors.to_currency.message}</p>
-                    )}
+                    {errors.to_currency && <p className="mt-1 text-xs text-sell">{errors.to_currency.message}</p>}
                   </div>
 
                   {previewRate && toCurrency && (
-                    <div className="rounded-lg bg-slate-800/50 px-3 py-2 text-xs text-slate-400">
-                      ≈ {formatCurrency(previewRate, toCurrency, 4)}
+                    <div className="rounded border border-edge/50 bg-raised px-3 py-2 text-[11px] text-dim">
+                      ≈ <span className="tabular-nums text-bright">{formatCurrency(previewRate, toCurrency, 4)}</span>
                     </div>
                   )}
 
-                  {serverError && (
-                    <p className="text-xs text-red-400">{serverError}</p>
-                  )}
+                  {serverError && <p className="text-xs text-sell">{serverError}</p>}
 
                   <button
                     type="submit"
                     disabled={transferMutation.isPending}
-                    className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+                    className="w-full rounded bg-accent py-2 text-sm font-medium text-base transition hover:bg-accent/90 disabled:opacity-50"
                   >
                     {transferMutation.isPending ? 'Converting…' : 'Convert'}
                   </button>
 
                   {transferMutation.isSuccess && (
-                    <p className="text-center text-xs text-emerald-400">Transfer complete!</p>
+                    <p className="text-center text-xs text-buy">Transfer complete!</p>
                   )}
                 </form>
               </div>
@@ -170,34 +157,34 @@ export default function WalletDetailPage() {
 
             {/* Transactions */}
             <div className={availableTargets.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}>
-              <div className="rounded-xl border border-slate-800 bg-slate-900">
-                <div className="border-b border-slate-800 px-4 py-3">
-                  <h2 className="text-sm font-medium text-slate-300">Transactions</h2>
+              <div className="rounded-lg border border-edge bg-panel">
+                <div className="border-b border-edge px-4 py-3">
+                  <h2 className="text-[11px] uppercase tracking-wider text-faint">Transactions</h2>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-800 text-xs text-slate-500">
-                        <th className="px-4 py-3 text-left">Date</th>
-                        <th className="px-4 py-3 text-left">Type</th>
-                        <th className="px-4 py-3 text-left">Description</th>
-                        <th className="px-4 py-3 text-right">Amount</th>
-                        <th className="px-4 py-3 text-right">Balance after</th>
+                      <tr className="border-b border-edge/60 text-[11px] uppercase tracking-wider text-faint">
+                        <th className="px-4 py-2.5 text-left font-medium">Date</th>
+                        <th className="px-4 py-2.5 text-left font-medium">Type</th>
+                        <th className="px-4 py-2.5 text-left font-medium hidden md:table-cell">Description</th>
+                        <th className="px-4 py-2.5 text-right font-medium">Amount</th>
+                        <th className="px-4 py-2.5 text-right font-medium hidden sm:table-cell">Balance after</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(wallet.transactions.results ?? []).map((tx) => {
                         const amt = parseFloat(tx.amount)
-                        const isPositive = amt >= 0
+                        const pos = amt >= 0
                         return (
-                          <tr key={tx.id} className="border-b border-slate-800/50 last:border-0 hover:bg-slate-800/30">
-                            <td className="px-4 py-2.5 text-xs text-slate-400">{formatDate(tx.timestamp)}</td>
-                            <td className="px-4 py-2.5 text-xs text-slate-500">{tx.source_display}</td>
-                            <td className="px-4 py-2.5 text-xs text-slate-400">{tx.description}</td>
-                            <td className={`px-4 py-2.5 text-right tabular-nums text-sm font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {isPositive ? '+' : ''}{formatCurrency(tx.amount, wallet.currency_code)}
+                          <tr key={tx.id} className="border-b border-edge/40 last:border-0 hover:bg-raised/40 transition-colors">
+                            <td className="px-4 py-2.5 text-[11px] text-faint">{formatDate(tx.timestamp)}</td>
+                            <td className="px-4 py-2.5 text-[11px] text-faint">{tx.source_display}</td>
+                            <td className="px-4 py-2.5 text-xs text-dim hidden md:table-cell">{tx.description}</td>
+                            <td className={`px-4 py-2.5 text-right tabular-nums text-sm font-medium ${pos ? 'text-buy' : 'text-sell'}`}>
+                              {pos ? '+' : ''}{formatCurrency(tx.amount, wallet.currency_code)}
                             </td>
-                            <td className="px-4 py-2.5 text-right tabular-nums text-slate-300">
+                            <td className="px-4 py-2.5 text-right tabular-nums text-xs text-dim hidden sm:table-cell">
                               {formatCurrency(tx.balance_after, wallet.currency_code)}
                             </td>
                           </tr>
@@ -205,9 +192,7 @@ export default function WalletDetailPage() {
                       })}
                       {wallet.transactions.results.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
-                            No transactions yet.
-                          </td>
+                          <td colSpan={5} className="px-4 py-12 text-center text-sm text-faint">No transactions yet</td>
                         </tr>
                       )}
                     </tbody>
@@ -215,23 +200,17 @@ export default function WalletDetailPage() {
                 </div>
 
                 {wallet.transactions.count > 25 && (
-                  <div className="flex items-center justify-between border-t border-slate-800 px-4 py-3">
-                    <span className="text-xs text-slate-500">{wallet.transactions.count} transactions total</span>
+                  <div className="flex items-center justify-between border-t border-edge px-4 py-3">
+                    <span className="text-[11px] text-faint">{wallet.transactions.count} transactions total</span>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setPage((p) => p - 1)}
-                        disabled={!wallet.transactions.previous}
-                        className="rounded px-3 py-1 text-xs text-slate-400 disabled:opacity-30 hover:text-white"
-                      >
-                        ← Prev
-                      </button>
+                        onClick={() => setPage(p => p - 1)} disabled={!wallet.transactions.previous}
+                        className="rounded px-3 py-1 text-xs text-dim disabled:opacity-30 hover:text-bright transition-colors"
+                      >← Prev</button>
                       <button
-                        onClick={() => setPage((p) => p + 1)}
-                        disabled={!wallet.transactions.next}
-                        className="rounded px-3 py-1 text-xs text-slate-400 disabled:opacity-30 hover:text-white"
-                      >
-                        Next →
-                      </button>
+                        onClick={() => setPage(p => p + 1)} disabled={!wallet.transactions.next}
+                        className="rounded px-3 py-1 text-xs text-dim disabled:opacity-30 hover:text-bright transition-colors"
+                      >Next →</button>
                     </div>
                   </div>
                 )}
@@ -240,7 +219,7 @@ export default function WalletDetailPage() {
           </div>
         </div>
       ) : (
-        <p className="text-slate-400">Wallet not found.</p>
+        <p className="text-dim">Wallet not found.</p>
       )}
     </PageWrapper>
   )

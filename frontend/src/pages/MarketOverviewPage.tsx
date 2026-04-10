@@ -13,80 +13,92 @@ export default function MarketOverviewPage() {
   })
 
   return (
-    <PageWrapper title="Markets">
+    <PageWrapper>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-bright">Markets</h1>
+      </div>
+
       {isLoading ? (
         <div className="flex h-40 items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-500" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge border-t-accent" />
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {(exchanges ?? []).map((exchange) => (
-            <div key={exchange.code} className="rounded-xl border border-slate-800 bg-slate-900">
+            <div key={exchange.code} className="rounded-lg border border-edge bg-panel overflow-hidden">
               {/* Exchange header */}
-              <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+              <div className="flex items-center justify-between border-b border-edge px-4 py-3">
                 <div className="flex items-center gap-3">
                   <Link
                     to={`/market/${exchange.code}`}
-                    className="font-medium text-white hover:text-indigo-400"
+                    className="text-sm font-semibold text-bright hover:text-accent transition-colors"
                   >
                     {exchange.name}
                   </Link>
-                  <span className="text-xs text-slate-500">{exchange.code}</span>
+                  <span className="text-[11px] text-faint">{exchange.code}</span>
                   <StatusBadge value={exchange.is_open ? 'OPEN' : 'CLOSED'} />
                 </div>
-                <div className="text-right text-xs text-slate-500">
+                <span className="text-[11px] text-faint">
                   {exchange.is_open
-                    ? `${exchange.open_time} – ${exchange.close_time}`
+                    ? `${exchange.open_time}–${exchange.close_time}`
                     : exchange.hours_until_open != null
                       ? `Opens in ${exchange.hours_until_open}h`
                       : 'Closed'}
-                </div>
+                </span>
               </div>
 
-              {/* Asset rows */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <tbody>
-                    {exchange.assets.slice(0, 10).map((asset) => (
-                      <tr
-                        key={asset.ticker}
-                        className="border-b border-slate-800/50 last:border-0 hover:bg-slate-800/30"
-                      >
-                        <td className="px-4 py-2.5">
-                          <Link
-                            to={`/market/${exchange.code}/${asset.ticker}`}
-                            className="font-medium text-white hover:text-indigo-400"
-                          >
-                            {asset.ticker}
-                          </Link>
-                          <span className="ml-2 text-xs text-slate-500">{asset.name}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-slate-300">
-                          {asset.current_price
-                            ? formatCurrency(asset.current_price, asset.currency_code)
-                            : '—'}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <Link
-                            to={`/market/${exchange.code}/${asset.ticker}`}
-                            className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-400 transition hover:border-indigo-500 hover:text-white"
-                          >
-                            Trade
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* Asset table */}
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-edge/60 text-[11px] uppercase tracking-wider text-faint">
+                    <th className="px-4 py-2 text-left font-medium">Ticker</th>
+                    <th className="px-4 py-2 text-left font-medium hidden sm:table-cell">Name</th>
+                    <th className="px-4 py-2 text-right font-medium">Price</th>
+                    <th className="px-4 py-2 text-right font-medium w-20"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exchange.assets.slice(0, 10).map((asset) => (
+                    <tr
+                      key={asset.ticker}
+                      className="border-b border-edge/30 last:border-0 hover:bg-raised/50 transition-colors"
+                    >
+                      <td className="px-4 py-2.5">
+                        <Link
+                          to={`/market/${exchange.code}/${asset.ticker}`}
+                          className="text-sm font-semibold text-bright hover:text-accent transition-colors"
+                        >
+                          {asset.ticker}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2.5 hidden sm:table-cell">
+                        <span className="text-xs text-dim">{asset.name}</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-xs font-medium text-bright">
+                        {asset.current_price
+                          ? formatCurrency(asset.current_price, asset.currency_code)
+                          : <span className="text-faint">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <Link
+                          to={`/market/${exchange.code}/${asset.ticker}`}
+                          className="inline-flex items-center rounded border border-edge px-2.5 py-1 text-[11px] text-dim transition hover:border-accent hover:text-accent"
+                        >
+                          Trade
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
               {exchange.asset_count > 10 && (
-                <div className="border-t border-slate-800 px-4 py-2 text-center">
+                <div className="border-t border-edge/40 px-4 py-2.5">
                   <Link
                     to={`/market/${exchange.code}`}
-                    className="text-xs text-indigo-400 hover:text-indigo-300"
+                    className="text-[11px] text-accent hover:text-accent/80"
                   >
-                    View all {exchange.asset_count} assets →
+                    View all {exchange.asset_count} assets on {exchange.name} →
                   </Link>
                 </div>
               )}

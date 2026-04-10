@@ -20,7 +20,6 @@ export default function RegisterPage() {
   const navigate = useNavigate()
   const [serverError, setServerError] = useState('')
 
-  // Fetch available currencies from fx-rates endpoint
   const { data: fxRates } = useQuery({
     queryKey: ['fx-rates-public'],
     queryFn: async () => {
@@ -30,7 +29,6 @@ export default function RegisterPage() {
     staleTime: 10 * 60_000,
   })
 
-  // Derive unique currency codes (base + targets)
   const currencies = fxRates
     ? Array.from(new Set(fxRates.map((r) => r.to_currency))).sort()
     : ['GBP', 'USD', 'EUR']
@@ -63,95 +61,75 @@ export default function RegisterPage() {
     }
   }
 
+  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0f1117] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-base px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold text-white">Create account</h1>
-          <p className="mt-1 text-sm text-slate-400">Start with £100,000 in simulated funds</p>
+          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-lg font-bold text-base">T</div>
+          <h1 className="text-xl font-semibold text-bright">Create account</h1>
+          <p className="mt-1 text-sm text-faint">Start with £100,000 in simulated funds</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-6"
-        >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-lg border border-edge bg-panel p-6">
           {serverError && (
-            <p className="rounded-lg bg-red-900/30 px-3 py-2 text-sm text-red-400">
+            <p className="rounded border border-sell/20 bg-sell/8 px-3 py-2 text-sm text-sell">
               {serverError}
             </p>
           )}
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-300">Username</label>
-            <input
-              {...register('username', { required: 'Required' })}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              autoComplete="username"
-            />
-            {errors.username && <p className="mt-1 text-xs text-red-400">{errors.username.message}</p>}
+            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Username</label>
+            <input {...register('username', { required: 'Required' })} className={inputCls} autoComplete="username" />
+            {errors.username && <p className="mt-1 text-xs text-sell">{errors.username.message}</p>}
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-300">Email</label>
-            <input
-              {...register('email', { required: 'Required' })}
-              type="email"
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              autoComplete="email"
-            />
-            {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>}
+            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Email</label>
+            <input {...register('email', { required: 'Required' })} type="email" className={inputCls} autoComplete="email" />
+            {errors.email && <p className="mt-1 text-xs text-sell">{errors.email.message}</p>}
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-300">Home currency</label>
-            <select
-              {...register('home_currency', { required: 'Required' })}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              {currencies.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Home currency</label>
+            <select {...register('home_currency', { required: 'Required' })} className={inputCls}>
+              {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-300">Password</label>
+            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Password</label>
             <input
               {...register('password', { required: 'Required', minLength: { value: 8, message: 'Min 8 characters' } })}
-              type="password"
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              autoComplete="new-password"
+              type="password" className={inputCls} autoComplete="new-password"
             />
-            {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>}
+            {errors.password && <p className="mt-1 text-xs text-sell">{errors.password.message}</p>}
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-300">Confirm password</label>
+            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Confirm password</label>
             <input
               {...register('password2', {
                 required: 'Required',
                 validate: (v) => v === watch('password') || 'Passwords do not match',
               })}
-              type="password"
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              autoComplete="new-password"
+              type="password" className={inputCls} autoComplete="new-password"
             />
-            {errors.password2 && <p className="mt-1 text-xs text-red-400">{errors.password2.message}</p>}
+            {errors.password2 && <p className="mt-1 text-xs text-sell">{errors.password2.message}</p>}
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+            className="w-full rounded bg-accent px-4 py-2.5 text-sm font-medium text-base transition hover:bg-accent/90 disabled:opacity-50"
           >
             {isSubmitting ? 'Creating account…' : 'Create account'}
           </button>
 
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-[11px] text-faint">
             Already have an account?{' '}
-            <Link to="/login" className="text-indigo-400 hover:text-indigo-300">
-              Sign in
-            </Link>
+            <Link to="/login" className="text-accent hover:text-accent/80 transition-colors">Sign in</Link>
           </p>
         </form>
       </div>
