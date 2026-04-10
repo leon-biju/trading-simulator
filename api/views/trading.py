@@ -147,7 +147,7 @@ class PortfolioHistoryView(APIView):
 
         labels, total_assets, portfolio_value, cash_balance = [], [], [], []
         for snapshot in history:
-            labels.append(snapshot.date.strftime('%d %b'))
+            labels.append(snapshot.date.isoformat())
             total_assets.append(float(snapshot.total_value + snapshot.cash_balance) * fx_multiplier)
             portfolio_value.append(float(snapshot.total_value) * fx_multiplier)
             cash_balance.append(float(snapshot.cash_balance) * fx_multiplier)
