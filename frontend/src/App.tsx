@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '@/auth/AuthContext'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
@@ -26,6 +27,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <TooltipProvider>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login"    element={<LoginPage />} />
@@ -48,6 +50,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Suspense>
+        </TooltipProvider>
       </AuthProvider>
     </BrowserRouter>
   )

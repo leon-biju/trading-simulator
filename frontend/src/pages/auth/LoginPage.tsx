@@ -3,6 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '@/auth/AuthContext'
 import { AxiosError } from 'axios'
+import AuthLayout from '@/components/layout/AuthLayout'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertCircle, CheckCircle } from 'lucide-react'
 
 interface LoginForm {
   username: string
@@ -41,66 +47,87 @@ export default function LoginPage() {
     }
   }
 
-  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-base px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-lg font-bold text-base">T</div>
-          <h1 className="text-xl font-semibold text-bright">TradeSim</h1>
-          <p className="mt-1 text-sm text-faint">Sign in to your account</p>
+    <AuthLayout>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-bright">Welcome back</h1>
+        <p className="mt-1 text-sm text-faint">Sign in to your account</p>
+      </div>
+
+      {passwordReset && (
+        <Alert className="mb-4 border-buy/20 bg-buy/8 text-buy">
+          <CheckCircle className="size-4 !text-buy" />
+          <AlertDescription className="text-buy">
+            Password updated. Sign in with your new password.
+          </AlertDescription>
+        </Alert>
+      )}
+      {serverError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="size-4" />
+          <AlertDescription>{serverError}</AlertDescription>
+        </Alert>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="username" className="text-dim">Username</Label>
+          <Input
+            id="username"
+            {...register('username', { required: 'Username is required' })}
+            placeholder="your_username"
+            autoComplete="username"
+            aria-invalid={!!errors.username}
+            className="bg-raised border-edge focus-visible:ring-accent/50"
+          />
+          {errors.username && (
+            <p className="text-xs text-sell">{errors.username.message}</p>
+          )}
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-lg border border-edge bg-panel p-6">
-          {passwordReset && (
-            <p className="rounded border border-buy/20 bg-buy/8 px-3 py-2 text-sm text-buy">
-              Password updated. Sign in with your new password.
-            </p>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password" className="text-dim">Password</Label>
+            <Link
+              to="/forgot-password"
+              className="text-[11px] text-faint hover:text-dim transition-colors"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <Input
+            id="password"
+            type="password"
+            {...register('password', { required: 'Password is required' })}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            aria-invalid={!!errors.password}
+            className="bg-raised border-edge focus-visible:ring-accent/50"
+          />
+          {errors.password && (
+            <p className="text-xs text-sell">{errors.password.message}</p>
           )}
-          {serverError && (
-            <p className="rounded border border-sell/20 bg-sell/8 px-3 py-2 text-sm text-sell">
-              {serverError}
-            </p>
-          )}
+        </div>
 
-          <div>
-            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Username</label>
-            <input
-              {...register('username', { required: 'Username is required' })}
-              className={inputCls}
-              placeholder="your_username"
-              autoComplete="username"
-            />
-            {errors.username && <p className="mt-1 text-xs text-sell">{errors.username.message}</p>}
-          </div>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full"
+          size="lg"
+        >
+          {isSubmitting ? 'Signing in…' : 'Sign in'}
+        </Button>
+      </form>
 
-          <div>
-            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Password</label>
-            <input
-              {...register('password', { required: 'Password is required' })}
-              type="password"
-              className={inputCls}
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-            {errors.password && <p className="mt-1 text-xs text-sell">{errors.password.message}</p>}
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded bg-accent px-4 py-2.5 text-sm font-medium text-base transition hover:bg-accent/90 disabled:opacity-50"
-          >
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
-          </button>
-
-          <div className="flex items-center justify-between text-[11px] text-faint">
-            <Link to="/register" className="hover:text-dim transition-colors">Create account</Link>
-            <Link to="/forgot-password" className="hover:text-dim transition-colors">Forgot password?</Link>
-          </div>
-        </form>
-      </div>
-    </div>
+      <p className="mt-6 text-center text-sm text-faint">
+        Don't have an account?{' '}
+        <Link
+          to="/register"
+          className="font-medium text-accent hover:text-accent/80 transition-colors"
+        >
+          Create one
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }

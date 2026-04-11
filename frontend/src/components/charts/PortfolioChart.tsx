@@ -7,9 +7,12 @@ import {
   LineElement,
   Tooltip,
   Filler,
+  type TooltipItem,
 } from 'chart.js'
 import { useQuery } from '@tanstack/react-query'
 import { getPortfolioHistory } from '@/api/trading'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Skeleton } from '@/components/ui/skeleton'
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Filler)
 
@@ -51,22 +54,18 @@ export default function PortfolioChart() {
 
   const now = Date.now()
 
-  // Convert ISO date labels → timestamps for proportional x-axis positioning
   const points =
     data?.labels.map((iso, i) => ({
       x: parseISODate(iso),
       y: data.datasets.total_assets[i],
     })) ?? []
 
-  // Fixed window: always span [windowStart, today] so sparse data reads honestly
   const windowMs = RANGE_MS[range]
   const xMin = windowMs !== null
     ? now - windowMs
-    : (points[0]?.x ?? now - 30 * 86_400_000)  // ALL: first snapshot, or 30d if no data
+    : (points[0]?.x ?? now - 30 * 86_400_000)
   const xMax = now
 
-  // Compute y bounds explicitly — Chart.js doesn't reliably auto-range {x,y} data
-  // when x min/max are constrained
   const yValues = points.map(p => p.y)
   const yMin = yValues.length ? Math.min(...yValues) : 0
   const yMax = yValues.length ? Math.max(...yValues) : 100
@@ -79,7 +78,7 @@ export default function PortfolioChart() {
       {
         label: 'Total Assets',
         data: points,
-        parsing: false,
+        parsing: false as const,
         borderColor: '#06B6D4',
         backgroundColor: 'rgba(6,182,212,0.06)',
         borderWidth: 1.5,
@@ -105,9 +104,11 @@ export default function PortfolioChart() {
         bodyColor: '#E2E8F0',
         padding: 10,
         callbacks: {
-          title: (items: { parsed: { x: number } }[]) => {
+          title: (items: TooltipItem<'line'>[]) => {
             if (!items.length) return ''
-            const d = new Date(items[0].parsed.x)
+            const x = items[0].parsed.x
+            if (x == null) return ''
+            const d = new Date(x)
             return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
           },
         },
@@ -146,27 +147,26 @@ export default function PortfolioChart() {
     <div className="flex h-full flex-col">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[11px] font-medium text-faint uppercase tracking-wider">Portfolio value</span>
-        <div className="flex gap-0.5">
+        <ToggleGroup
+          type="single"
+          value={range}
+          onValueChange={(v) => v && setRange(v as Range)}
+          className="gap-0"
+        >
           {RANGES.map((r) => (
-            <button
+            <ToggleGroupItem
               key={r}
-              onClick={() => setRange(r)}
-              className={`rounded px-2 py-0.5 text-xs transition ${
-                range === r
-                  ? 'bg-accent/15 text-accent font-medium'
-                  : 'text-faint hover:text-dim'
-              }`}
+              value={r}
+              className="h-6 px-2 text-xs font-medium text-faint rounded data-[state=on]:bg-accent/15 data-[state=on]:text-accent hover:text-dim hover:bg-transparent"
             >
               {r}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </div>
       <div className="flex-1 min-h-0">
         {isLoading ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge border-t-accent" />
-          </div>
+          <Skeleton className="h-full w-full" />
         ) : !data?.labels.length ? (
           <div className="flex h-full items-center justify-center text-xs text-faint">
             No portfolio history yet
