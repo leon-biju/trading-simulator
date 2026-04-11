@@ -2,6 +2,7 @@ from decimal import Decimal
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from market.models import Currency
 from market.services.fx import get_fx_conversion
 
@@ -45,3 +46,18 @@ class Profile(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.username}'s profile"
+
+
+class PasswordResetOTP(models.Model):
+    OTP_EXPIRY_SECONDS = 600  # 10 minutes
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='password_reset_otps')
+    otp_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+
+    def is_valid(self) -> bool:
+        if self.used:
+            return False
+        age = (timezone.now() - self.created_at).total_seconds()
+        return age <= self.OTP_EXPIRY_SECONDS

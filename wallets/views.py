@@ -1,82 +1,71 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import HttpRequest, HttpResponse
-from decimal import Decimal
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from market.models import FXRate
-from .models import Wallet
-from .forms import AddFundsForm
-from market.services.fx import get_fx_rate
+from config.pagination import StandardPagination
+from wallets.serializers import (
+    FxTransferInputSerializer,
+    TransactionSerializer,
+    WalletSerializer,
+)
+from wallets.models import Transaction, Wallet
 from wallets.services import perform_fx_transfer
-import json
-
-ERROR_MESSAGES = {
-    'ZERO_AMOUNT_TRANSACTION': 'Transaction amount cannot be zero.',
-    'INSUFFICIENT_FUNDS': 'Insufficient funds in your wallet.',
-    'INSUFFICIENT_FUNDS_IN_FROM_WALLET': 'Insufficient funds in the source wallet for this transfer.',
-    'WALLET_DOES_NOT_EXIST': 'The specified wallet does not exist.',
-    'SAME_WALLET_TRANSFER': 'Cannot transfer funds to the same wallet.',
-    'UNSUPPORTED_CURRENCY': 'One or more currencies are not supported.',
-    'UNSUPPORTED_CURRENCY_FOR_FX': 'Exchange rate not available for the selected currencies.',
-    'SPECIFY_EITHER_FROM_OR_TO_AMOUNT': 'Invalid transfer parameters. Please try again.',
-    'INVALID_FROM_AMOUNT': 'The transfer amount must be greater than zero.',
-    'INVALID_TO_AMOUNT': 'The transfer amount must be greater than zero.',
-}
 
 
-@login_required
-def wallet_detail(request: HttpRequest, currency_code: str) -> HttpResponse:
-    wallet = get_object_or_404(Wallet, currency__code=currency_code, user=request.user)
-    transactions = wallet.transactions.all()
-    user_other_wallets = Wallet.objects.filter(user_id=request.user.id).exclude(id=wallet.id)
-    if request.method == 'POST':
-        form = AddFundsForm(request.POST)
-        if form.is_valid():
-            from_wallet_currency = form.cleaned_data['from_wallet_currency']
-            to_amount = form.cleaned_data['to_amount']
-            
-            try:
-                fx_transfer = perform_fx_transfer(
-                    user_id=request.user.id, # type: ignore
-                    from_wallet_currency_code=from_wallet_currency,
-                    to_wallet_currency_code=wallet.currency.code,
-                    to_amount=to_amount
-                )
-            except ValueError as ve:
-                error_message = ERROR_MESSAGES.get(str(ve), 'An unknown error occurred.')
-                messages.error(request, error_message)
-            else:
-                messages.success(request, f'Successfully added {wallet.symbol}{to_amount:,.2f} to your {wallet.currency.code} wallet.')
-
-            return redirect('wallets:wallet_detail', currency_code=wallet.currency.code)
-        else:
-            messages.error(request, 'There was an error with your submission. Please check the form and try again.')
-    else: # GET requests
-        form = AddFundsForm()
+@method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
+class WalletListView(APIView):
+    def get(self, request):
+        wallets = Wallet.objects.filter(user_id=request.user.id).select_related('currency')
+        serializer = WalletSerializer(wallets, many=True)
+        return Response(serializer.data)
 
 
-    currency_codes = [wallet.currency.code for wallet in user_other_wallets] + [wallet.currency.code]
-    exchange_rates = {curr: get_fx_rate(wallet.currency.code, curr) for curr in currency_codes}
+@method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
+class WalletDetailView(APIView):
+    def get(self, request, currency_code):
+        try:
+            wallet = Wallet.objects.select_related('currency').get(
+                user_id=request.user.id,
+                currency__code=currency_code.upper(),
+            )
+        except Wallet.DoesNotExist:
+            return Response({'error': 'Wallet not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    serializable_fx_rates = {k: str(v) for k, v in exchange_rates.items()}
+        transactions = (
+            Transaction.objects.filter(wallet=wallet)
+            .order_by('-timestamp')
+        )
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(transactions, request)
+        tx_data = TransactionSerializer(page, many=True).data
 
-    latest_rate = FXRate.objects.filter(
-        base_currency__is_base=True,
-        target_currency=wallet.currency
-    ).first()
-    if latest_rate is not None:
-        fx_last_updated = latest_rate.last_updated.strftime('%Y-%m-%d %H:%M:%S')
-    else:
-        fx_last_updated = None
-    
-    context = {
-        'wallet': wallet,
-        'transactions': transactions,
-        'user_other_wallets': user_other_wallets,
-        'form': form,
-        'fx_rates': json.dumps(serializable_fx_rates),
-        'fx_last_updated': fx_last_updated,
-    }
+        wallet_data = WalletSerializer(wallet).data
+        paginated = paginator.get_paginated_response(tx_data).data
+        wallet_data['transactions'] = paginated
+        return Response(wallet_data)
 
-    return render(request, 'wallets/wallet_detail.html', context)
+
+@method_decorator(ratelimit(key='user', rate='10/m', block=True), name='post')
+class FxTransferView(APIView):
+    def post(self, request):
+        serializer = FxTransferInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        transfer = perform_fx_transfer(
+            user_id=request.user.id,
+            from_wallet_currency_code=data['from_currency'].upper(),
+            to_wallet_currency_code=data['to_currency'].upper(),
+            from_amount=data.get('from_amount'),
+            to_amount=data.get('to_amount'),
+        )
+
+        return Response({
+            'from_amount': str(transfer.from_amount),
+            'to_amount': str(transfer.to_amount),
+            'exchange_rate': str(transfer.exchange_rate),
+            'from_currency': data['from_currency'].upper(),
+            'to_currency': data['to_currency'].upper(),
+        }, status=status.HTTP_201_CREATED)

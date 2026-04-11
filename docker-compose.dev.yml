@@ -15,7 +15,7 @@ services:
     image: "redis:7-alpine"
     ports: [ "6379:6379" ]
 
-  web:
+  api:
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -41,12 +41,23 @@ services:
       dockerfile: Dockerfile.dev
     env_file: .env.dev
     depends_on: [ db, redis ]
-    
+
     # important to remove old pid file to avoid startup issues
     command: sh -c "rm -f ./celerybeat.pid &&
              celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/code
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /frontend
+    volumes:
+      - ./frontend:/frontend
+    ports: [ "5173:5173" ]
+    environment:
+      - VITE_DJANGO_HOST=http://api:8000
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on: [ api ]
 
 volumes:
   pgdata:

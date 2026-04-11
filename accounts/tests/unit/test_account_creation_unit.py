@@ -2,10 +2,11 @@
 
 import pytest
 
-from accounts.forms import SignUpForm
+from accounts.serializers import RegisterSerializer
 
 
-#1. Test email normalisation
+# 1. Test email normalisation
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "raw, expected",
     [
@@ -16,10 +17,10 @@ from accounts.forms import SignUpForm
 )
 def test_normalised_email(raw, expected):
     """
-    SignUpForm.clean_email() must always return a lowercased email since
-    emails are case insensitive
+    RegisterSerializer.validate_email() must always return a lowercased email
+    since emails are case insensitive.
     """
-    
-    form = SignUpForm()
-    form.cleaned_data = {"email": raw}
-    assert form.clean_email() == expected 
+    s = RegisterSerializer()
+    s.initial_data = {}  # type: ignore[attr-defined]
+    result = s.validate_email(raw)
+    assert result == expected

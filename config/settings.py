@@ -44,26 +44,23 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
-    'crispy_forms',
-    'crispy_bootstrap5',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
     'accounts',
-    'dashboard',
     'market',
     'trading',
     'wallets',
     'django_celery_beat',
-    'mathfilters',
     'django_stubs_ext'
 ]
-
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-
-CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'csp.middleware.CSPMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -77,7 +74,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -146,9 +143,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
+STATICFILES_DIRS = []
 
 # Media files
 MEDIA_URL = 'media/'
@@ -159,12 +154,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
-
-PASSWORD_RESET_TIMEOUT = 3600  # 1 hour
-
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 EMAIL_BACKEND   = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
@@ -210,10 +200,48 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
 
 CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'", "cdn.jsdelivr.net")
-CSP_STYLE_SRC = ("'self'", "cdn.jsdelivr.net")
 CSP_FONT_SRC = ("'self'", "cdn.jsdelivr.net")
 CSP_IMG_SRC = ("'self'", "data:")
+
+if DEBUG:
+    # Vite HMR requires unsafe-inline for injected styles/scripts
+    CSP_SCRIPT_SRC = ("'self'", "cdn.jsdelivr.net", "'unsafe-inline'")
+    CSP_STYLE_SRC = ("'self'", "cdn.jsdelivr.net", "'unsafe-inline'")
+    CSP_CONNECT_SRC = ("'self'", "ws://localhost:5173", "http://localhost:5173")
+else:
+    CSP_SCRIPT_SRC = ("'self'",)
+    CSP_STYLE_SRC = ("'self'",)
+
+# Django REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'COERCE_DECIMAL_TO_STRING': True,
+    'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
+}
+
+# SimpleJWT
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# CORS — dev only; prod is same-origin via nginx
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = ['http://localhost:5173']
+    CORS_ALLOW_CREDENTIALS = True
 
 from config.constants import MARKET_TICK_INTERVAL_MINUTES, FX_RATES_UPDATE_INTERVAL_MINUTES
 
@@ -239,6 +267,10 @@ CELERY_BEAT_SCHEDULE = {
     'prune-old-price-data-daily': {
         'task': 'market.tasks.prune_old_price_data',
         'schedule': 86400,  # 1 day in seconds
+    },
+    'flush-expired-jwt-tokens-daily': {
+        'task': 'accounts.tasks.flush_expired_tokens',
+        'schedule': 86400,
     },
 
 }
