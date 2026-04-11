@@ -26,6 +26,7 @@ interface AuthContextValue {
   logout: () => Promise<void>
   getAccessToken: () => string | null
   setAccessToken: (token: string) => void
+  loginWithToken: (token: string, user: User) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -42,6 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearAuth = () => {
     accessTokenRef.current = null
     setUser(null)
+  }
+
+  function loginWithToken(token: string, userData: User) {
+    accessTokenRef.current = token
+    setUser(userData)
   }
 
   // Inject handlers into the Axios interceptor so it can refresh tokens
@@ -106,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         getAccessToken,
         setAccessToken,
+        loginWithToken,
       }}
     >
       {children}

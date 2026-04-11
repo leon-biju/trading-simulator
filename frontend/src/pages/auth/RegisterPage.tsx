@@ -16,7 +16,7 @@ interface RegisterForm {
 }
 
 export default function RegisterPage() {
-  const { isAuthenticated, setAccessToken } = useAuth()
+  const { isAuthenticated, loginWithToken } = useAuth()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState('')
 
@@ -49,7 +49,7 @@ export default function RegisterPage() {
     setServerError('')
     try {
       const result = await registerUser(data)
-      setAccessToken(result.access)
+      loginWithToken(result.access, result.user)
       navigate('/dashboard', { replace: true })
     } catch (err) {
       if (err instanceof AxiosError && err.response?.data) {
