@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute'
 
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 
 const DashboardPage      = lazy(() => import('@/pages/DashboardPage'))
 const MarketOverviewPage = lazy(() => import('@/pages/MarketOverviewPage'))
@@ -29,6 +30,7 @@ export default function App() {
           <Routes>
             <Route path="/login"    element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

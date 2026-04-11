@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '@/auth/AuthContext'
 import { AxiosError } from 'axios'
@@ -12,7 +12,9 @@ interface LoginForm {
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [serverError, setServerError] = useState('')
+  const passwordReset = (location.state as { passwordReset?: boolean } | null)?.passwordReset
 
   const {
     register,
@@ -51,6 +53,11 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-lg border border-edge bg-panel p-6">
+          {passwordReset && (
+            <p className="rounded border border-buy/20 bg-buy/8 px-3 py-2 text-sm text-buy">
+              Password updated. Sign in with your new password.
+            </p>
+          )}
           {serverError && (
             <p className="rounded border border-sell/20 bg-sell/8 px-3 py-2 text-sm text-sell">
               {serverError}
@@ -90,7 +97,7 @@ export default function LoginPage() {
 
           <div className="flex items-center justify-between text-[11px] text-faint">
             <Link to="/register" className="hover:text-dim transition-colors">Create account</Link>
-            <a href="/accounts/password_reset/" className="hover:text-dim transition-colors">Forgot password?</a>
+            <Link to="/forgot-password" className="hover:text-dim transition-colors">Forgot password?</Link>
           </div>
         </form>
       </div>

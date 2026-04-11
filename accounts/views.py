@@ -1,11 +1,10 @@
+import secrets
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.utils.decorators import method_decorator
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django_ratelimit.decorators import ratelimit
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -15,6 +14,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from accounts.models import PasswordResetOTP
 from accounts.serializers import RegisterSerializer, UserSerializer
 
 User = get_user_model()
@@ -148,7 +148,7 @@ class PasswordResetRequestView(APIView):
         email = request.data.get('email', '').strip().lower()
         # Always return 200 — never confirm whether an email exists
         response = Response(
-            {'detail': 'If that email exists, a reset link has been sent.'},
+            {'detail': 'If that email exists, a reset code has been sent.'},
             status=status.HTTP_200_OK,
         )
 
@@ -157,17 +157,15 @@ class PasswordResetRequestView(APIView):
         except User.DoesNotExist:
             return response
 
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-        reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
+        otp = f"{secrets.randbelow(1_000_000):06d}"
+        PasswordResetOTP.objects.create(user=user, otp_hash=make_password(otp))
 
         send_mail(
-            subject='Password reset request',
+            subject='Your password reset code',
             message=(
                 f'Hi {user.username},\n\n'
-                f'Click the link below to reset your password. '
-                f'This link expires in {settings.PASSWORD_RESET_TIMEOUT // 3600} hour(s).\n\n'
-                f'{reset_url}\n\n'
+                f'Your password reset code is: {otp}\n\n'
+                f'It expires in 10 minutes. '
                 f'If you did not request this, you can ignore this email.'
             ),
             from_email=settings.DEFAULT_FROM_EMAIL,
@@ -178,26 +176,56 @@ class PasswordResetRequestView(APIView):
         return response
 
 
+@method_decorator(ratelimit(key='ip', rate='10/h', block=True), name='post')
+class PasswordResetVerifyView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email', '').strip().lower()
+        otp = request.data.get('otp', '').strip()
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return Response({'error': 'Invalid code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        record = (
+            PasswordResetOTP.objects
+            .filter(user=user, used=False)
+            .order_by('-created_at')
+            .first()
+        )
+
+        if not record or not record.is_valid() or not check_password(otp, record.otp_hash):
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'detail': 'Code verified.'}, status=status.HTTP_200_OK)
+
+
+@method_decorator(ratelimit(key='ip', rate='10/h', block=True), name='post')
 class PasswordResetConfirmView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        uid = request.data.get('uid', '')
-        token = request.data.get('token', '')
+        email = request.data.get('email', '').strip().lower()
+        otp = request.data.get('otp', '').strip()
         new_password = request.data.get('new_password', '')
         new_password2 = request.data.get('new_password2', '')
 
         try:
-            user_pk = force_str(urlsafe_base64_decode(uid))
-            user = User.objects.get(pk=user_pk)
-        except (User.DoesNotExist, ValueError, TypeError):
-            return Response({'error': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return Response({'error': 'Invalid code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not default_token_generator.check_token(user, token):
-            return Response({'error': 'Reset link is invalid or has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+        record = (
+            PasswordResetOTP.objects
+            .filter(user=user, used=False)
+            .order_by('-created_at')
+            .first()
+        )
 
-        if not new_password or not new_password2:
-            return Response({'error': 'Both password fields are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not record or not record.is_valid() or not check_password(otp, record.otp_hash):
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if new_password != new_password2:
             return Response({'error': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -206,6 +234,9 @@ class PasswordResetConfirmView(APIView):
             validate_password(new_password, user=user)
         except Exception as e:
             return Response({'error': ' '.join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        record.used = True
+        record.save(update_fields=['used'])
 
         user.set_password(new_password)
         user.save()

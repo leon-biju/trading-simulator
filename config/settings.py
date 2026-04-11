@@ -156,9 +156,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-PASSWORD_RESET_TIMEOUT = 3600  # 1 hour
-
-
 
 EMAIL_BACKEND   = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST_PASSWORD = os.getenv("RESEND_API_KEY")
