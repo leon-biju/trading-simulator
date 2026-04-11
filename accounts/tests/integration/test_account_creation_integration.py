@@ -1,8 +1,13 @@
 # mypy: disable-error-code=no-untyped-def
 
 import pytest
-from accounts.forms import SignUpForm, LoginForm
 from django.contrib.auth import get_user_model
+
+from accounts.serializers import RegisterSerializer
+
+
+def _serializer(data):
+    return RegisterSerializer(data=data)
 
 
 # 1. Reject weak passwords
@@ -18,15 +23,14 @@ from django.contrib.auth import get_user_model
     ]
 )
 def test_weak_password_reject(password, expected, market_data):
-    form = SignUpForm(data={
+    s = _serializer({
         "username": "testuser",
         "email": "testuser@example.com",
-        "password1": password,
+        "password": password,
         "password2": password,
-        "home_currency": market_data["currencies"]["USD"].id,
+        "home_currency": market_data["currencies"]["USD"].code,
     })
-    assert form.is_valid() == expected
-
+    assert s.is_valid() == expected
 
 
 # 2. Reject mismatched passwords
@@ -38,71 +42,60 @@ def test_weak_password_reject(password, expected, market_data):
     ]
 )
 def test_password_confirmation(password1, password2, expected, market_data):
-    form = SignUpForm(data={
+    s = _serializer({
         "username": "testuser",
         "email": "testuser@example.com",
-        "password1": password1,
+        "password": password1,
         "password2": password2,
-        "home_currency": market_data["currencies"]["USD"].id,
+        "home_currency": market_data["currencies"]["USD"].code,
     })
-    assert form.is_valid() == expected
-
+    assert s.is_valid() == expected
 
 
 # 3. Cannot create an account with an existing username
 def test_cannot_create_account_with_existing_username(market_data):
     User = get_user_model()
-
-    # Create initial user
     User.objects.create_user(username="test_user", email="test_first@example.com", password="StrongV3ryStrongPasswd!")
 
-    # Attempt to create another user with same username
-    form = SignUpForm(data={
+    s = _serializer({
         "username": "test_user",
         "email": "test_second@example.com",
-        "password1": "AnotherStrongPasswd!123",
+        "password": "AnotherStrongPasswd!123",
         "password2": "AnotherStrongPasswd!123",
-        "home_currency": market_data["currencies"]["USD"].id,
+        "home_currency": market_data["currencies"]["USD"].code,
     })
-    assert not form.is_valid()
-    assert "username" in form.errors
-
+    assert not s.is_valid()
+    assert "username" in s.errors
 
 
 # 4. Cannot create an account with an existing email
 def test_cannot_create_account_with_existing_email(market_data):
     User = get_user_model()
-
-    # Create initial user
     User.objects.create_user(username="test_user1", email="testemail@example.com", password="StrongV3ryStrongPasswd!")
 
-    # Attempt to create another user with same email
-    form = SignUpForm(data={
+    s = _serializer({
         "username": "test_user2",
         "email": "testemail@example.com",
-        "password1": "AnotherStrongPasswd!123",
+        "password": "AnotherStrongPasswd!123",
         "password2": "AnotherStrongPasswd!123",
-        "home_currency": market_data["currencies"]["USD"].id,
+        "home_currency": market_data["currencies"]["USD"].code,
     })
-    assert not form.is_valid()
-    assert "email" in form.errors
-
+    assert not s.is_valid()
+    assert "email" in s.errors
 
 
 # 5. Passwords are stored hashed NOT plaintext
 def test_password_is_hashed(market_data):
     raw_password = "StrongV3ryStrongPasswd!"
-    form = SignUpForm(data={
+    s = _serializer({
         "username": "test_user_hashed",
         "email": "testemail_hashed@example.com",
-        "password1": raw_password,
+        "password": raw_password,
         "password2": raw_password,
-        "home_currency": market_data["currencies"]["USD"].id,
+        "home_currency": market_data["currencies"]["USD"].code,
     })
-    assert form.is_valid()
-    user = form.save()
+    assert s.is_valid(), s.errors
+    user = s.save()
 
     assert user.password != raw_password
-
-    # The user can authenticate with raw password
     assert user.check_password(raw_password)
