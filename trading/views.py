@@ -7,8 +7,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import Profile
-from api.pagination import StandardPagination
-from api.serializers.trading import (
+from config.pagination import StandardPagination
+from trading.serializers import (
     OrderSerializer,
     PlaceOrderSerializer,
     PortfolioSerializer,
@@ -126,8 +126,6 @@ class PortfolioView(APIView):
 
 @method_decorator(ratelimit(key='user', rate='20/m', block=True), name='get')
 class PortfolioHistoryView(APIView):
-    """Mirrors the existing portfolio_history_api, now under /api/."""
-
     def get(self, request):
         range_param = request.GET.get('range', '1M')
         days_map = {'1W': 7, '1M': 30, '3M': 90, '6M': 180, '1Y': 365, 'ALL': None}

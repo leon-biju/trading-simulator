@@ -1,37 +1,17 @@
-"""
-URL configuration for core project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import path, include, re_path
-from django.views.generic import RedirectView, TemplateView
+from django.views.generic import TemplateView
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('api.urls')),
-    path('accounts/', include('accounts.urls')),
-    path('dashboard/', include('dashboard.urls')),
-    path('wallets/', include('wallets.urls')),
-    path('market/', include('market.urls')),
-    path('trading/', include('trading.urls')),
-    path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home_redirect'),
-    # SPA catch-all: serve index.html for any path not matched above.
-    # Excludes api/, admin/, accounts/, static/, media/ so Django still handles those.
+    path('api/', include('accounts.urls')),
+    path('api/', include('market.urls')),
+    path('api/', include('trading.urls')),
+    path('api/', include('wallets.urls')),
+    # SPA catch-all: serve index.html for any non-api path.
     re_path(
-        r'^(?!api/|admin/|accounts/|static/|media/|dashboard/|wallets/|market/|trading/).*$',
+        r'^(?!api/|admin/|static/|media/).*$',
         TemplateView.as_view(template_name='index.html'),
         name='spa',
     ),

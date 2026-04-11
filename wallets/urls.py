@@ -1,8 +1,9 @@
 from django.urls import path
-from . import views
 
-app_name = 'wallets'
+from wallets.views import FxTransferView, WalletDetailView, WalletListView
 
 urlpatterns = [
-    path('<str:currency_code>/', views.wallet_detail, name='wallet_detail'),
+    path('wallets/', WalletListView.as_view(), name='api_wallets'),
+    path('wallets/fx-transfer/', FxTransferView.as_view(), name='api_fx_transfer'),
+    path('wallets/<str:currency_code>/', WalletDetailView.as_view(), name='api_wallet_detail'),
 ]

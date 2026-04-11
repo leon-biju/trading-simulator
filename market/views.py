@@ -12,7 +12,7 @@ from trading.models import Order, OrderStatus, Position
 from wallets.models import Wallet
 from market.services.candles import get_asset_timezone, get_candles_for_range
 
-from api.serializers.market import (
+from market.serializers import (
     AssetDetailSerializer,
     AssetListSerializer,
     ExchangeSerializer,
@@ -111,8 +111,6 @@ class AssetDetailView(APIView):
 
 @method_decorator(ratelimit(key='user', rate='30/m', block=True), name='get')
 class ChartDataView(APIView):
-    """Mirrors the existing asset_performance_chart_data_view, now under /api/."""
-
     def get(self, request, exchange_code, ticker):
         try:
             asset = Asset.objects.select_related('currency').get(

@@ -48,22 +48,13 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'crispy_forms',
-    'crispy_bootstrap5',
     'accounts',
-    'api',
-    'dashboard',
     'market',
     'trading',
     'wallets',
     'django_celery_beat',
-    'mathfilters',
     'django_stubs_ext'
 ]
-
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-
-CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 
 MIDDLEWARE = [
@@ -83,7 +74,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates', BASE_DIR / 'frontend' / 'dist'],
+        'DIRS': [BASE_DIR / 'frontend' / 'dist'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -153,7 +144,6 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STATICFILES_DIRS = [
-    BASE_DIR / "static",
     BASE_DIR / "frontend" / "dist" / "assets",
 ]
 
@@ -166,9 +156,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 PASSWORD_RESET_TIMEOUT = 3600  # 1 hour
 
@@ -241,7 +229,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     'COERCE_DECIMAL_TO_STRING': True,
-    'EXCEPTION_HANDLER': 'api.exceptions.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
 }
 
 # SimpleJWT
@@ -286,7 +274,7 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 86400,  # 1 day in seconds
     },
     'flush-expired-jwt-tokens-daily': {
-        'task': 'api.tasks.flush_expired_tokens',
+        'task': 'accounts.tasks.flush_expired_tokens',
         'schedule': 86400,
     },
 

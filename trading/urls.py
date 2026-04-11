@@ -1,37 +1,19 @@
 from django.urls import path
-from . import views_ui, views_api
+
+from trading.views import (
+    CancelOrderView,
+    OrderListCreateView,
+    PortfolioHistoryView,
+    PortfolioView,
+    PositionView,
+    TradeListView,
+)
 
 urlpatterns = [
-    # Order management
-    path('order/<int:order_id>/cancel/', views_ui.cancel_order_view, name='cancel_order'),
-    # Order placement
-    path(
-        'order/<str:exchange_code>/<str:asset_symbol>/', 
-        views_ui.place_order_view, 
-        name='place_order'
-    ),
-        
-    # History views
-    path('orders/', views_ui.order_history_view, name='order_history'),
-    path('trades/', views_ui.trade_history_view, name='trade_history'),
-    
-    # Portfolio
-    path('portfolio/', views_ui.portfolio_view, name='portfolio'),
-    
-    # API endpoints for dynamic form updates
-    path(
-        'api/position/<str:exchange_code>/<str:asset_symbol>/', 
-        views_api.get_position_for_stock, 
-        name='api_get_position'
-    ),
-    path(
-        'api/wallet/<str:currency_code>/', 
-        views_api.get_wallet_balance, 
-        name='api_get_wallet'
-    ),
-    path(
-        'api/portfolio-history/',
-        views_api.portfolio_history_api,
-        name='api_portfolio_history'
-    ),
+    path('trading/portfolio/', PortfolioView.as_view(), name='api_portfolio'),
+    path('trading/portfolio/history/', PortfolioHistoryView.as_view(), name='api_portfolio_history'),
+    path('trading/orders/', OrderListCreateView.as_view(), name='api_orders'),
+    path('trading/orders/<int:order_id>/cancel/', CancelOrderView.as_view(), name='api_cancel_order'),
+    path('trading/trades/', TradeListView.as_view(), name='api_trades'),
+    path('trading/position/<str:exchange_code>/<str:ticker>/', PositionView.as_view(), name='api_position'),
 ]

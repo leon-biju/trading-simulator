@@ -1,77 +1,135 @@
-from datetime import datetime, timedelta
-
 from django.conf import settings
-from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import PasswordResetView
-from django.urls import reverse_lazy
+from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
-from django.utils.timesince import timesince
-from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
-from .forms import SignUpForm, LoginForm
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-_timeout_str = timesince(
-    datetime(2000, 1, 1),
-    datetime(2000, 1, 1) + timedelta(seconds=settings.PASSWORD_RESET_TIMEOUT),
-).split(",")[0]
+from accounts.serializers import RegisterSerializer, UserSerializer
+
+User = get_user_model()
+
+COOKIE_NAME = 'refresh_token'
+COOKIE_MAX_AGE = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+
+def _set_refresh_cookie(response, refresh_token_str):
+    response.set_cookie(
+        COOKIE_NAME,
+        refresh_token_str,
+        max_age=COOKIE_MAX_AGE,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite='Lax',
+        path='/',
+    )
+
+
+def _clear_refresh_cookie(response):
+    response.delete_cookie(COOKIE_NAME, path='/')
+
+
+@method_decorator(ratelimit(key='ip', rate='10/m', block=True), name='post')
+class CookieTokenObtainPairView(TokenObtainPairView):
+    """
+    Login: validates credentials, returns access token in body,
+    sets refresh token as httpOnly cookie.
+    """
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        refresh = serializer.validated_data['refresh']
+        access = serializer.validated_data['access']
+
+        response = Response({'access': access}, status=status.HTTP_200_OK)
+        _set_refresh_cookie(response, refresh)
+        return response
+
+
+@method_decorator(ratelimit(key='ip', rate='30/m', block=True), name='post')
+class CookieTokenRefreshView(TokenRefreshView):
+    """
+    Silent refresh: reads refresh token from httpOnly cookie,
+    returns new access token in body and rotates cookie.
+    """
+
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get(COOKIE_NAME)
+        if not refresh_token:
+            return Response({'error': 'No refresh token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        serializer = self.get_serializer(data={'refresh': refresh_token})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except (TokenError, InvalidToken):
+            response = Response({'error': 'Token expired or invalid'}, status=status.HTTP_401_UNAUTHORIZED)
+            _clear_refresh_cookie(response)
+            return response
+
+        access = serializer.validated_data['access']
+        response = Response({'access': access}, status=status.HTTP_200_OK)
+
+        # If rotation is enabled, a new refresh token is issued — update the cookie
+        new_refresh = serializer.validated_data.get('refresh')
+        if new_refresh:
+            _set_refresh_cookie(response, new_refresh)
+
+        return response
+
+
+class CookieTokenBlacklistView(APIView):
+    """
+    Logout: blacklists the refresh token from the cookie and clears it.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get(COOKIE_NAME)
+        response = Response({'detail': 'Logged out'}, status=status.HTTP_200_OK)
+        _clear_refresh_cookie(response)
+
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except (TokenError, InvalidToken):
+                pass  # Already invalid — that's fine
+
+        return response
 
 
 @method_decorator(ratelimit(key='ip', rate='5/h', block=True), name='post')
-class CustomPasswordResetView(PasswordResetView):
-    template_name = 'accounts/password_reset/form.html'
-    email_template_name = 'accounts/password_reset/email.html'
-    subject_template_name = 'accounts/password_reset/subject.txt'
-    success_url = reverse_lazy('password_reset_done')
-    extra_email_context = {'timeout_str': _timeout_str}
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        # Issue tokens immediately so user is logged in after registration
+        refresh = RefreshToken.for_user(user)
+        access = str(refresh.access_token)
+
+        response = Response(
+            {'access': access, 'user': UserSerializer(user).data},
+            status=status.HTTP_201_CREATED,
+        )
+        _set_refresh_cookie(response, str(refresh))
+        return response
 
 
-def register_view(request: HttpRequest) -> HttpResponse:
-    # User shouldn't be logged in to access the register page
-    if request.user.is_authenticated:
-        return redirect("/dashboard/")
-    
-    if request.method == "POST":
-        form = SignUpForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-
-            return redirect("/dashboard/")
-        
-    else:
-        form = SignUpForm()
-    
-    return render(request, "accounts/register.html", {"form": form})
-
-
-def login_view(request: HttpRequest) -> HttpResponse:
-    # User shouldn't be logged in to access the login page
-    if request.user.is_authenticated:
-        return redirect("/dashboard/")
-    
-    if request.method == "POST":
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data["username"]
-            password = form.cleaned_data["password"]
-            # Use username if your authentication backend does not support email
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return redirect("/dashboard/")
-            else:
-                form.add_error(None, "Invalid username or password")
-    else:
-        form = LoginForm()
-    
-    return render(request, "accounts/login.html", {"form": form})
-
-@login_required
-@require_POST
-def logout_view(request: HttpRequest) -> HttpResponse:
-    logout(request)
-    
-    return redirect("/accounts/login/")
+class CurrentUserView(APIView):
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
