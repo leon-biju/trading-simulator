@@ -9,9 +9,7 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
-  // In production the React build is served by Django under /static/
-  // so all asset references must be prefixed with /static/
-  base: '/static/',
+  base: '/',
   server: {
     port: 5173,
     proxy: {
