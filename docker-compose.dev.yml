@@ -15,7 +15,7 @@ services:
     image: "redis:7-alpine"
     ports: [ "6379:6379" ]
 
-  web:
+  api:
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -55,9 +55,9 @@ services:
       - ./frontend:/frontend
     ports: [ "5173:5173" ]
     environment:
-      - VITE_DJANGO_HOST=http://web:8000
+      - VITE_DJANGO_HOST=http://api:8000
     command: sh -c "npm install && npm run dev -- --host"
-    depends_on: [ web ]
+    depends_on: [ api ]
 
 volumes:
   pgdata:

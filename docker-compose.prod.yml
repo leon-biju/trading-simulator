@@ -7,7 +7,7 @@ services:
   redis:
     image: "redis:7-alpine"
 
-  web:
+  api:
     build:
       context: .
       dockerfile: Dockerfile.prod
@@ -29,7 +29,7 @@ services:
       - static_files:/code/staticfiles
       - media_files:/code/media
       - /etc/letsencrypt:/etc/letsencrypt:ro
-    depends_on: [ web ]
+    depends_on: [ api ]
 
   celery_worker:
     build:

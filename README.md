@@ -107,19 +107,19 @@ Duplicate `example.env` to `.env.dev` and fill in the values. Do not change data
 docker-compose up --build --detach
 ```
 
-This starts the following containers: `db` (Postgres), `redis`, `web` (Django on port 8000), `celery_worker`, `celery_beat`, and `pgadmin` (port 8080).
+This starts the following containers: `db` (Postgres), `redis`, `api` (Django on port 8000), `celery_worker`, `celery_beat`, and `pgadmin` (port 8080).
 
 ### 3. Run migrations
 
 ```bash
-docker-compose exec web python manage.py migrate
+docker-compose exec api python manage.py migrate
 ```
 
 ### 4. Set up market data and create admin account
 
 ```bash
-docker-compose exec web python manage.py setup_market_data
-docker-compose exec web python manage.py createsuperuser
+docker-compose exec api python manage.py setup_market_data
+docker-compose exec api python manage.py createsuperuser
 ```
 
 The `setup_market_data` wizard lets you choose currencies, loads exchanges and assets from bundled JSON data ( stored in market/data), and sets up FX rates. The wizard also lets you choose a base currency, which is used for currency conversion and internal calculations.
@@ -137,10 +137,10 @@ The `setup_market_data` wizard lets you choose currencies, loads exchanges and a
 
 ```bash
 # All tests
-docker-compose exec web pytest
+docker-compose exec api pytest
 
 # Specific app
-docker-compose exec web pytest wallets/
+docker-compose exec api pytest wallets/
 
 ```
 
@@ -150,7 +150,7 @@ docker-compose exec web pytest wallets/
 
 ```bash
 # Backfill price history for a specific list of assets
-docker-compose exec web python manage.py backfill_asset_history --ticker AAPL GOOGL PLTR
+docker-compose exec api python manage.py backfill_asset_history --ticker AAPL GOOGL PLTR
 ```
 
 ---
