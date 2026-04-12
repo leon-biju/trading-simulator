@@ -11,6 +11,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
+    image: trading-simulator-prod
     env_file: .env.prod
     expose: [ "8000" ]
     depends_on: [ db, redis ]
@@ -32,20 +33,15 @@ services:
     depends_on: [ api ]
 
   celery_worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
+    image: trading-simulator-prod
     env_file: .env.prod
-    depends_on: [ db, redis ]
+    depends_on: [ api, db, redis ]
     command: celery -A config worker --loglevel=info
 
   celery_beat:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
+    image: trading-simulator-prod
     env_file: .env.prod
-    depends_on: [ db, redis ]
-    
+    depends_on: [ api, db, redis ]
     # important to remove old pid file to avoid startup issues
     command: sh -c "rm -f ./celerybeat.pid &&
              celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
