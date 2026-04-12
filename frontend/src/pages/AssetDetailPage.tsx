@@ -101,7 +101,7 @@ export default function AssetDetailPage() {
     if (chartData.chart_type === 'candlestick' && chartData.candlestick_data) {
       return [{
         name: ticker ?? '',
-        data: chartData.candlestick_data.map(d => ({ x: new Date(d.x * 1000), y: [d.o, d.h, d.l, d.c] })),
+        data: chartData.candlestick_data.map(d => ({ x: new Date(d.x), y: [d.o, d.h, d.l, d.c] })),
       }]
     }
     if (chartData.line_series) {

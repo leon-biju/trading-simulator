@@ -63,7 +63,7 @@ export interface PendingOrder {
 
 export interface ChartData {
   chart_type: 'candlestick' | 'line'
-  candlestick_data?: { x: number; o: number; h: number; l: number; c: number }[]
+  candlestick_data?: { x: string; o: number; h: number; l: number; c: number }[]
   line_series?: { x: string; y: number }[]
   currency_code: string
 }
@@ -90,13 +90,21 @@ export async function getAsset(exchangeCode: string, ticker: string): Promise<As
   return data
 }
 
+const RANGE_MAP: Record<string, string> = {
+  '1H': 'hour',
+  '1D': 'day',
+  '1M': 'month',
+  '6M': '6m',
+  '1Y': 'year',
+}
+
 export async function getChartData(
   exchangeCode: string,
   ticker: string,
   range: string,
 ): Promise<ChartData> {
   const { data } = await api.get(`/api/market/data/${exchangeCode}/${ticker}/`, {
-    params: { range },
+    params: { range: RANGE_MAP[range] ?? range },
   })
   return data
 }
