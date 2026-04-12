@@ -157,7 +157,7 @@ export default function PortfolioChart() {
             <ToggleGroupItem
               key={r}
               value={r}
-              className="h-6 px-2 text-xs font-medium text-faint rounded data-[state=on]:bg-accent/15 data-[state=on]:text-accent hover:text-dim hover:bg-transparent"
+              className="h-6 px-2 text-xs font-medium text-faint rounded data-[state=on]:bg-brand/15 data-[state=on]:text-brand hover:text-dim hover:bg-transparent"
             >
               {r}
             </ToggleGroupItem>

@@ -171,7 +171,7 @@ export default function DashboardPage() {
               <CardTitle className="text-[11px] uppercase tracking-wider text-faint font-medium">
                 Pending orders
               </CardTitle>
-              <Button variant="link" size="sm" className="h-auto p-0 text-[11px] text-accent" asChild>
+              <Button variant="link" size="sm" className="h-auto p-0 text-[11px] text-brand" asChild>
                 <Link to="/portfolio?tab=orders">View all</Link>
               </Button>
             </CardHeader>
@@ -225,7 +225,7 @@ export default function DashboardPage() {
                 Holdings
               </CardTitle>
             </div>
-            <Button variant="link" size="sm" className="h-auto p-0 text-[11px] text-accent" asChild>
+            <Button variant="link" size="sm" className="h-auto p-0 text-[11px] text-brand" asChild>
               <Link to="/portfolio">Full portfolio →</Link>
             </Button>
           </CardHeader>
@@ -259,7 +259,7 @@ export default function DashboardPage() {
                     <TableCell className="px-4 py-2.5">
                       <Link
                         to={`/market/${p.exchange_code}/${p.asset_ticker}`}
-                        className="font-medium text-bright hover:text-accent transition-colors"
+                        className="font-medium text-bright hover:text-brand transition-colors"
                       >
                         {p.asset_ticker}
                       </Link>
@@ -300,7 +300,7 @@ export default function DashboardPage() {
                 Recent trades
               </CardTitle>
             </div>
-            <Button variant="link" size="sm" className="h-auto p-0 text-[11px] text-accent" asChild>
+            <Button variant="link" size="sm" className="h-auto p-0 text-[11px] text-brand" asChild>
               <Link to="/portfolio?tab=trades">View all →</Link>
             </Button>
           </CardHeader>

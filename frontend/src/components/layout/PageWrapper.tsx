@@ -17,11 +17,11 @@ export default function PageWrapper({ children }: Props) {
           <SidebarTrigger className="-ml-1 text-dim hover:text-bright" />
           <Separator orientation="vertical" className="h-4 bg-edge" />
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-accent text-xs font-bold text-base leading-none select-none">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-brand text-xs font-bold text-base leading-none select-none">
               TS
             </div>
             <span className="text-sm font-semibold tracking-tight text-bright">
-              Trade<span className="text-accent">Sim</span>
+              Trade<span className="text-brand">Sim</span>
             </span>
           </Link>
         </header>

@@ -57,7 +57,7 @@ function HoldingsTab({ homeCurrency }: { homeCurrency: string }) {
     return (
       <div className="py-16 text-center">
         <p className="text-sm text-dim">No open positions.</p>
-        <Link to="/market" className="mt-2 block text-xs text-accent hover:text-accent/80">Browse markets →</Link>
+        <Link to="/market" className="mt-2 block text-xs text-brand hover:text-brand/80">Browse markets →</Link>
       </div>
     )
   }
@@ -81,7 +81,7 @@ function HoldingsTab({ homeCurrency }: { homeCurrency: string }) {
             <tr key={p.id} className="border-b border-edge/50 last:border-0 hover:bg-raised/40 transition-colors">
               <td className="px-4 py-2.5">
                 <Link to={`/market/${p.exchange_code}/${p.asset_ticker}`}
-                  className="font-semibold text-bright hover:text-accent transition-colors text-sm">
+                  className="font-semibold text-bright hover:text-brand transition-colors text-sm">
                   {p.asset_ticker}
                 </Link>
                 <span className="ml-1.5 text-[11px] text-faint">{p.exchange_code}</span>
@@ -267,7 +267,7 @@ export default function PortfolioPage() {
   const tabCls = (id: Tab) =>
     `px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
       activeTab === id
-        ? 'border-accent text-accent'
+        ? 'border-brand text-brand'
         : 'border-transparent text-faint hover:text-dim'
     }`
 

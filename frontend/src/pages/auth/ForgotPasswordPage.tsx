@@ -93,9 +93,9 @@ export default function ForgotPasswordPage() {
             className={cn(
               'h-1 flex-1 rounded-full transition-all duration-300',
               i < currentStageIndex
-                ? 'bg-accent/40'
+                ? 'bg-brand/40'
                 : i === currentStageIndex
-                ? 'bg-accent'
+                ? 'bg-brand'
                 : 'bg-edge',
             )}
           />
@@ -136,7 +136,7 @@ export default function ForgotPasswordPage() {
               placeholder="you@example.com"
               autoComplete="email"
               aria-invalid={!!emailForm.formState.errors.email}
-              className="bg-raised border-edge focus-visible:ring-accent/50"
+              className="bg-raised border-edge focus-visible:ring-brand/50"
             />
             {emailForm.formState.errors.email && (
               <p className="text-xs text-sell">{emailForm.formState.errors.email.message}</p>
@@ -220,7 +220,7 @@ export default function ForgotPasswordPage() {
               placeholder="••••••••"
               autoComplete="new-password"
               aria-invalid={!!passwordForm.formState.errors.new_password}
-              className="bg-raised border-edge focus-visible:ring-accent/50"
+              className="bg-raised border-edge focus-visible:ring-brand/50"
             />
             {passwordForm.formState.errors.new_password && (
               <p className="text-xs text-sell">{passwordForm.formState.errors.new_password.message}</p>
@@ -238,7 +238,7 @@ export default function ForgotPasswordPage() {
               placeholder="••••••••"
               autoComplete="new-password"
               aria-invalid={!!passwordForm.formState.errors.new_password2}
-              className="bg-raised border-edge focus-visible:ring-accent/50"
+              className="bg-raised border-edge focus-visible:ring-brand/50"
             />
             {passwordForm.formState.errors.new_password2 && (
               <p className="text-xs text-sell">{passwordForm.formState.errors.new_password2.message}</p>

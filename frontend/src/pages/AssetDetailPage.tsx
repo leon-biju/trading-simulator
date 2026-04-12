@@ -145,7 +145,7 @@ export default function AssetDetailPage() {
     },
   }
 
-  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
+  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-brand focus:outline-none transition-colors'
 
   return (
     <PageWrapper>
@@ -189,7 +189,7 @@ export default function AssetDetailPage() {
                     onClick={() => setRange(r)}
                     className={`rounded px-2.5 py-1 text-xs font-medium transition ${
                       range === r
-                        ? 'bg-accent/15 text-accent'
+                        ? 'bg-brand/15 text-brand'
                         : 'text-faint hover:text-dim'
                     }`}
                   >
@@ -252,7 +252,7 @@ export default function AssetDetailPage() {
                       onClick={() => setOrderType(t)}
                       className={`flex-1 rounded py-1.5 text-xs font-medium transition border ${
                         orderType === t
-                          ? 'border-accent text-accent'
+                          ? 'border-brand text-brand'
                           : 'border-edge text-faint hover:border-dim hover:text-dim'
                       }`}
                     >
@@ -360,7 +360,7 @@ export default function AssetDetailPage() {
                     <h2 className="text-[11px] uppercase tracking-wider text-faint">
                       {asset.user_wallet.currency_code} wallet
                     </h2>
-                    <Link to={`/wallets/${asset.user_wallet.currency_code}`} className="text-[11px] text-accent hover:text-accent/80">
+                    <Link to={`/wallets/${asset.user_wallet.currency_code}`} className="text-[11px] text-brand hover:text-brand/80">
                       View →
                     </Link>
                   </div>

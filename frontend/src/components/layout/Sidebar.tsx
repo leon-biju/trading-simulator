@@ -45,11 +45,11 @@ export default function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild className="hover:bg-transparent active:bg-transparent">
               <Link to="/dashboard" className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-sm font-bold text-base leading-none select-none">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand text-sm font-bold text-base leading-none select-none">
                   TS
                 </div>
                 <span className="text-sm font-semibold tracking-tight text-bright">
-                  Trade<span className="text-accent">Sim</span>
+                  Trade<span className="text-brand">Sim</span>
                 </span>
               </Link>
             </SidebarMenuButton>

@@ -79,7 +79,7 @@ export default function WalletDetailPage() {
 
   const otherWallets = allWallets?.filter(w => w.currency_code !== currencyCode) ?? []
 
-  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
+  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-brand focus:outline-none transition-colors'
 
   return (
     <PageWrapper>
@@ -158,7 +158,7 @@ export default function WalletDetailPage() {
                   <button
                     type="submit"
                     disabled={transferMutation.isPending}
-                    className="w-full rounded bg-accent py-2 text-sm font-medium text-base transition hover:bg-accent/90 disabled:opacity-50"
+                    className="w-full rounded bg-brand py-2 text-sm font-medium text-base transition hover:bg-brand/90 disabled:opacity-50"
                   >
                     {transferMutation.isPending ? 'Adding…' : 'Add funds'}
                   </button>

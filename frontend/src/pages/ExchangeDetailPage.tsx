@@ -67,7 +67,7 @@ export default function ExchangeDetailPage() {
                     <td className="px-4 py-2.5 text-right">
                       <Link
                         to={`/market/${exchange.code}/${asset.ticker}`}
-                        className="inline-flex items-center rounded border border-edge px-2.5 py-1 text-[11px] text-dim transition hover:border-accent hover:text-accent"
+                        className="inline-flex items-center rounded border border-edge px-2.5 py-1 text-[11px] text-dim transition hover:border-brand hover:text-brand"
                       >
                         Trade
                       </Link>

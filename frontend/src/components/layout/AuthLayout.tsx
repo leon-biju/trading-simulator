@@ -23,15 +23,15 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           }}
         />
         {/* Glow */}
-        <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-accent/5 blur-3xl" />
+        <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-brand/5 blur-3xl" />
 
         {/* Logo */}
         <div className="relative flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-sm font-bold text-base leading-none select-none">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand text-sm font-bold text-base leading-none select-none">
             TS
           </div>
           <span className="text-base font-semibold tracking-tight text-bright">
-            Trade<span className="text-accent">Sim</span>
+            Trade<span className="text-brand">Sim</span>
           </span>
         </div>
 
@@ -79,11 +79,11 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:px-16">
         {/* Mobile-only logo */}
         <Link to="/" className="mb-8 flex items-center gap-2 lg:hidden">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-xs font-bold text-base leading-none">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-xs font-bold text-base leading-none">
             TS
           </div>
           <span className="text-sm font-semibold tracking-tight text-bright">
-            Trade<span className="text-accent">Sim</span>
+            Trade<span className="text-brand">Sim</span>
           </span>
         </Link>
 

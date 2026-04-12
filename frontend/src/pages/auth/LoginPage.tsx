@@ -78,7 +78,7 @@ export default function LoginPage() {
             placeholder="your_username"
             autoComplete="username"
             aria-invalid={!!errors.username}
-            className="bg-raised border-edge focus-visible:ring-accent/50"
+            className="bg-raised border-edge focus-visible:ring-brand/50"
           />
           {errors.username && (
             <p className="text-xs text-sell">{errors.username.message}</p>
@@ -102,7 +102,7 @@ export default function LoginPage() {
             placeholder="••••••••"
             autoComplete="current-password"
             aria-invalid={!!errors.password}
-            className="bg-raised border-edge focus-visible:ring-accent/50"
+            className="bg-raised border-edge focus-visible:ring-brand/50"
           />
           {errors.password && (
             <p className="text-xs text-sell">{errors.password.message}</p>
@@ -123,7 +123,7 @@ export default function LoginPage() {
         Don't have an account?{' '}
         <Link
           to="/register"
-          className="font-medium text-accent hover:text-accent/80 transition-colors"
+          className="font-medium text-brand hover:text-brand/80 transition-colors"
         >
           Create one
         </Link>

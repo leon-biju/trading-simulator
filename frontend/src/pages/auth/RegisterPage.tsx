@@ -91,7 +91,7 @@ export default function RegisterPage() {
             {...register('username', { required: 'Required' })}
             autoComplete="username"
             aria-invalid={!!errors.username}
-            className="bg-raised border-edge focus-visible:ring-accent/50"
+            className="bg-raised border-edge focus-visible:ring-brand/50"
           />
           {errors.username && <p className="text-xs text-sell">{errors.username.message}</p>}
         </div>
@@ -104,7 +104,7 @@ export default function RegisterPage() {
             {...register('email', { required: 'Required' })}
             autoComplete="email"
             aria-invalid={!!errors.email}
-            className="bg-raised border-edge focus-visible:ring-accent/50"
+            className="bg-raised border-edge focus-visible:ring-brand/50"
           />
           {errors.email && <p className="text-xs text-sell">{errors.email.message}</p>}
         </div>
@@ -117,7 +117,7 @@ export default function RegisterPage() {
             rules={{ required: 'Required' }}
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className="bg-raised border-edge focus:ring-accent/50">
+                <SelectTrigger className="bg-raised border-edge focus:ring-brand/50">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -139,7 +139,7 @@ export default function RegisterPage() {
             {...register('password', { required: 'Required', minLength: { value: 8, message: 'Min 8 characters' } })}
             autoComplete="new-password"
             aria-invalid={!!errors.password}
-            className="bg-raised border-edge focus-visible:ring-accent/50"
+            className="bg-raised border-edge focus-visible:ring-brand/50"
           />
           {errors.password && <p className="text-xs text-sell">{errors.password.message}</p>}
         </div>
@@ -155,7 +155,7 @@ export default function RegisterPage() {
             })}
             autoComplete="new-password"
             aria-invalid={!!errors.password2}
-            className="bg-raised border-edge focus-visible:ring-accent/50"
+            className="bg-raised border-edge focus-visible:ring-brand/50"
           />
           {errors.password2 && <p className="text-xs text-sell">{errors.password2.message}</p>}
         </div>
@@ -174,7 +174,7 @@ export default function RegisterPage() {
         Already have an account?{' '}
         <Link
           to="/login"
-          className="font-medium text-accent hover:text-accent/80 transition-colors"
+          className="font-medium text-brand hover:text-brand/80 transition-colors"
         >
           Sign in
         </Link>
