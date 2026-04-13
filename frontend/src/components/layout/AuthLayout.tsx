@@ -31,7 +31,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             TS
           </div>
           <span className="text-base font-semibold tracking-tight text-bright">
-            Trade<span className="text-brand">Sim</span>
+            Trading<span className="text-brand"> Simulator</span>
           </span>
         </div>
 
@@ -83,7 +83,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             TS
           </div>
           <span className="text-sm font-semibold tracking-tight text-bright">
-            Trade<span className="text-brand">Sim</span>
+            Trading<span className="text-brand"> Simulator</span>
           </span>
         </Link>
 

@@ -49,7 +49,7 @@ export default function AppSidebar() {
                   TS
                 </div>
                 <span className="text-sm font-semibold tracking-tight text-bright">
-                  Trade<span className="text-brand">Sim</span>
+                  Trading<span className="text-brand"> Simulator</span>
                 </span>
               </Link>
             </SidebarMenuButton>
