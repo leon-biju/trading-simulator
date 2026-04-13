@@ -10,7 +10,7 @@ import StatusBadge from '@/components/common/StatusBadge'
 import { getAsset, getChartData } from '@/api/market'
 import { placeOrder, cancelOrder } from '@/api/trading'
 import { useAuth } from '@/auth/AuthContext'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, TRADING_FEE_RATE } from '@/lib/utils'
 
 const RANGES = ['1H', '1D', '1M', '6M', '1Y'] as const
 type Range = typeof RANGES[number]
@@ -45,9 +45,29 @@ export default function AssetDetailPage() {
     enabled: !!(exchangeCode && ticker),
   })
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<OrderForm>()
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<OrderForm>()
   const quantity  = watch('quantity')
   const limitPrice = watch('limit_price')
+
+  const maxQuantity = (() => {
+    if (side === 'SELL') {
+      const avail = asset?.user_position.available_quantity
+      return avail ? parseFloat(avail) : null
+    }
+    // BUY: available cash / (price * (1 + fee rate))
+    const cash = asset?.user_wallet?.available_balance
+    const priceStr = orderType === 'LIMIT' ? limitPrice : asset?.current_price ?? null
+    if (!cash || !priceStr) return null
+    const price = parseFloat(priceStr)
+    if (isNaN(price) || price <= 0) return null
+    return Math.floor(parseFloat(cash) / (price * (1 + TRADING_FEE_RATE)) * 10000) / 10000
+  })()
+
+  const clampQuantity = () => {
+    if (maxQuantity === null || !quantity) return
+    const val = parseFloat(quantity)
+    if (!isNaN(val) && val > maxQuantity) setValue('quantity', String(maxQuantity))
+  }
 
   const estimatedCost = (() => {
     const q = parseFloat(quantity)
@@ -270,6 +290,7 @@ export default function AssetDetailPage() {
                         required: 'Required',
                         min: { value: 0.0001, message: 'Must be positive' },
                       })}
+                      onBlur={clampQuantity}
                       className={inputCls}
                     />
                     {errors.quantity && <p className="mt-1 text-xs text-sell">{errors.quantity.message}</p>}

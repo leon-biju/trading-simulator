@@ -38,9 +38,28 @@ export default function WalletDetailPage() {
     staleTime: 10_000,
   })
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<AddFundsForm>()
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<AddFundsForm>()
   const fromCurrency = watch('from_currency')
   const toAmount = watch('to_amount')
+
+  // Max to_amount the user can request given the from-wallet's available balance
+  const maxToAmount = (() => {
+    if (!fxRates || !fromCurrency || !allWallets) return null
+    const fromWallet = allWallets.find(w => w.currency_code === fromCurrency)
+    if (!fromWallet) return null
+    const available = parseFloat(fromWallet.available_balance)
+    const fromEntry = fxRates.find(r => r.to_currency === fromCurrency)
+    const toEntry   = fxRates.find(r => r.to_currency === currencyCode)
+    const fromBaseRate = fromEntry ? parseFloat(fromEntry.rate) : 1.0
+    const toBaseRate   = toEntry   ? parseFloat(toEntry.rate)   : 1.0
+    return Math.floor(available * toBaseRate / fromBaseRate * 100) / 100
+  })()
+
+  const clampToAmount = () => {
+    if (maxToAmount === null || !toAmount) return
+    const val = parseFloat(toAmount)
+    if (!isNaN(val) && val > maxToAmount) setValue('to_amount', maxToAmount.toFixed(2))
+  }
 
   // Estimate how much will be deducted from the source wallet.
   // All stored rates are base→target (e.g. USD→X), so cross-rates are toRate/fromRate,
@@ -48,6 +67,12 @@ export default function WalletDetailPage() {
   const previewDeduction = (() => {
     if (!fxRates || !fromCurrency || !toAmount || isNaN(parseFloat(toAmount))) return null
     const amt = parseFloat(toAmount)
+    // When clamped to max, skip the round-trip and return the exact available balance
+    // to avoid a floor→round discrepancy with what the dropdown shows.
+    if (maxToAmount !== null && toAmount === maxToAmount.toFixed(2)) {
+      const fromWallet = allWallets?.find(w => w.currency_code === fromCurrency)
+      if (fromWallet) return parseFloat(fromWallet.available_balance).toFixed(2)
+    }
     const fromEntry = fxRates.find(r => r.to_currency === fromCurrency)
     const toEntry   = fxRates.find(r => r.to_currency === currencyCode)
     const fromBaseRate = fromEntry ? parseFloat(fromEntry.rate) : 1.0
@@ -143,6 +168,7 @@ export default function WalletDetailPage() {
                         required: 'Amount is required',
                         min: { value: 0.01, message: 'Must be positive' },
                       })}
+                      onBlur={clampToAmount}
                       className={inputCls}
                     />
                     {errors.to_amount && <p className="mt-1 text-xs text-sell">{errors.to_amount.message}</p>}
