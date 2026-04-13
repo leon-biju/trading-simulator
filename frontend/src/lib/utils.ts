@@ -1,7 +1,8 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
-// Must match config/constants.py TRADING_FEE_PERCENTAGE
+// WARNING: Must match config/constants.py TRADING_FEE_PERCENTAGE
+// If you edit this also edit the config/constants.py
 export const TRADING_FEE_RATE = 0.001
 
 export function cn(...inputs: ClassValue[]) {
