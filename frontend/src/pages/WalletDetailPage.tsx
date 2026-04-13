@@ -42,17 +42,19 @@ export default function WalletDetailPage() {
   const fromCurrency = watch('from_currency')
   const toAmount = watch('to_amount')
 
-  // Estimate how much will be deducted from the source wallet
+  // Estimate how much will be deducted from the source wallet.
+  // All stored rates are base→target (e.g. USD→X), so cross-rates are toRate/fromRate,
+  // matching Django's get_fx_rate logic. Base currency itself has no entry (implicit rate = 1).
   const previewDeduction = (() => {
     if (!fxRates || !fromCurrency || !toAmount || isNaN(parseFloat(toAmount))) return null
     const amt = parseFloat(toAmount)
-    // Direct rate: fromCurrency → currentWallet (e.g. USD→EUR = 0.9 means 1 USD = 0.9 EUR)
-    const direct = fxRates.find(r => r.from_currency === fromCurrency && r.to_currency === currencyCode)
-    if (direct) return (amt / parseFloat(direct.rate)).toFixed(4)
-    // Inverse rate: currentWallet → fromCurrency (e.g. EUR→USD = 1.11 means 1 EUR = 1.11 USD)
-    const inverse = fxRates.find(r => r.from_currency === currencyCode && r.to_currency === fromCurrency)
-    if (inverse) return (amt * parseFloat(inverse.rate)).toFixed(4)
-    return null
+    const fromEntry = fxRates.find(r => r.to_currency === fromCurrency)
+    const toEntry   = fxRates.find(r => r.to_currency === currencyCode)
+    const fromBaseRate = fromEntry ? parseFloat(fromEntry.rate) : 1.0
+    const toBaseRate   = toEntry   ? parseFloat(toEntry.rate)   : 1.0
+    // from_amount = to_amount / (toBaseRate / fromBaseRate)
+    const raw = amt * fromBaseRate / toBaseRate
+    return (Math.round(raw * 100) / 100).toFixed(2)
   })()
 
   const transferMutation = useMutation({
@@ -148,8 +150,8 @@ export default function WalletDetailPage() {
 
                   {previewDeduction && fromCurrency && (
                     <div className="rounded border border-edge/50 bg-raised px-3 py-2 text-[11px] text-dim">
-                      ≈ <span className="tabular-nums text-bright">{formatCurrency(previewDeduction, fromCurrency, 4)}</span>
-                      <span className="ml-1">deducted from {fromCurrency}</span>
+                      ≈ <span className="tabular-nums text-bright">{formatCurrency(previewDeduction, fromCurrency)}</span>
+                      <span className="ml-1">deducted from {fromCurrency} wallet</span>
                     </div>
                   )}
 
