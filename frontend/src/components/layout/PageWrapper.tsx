@@ -25,7 +25,7 @@ export default function PageWrapper({ children }: Props) {
             </span>
           </Link>
         </header>
-        <main className="mx-auto max-w-[1400px] px-4 py-6 lg:px-6 lg:py-6">
+        <main className="w-full mx-auto max-w-[1400px] px-4 py-6 lg:px-6 lg:py-6">
           {children}
         </main>
       </SidebarInset>
