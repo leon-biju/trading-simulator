@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import NotFoundPage from '@/pages/NotFoundPage'
 import { AuthProvider } from '@/auth/AuthContext'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -42,7 +43,7 @@ export default function App() {
               <Route path="/wallets/:currencyCode" element={<WalletDetailPage />} />
             </Route>
 
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
         </TooltipProvider>
