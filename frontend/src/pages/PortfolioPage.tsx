@@ -289,7 +289,7 @@ export default function PortfolioPage() {
 
       {/* ── Chart (holdings view only) ──────────────────────── */}
       {activeTab === 'holdings' && (
-        <div className="mb-5 rounded-lg border border-edge bg-panel p-4" style={{ height: 260 }}>
+        <div className="mb-5 rounded-lg border border-edge bg-panel p-4" style={{ height: 500 }}>
           <PortfolioChart />
         </div>
       )}

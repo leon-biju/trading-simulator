@@ -119,7 +119,7 @@ export default function PortfolioChart() {
         type: 'linear' as const,
         min: xMin,
         max: xMax,
-        grid: { color: 'rgba(30,40,64,0.6)' },
+        grid: { display: false },
         ticks: {
           color: '#475569',
           font: { size: 11, family: 'IBM Plex Sans' as const },
@@ -131,10 +131,12 @@ export default function PortfolioChart() {
       y: {
         min: yScaleMin,
         max: yScaleMax,
-        grid: { color: 'rgba(30,40,64,0.6)' },
+        position: 'left' as const,
+        grid: { color: 'rgba(30,40,64,0.3)' },
         ticks: {
           color: '#475569',
           font: { size: 11, family: 'IBM Plex Sans' as const },
+          maxTicksLimit: 5,
           callback: (v: unknown) =>
             data?.currency + ' ' + Number(v).toLocaleString('en-GB', { maximumFractionDigits: 0 }),
         },
@@ -145,8 +147,7 @@ export default function PortfolioChart() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[11px] font-medium text-faint uppercase tracking-wider">Portfolio value</span>
+      <div className="mb-2 flex justify-end">
         <ToggleGroup
           type="single"
           value={range}
@@ -157,7 +158,7 @@ export default function PortfolioChart() {
             <ToggleGroupItem
               key={r}
               value={r}
-              className="h-6 px-2 text-xs font-medium text-faint rounded data-[state=on]:bg-brand/15 data-[state=on]:text-brand hover:text-dim hover:bg-transparent"
+              className="h-6 px-2 text-xs font-medium text-faint rounded data-[state=on]:bg-transparent data-[state=on]:text-bright hover:text-dim hover:bg-transparent"
             >
               {r}
             </ToggleGroupItem>
