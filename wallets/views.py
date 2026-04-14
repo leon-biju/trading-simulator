@@ -12,12 +12,26 @@ from wallets.serializers import (
 )
 from wallets.models import Transaction, Wallet
 from wallets.services import perform_fx_transfer
+from market.models import FXRate
 
 
 @method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
 class WalletListView(APIView):
     def get(self, request):
-        wallets = Wallet.objects.filter(user_id=request.user.id).select_related('currency')
+        wallets = list(Wallet.objects.filter(user_id=request.user.id).select_related('currency'))
+
+        # Sort by balance (desc) converted to server base currency
+        # FXRate stores: 1 base = rate target, so base-equivalent = balance / rate
+        fx_rates = {
+            r.target_currency.code: r.rate
+            for r in FXRate.objects.filter(base_currency__is_base=True).select_related('target_currency')
+        }
+
+        wallets.sort(
+            key=lambda w: w.balance / fx_rates[w.currency.code] if w.currency.code in fx_rates else w.balance,
+            reverse=True,
+        )
+
         serializer = WalletSerializer(wallets, many=True)
         return Response(serializer.data)
 
