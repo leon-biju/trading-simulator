@@ -26,10 +26,7 @@ export default function Navbar() {
         {/* Desktop nav */}
         <div className="hidden items-center gap-6 sm:flex">
           <NavLink to="/dashboard" className={linkClass}>Dashboard</NavLink>
-          <NavLink to="/market" className={linkClass}>Market</NavLink>
-          <NavLink to="/portfolio" className={linkClass}>Portfolio</NavLink>
-          <NavLink to="/orders" className={linkClass}>Orders</NavLink>
-          <NavLink to="/trades" className={linkClass}>Trades</NavLink>
+          <NavLink to="/market" className={linkClass}>Markets</NavLink>
         </div>
 
         {/* User menu */}
@@ -64,10 +61,7 @@ export default function Navbar() {
           <div className="flex flex-col gap-3">
             {[
               ['/dashboard', 'Dashboard'],
-              ['/market', 'Market'],
-              ['/portfolio', 'Portfolio'],
-              ['/orders', 'Orders'],
-              ['/trades', 'Trades'],
+              ['/market', 'Markets'],
             ].map(([to, label]) => (
               <NavLink
                 key={to}
