@@ -3,6 +3,7 @@ import datetime
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -29,8 +30,10 @@ RANGE_TO_DAYS = {
 }
 
 
-@method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
+@method_decorator(ratelimit(key='ip', rate='60/m', block=True), name='get')
 class ExchangeListView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
         exchanges = Exchange.objects.prefetch_related('asset_set__currency').all()
         data = []
@@ -53,8 +56,10 @@ class ExchangeListView(APIView):
         return Response(data)
 
 
-@method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
+@method_decorator(ratelimit(key='ip', rate='60/m', block=True), name='get')
 class ExchangeDetailView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, exchange_code):
         try:
             exchange = Exchange.objects.prefetch_related('asset_set__currency').get(code=exchange_code)
@@ -69,8 +74,10 @@ class ExchangeDetailView(APIView):
         return Response(data)
 
 
-@method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
+@method_decorator(ratelimit(key='ip', rate='60/m', block=True), name='get')
 class AssetDetailView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, exchange_code, ticker):
         try:
             asset = Asset.objects.select_related('exchange', 'currency').get(
@@ -80,26 +87,28 @@ class AssetDetailView(APIView):
         except Asset.DoesNotExist:
             return Response({'error': 'Asset not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        user_id = request.user.id if request.user.is_authenticated else None
+
         # User wallet for this asset's currency
         wallet = Wallet.objects.filter(
-            user_id=request.user.id,
+            user_id=user_id,
             currency=asset.currency,
-        ).first()
+        ).first() if user_id else None
 
         # User position for this asset
         position = Position.objects.filter(
-            user_id=request.user.id,
+            user_id=user_id,
             asset=asset,
-        ).first()
+        ).first() if user_id else None
 
         # Pending orders for this asset
         pending_orders = list(
             Order.objects.filter(
-                user_id=request.user.id,
+                user_id=user_id,
                 asset=asset,
                 status=OrderStatus.PENDING,
             ).order_by('-created_at')[:5]
-        )
+        ) if user_id else []
 
         serializer = AssetDetailSerializer(asset, context={
             'wallet': wallet,
@@ -109,8 +118,10 @@ class AssetDetailView(APIView):
         return Response(serializer.data)
 
 
-@method_decorator(ratelimit(key='user', rate='30/m', block=True), name='get')
+@method_decorator(ratelimit(key='ip', rate='30/m', block=True), name='get')
 class ChartDataView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, exchange_code, ticker):
         try:
             asset = Asset.objects.select_related('currency').get(
@@ -156,9 +167,10 @@ class ChartDataView(APIView):
         return Response({'chart_type': 'line', 'line_series': line_series, 'currency_code': asset.currency.code})
 
 
-@method_decorator(ratelimit(key='user', rate='30/m', block=True), name='get')
+@method_decorator(ratelimit(key='ip', rate='30/m', block=True), name='get')
 class FxRatesView(APIView):
     """All FX rates, used by the wallet FX transfer preview in React."""
+    permission_classes = [AllowAny]
 
     def get(self, request):
         rates = FXRate.objects.select_related('base_currency', 'target_currency').all()

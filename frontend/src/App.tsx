@@ -34,12 +34,13 @@ export default function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
+            <Route path="/market" element={<MarketOverviewPage />} />
+            <Route path="/market/:exchangeCode" element={<ExchangeDetailPage />} />
+            <Route path="/market/:exchangeCode/:ticker" element={<AssetDetailPage />} />
+
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/market" element={<MarketOverviewPage />} />
-              <Route path="/market/:exchangeCode" element={<ExchangeDetailPage />} />
-              <Route path="/market/:exchangeCode/:ticker" element={<AssetDetailPage />} />
               <Route path="/wallets/:currencyCode" element={<WalletDetailPage />} />
             </Route>
 
