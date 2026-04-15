@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, TrendingUp, LogOut, ChevronsUpDown, LogIn, UserPlus } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, LogOut, ChevronsUpDown, LogIn, UserPlus, UserRound } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import {
   Sidebar,
@@ -20,9 +20,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-const AUTH_NAV = [
-  { to: '/login',    label: 'Sign in',        icon: LogIn },
-  { to: '/register', label: 'Create account', icon: UserPlus },
+const ANON_NAV = [
+  { to: '/market', label: 'Markets', icon: TrendingUp },
 ]
 
 const APP_NAV = [
@@ -40,7 +39,7 @@ export default function AppSidebar() {
   }
 
   const initials = user?.username?.[0]?.toUpperCase() ?? '?'
-  const nav = user ? APP_NAV : AUTH_NAV
+  const nav = user ? APP_NAV : ANON_NAV
 
   return (
     <Sidebar collapsible="icon">
@@ -49,7 +48,7 @@ export default function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild className="hover:bg-transparent active:bg-transparent">
-              <Link to={user ? '/dashboard' : '/login'} className="flex items-center gap-2.5">
+              <Link to={user ? '/dashboard' : '/market'} className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand text-sm font-bold text-base leading-none select-none">
                   TS
                 </div>
@@ -84,13 +83,13 @@ export default function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* ── Footer: user menu (logged in only) ────────── */}
-      {user && (
-        <SidebarFooter className="px-3 py-3">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+      {/* ── Footer ────────────────────────────────────── */}
+      <SidebarFooter className="px-3 py-3">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                {user ? (
                   <SidebarMenuButton
                     size="lg"
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
@@ -107,8 +106,27 @@ export default function AppSidebar() {
                     </div>
                     <ChevronsUpDown className="size-3.5 shrink-0 text-faint" />
                   </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" align="start" className="w-52 mb-1">
+                ) : (
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    tooltip="Sign in"
+                  >
+                    <Avatar className="h-7 w-7 shrink-0">
+                      <AvatarFallback className="bg-raised border border-edge text-dim text-xs font-medium">
+                        <UserRound className="size-3.5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0 text-left leading-none">
+                      <p className="text-xs font-medium text-bright">Sign in</p>
+                      <p className="text-[11px] text-faint mt-0.5">or create account</p>
+                    </div>
+                    <ChevronsUpDown className="size-3.5 shrink-0 text-faint" />
+                  </SidebarMenuButton>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-52 mb-1">
+                {user ? (
                   <DropdownMenuItem
                     onClick={handleLogout}
                     className="text-sell focus:text-sell focus:bg-sell/10 gap-2"
@@ -116,12 +134,27 @@ export default function AppSidebar() {
                     <LogOut className="size-4" />
                     Sign out
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      )}
+                ) : (
+                  <>
+                    <DropdownMenuItem asChild className="gap-2">
+                      <Link to="/login">
+                        <LogIn className="size-4" />
+                        Sign in
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="gap-2">
+                      <Link to="/register">
+                        <UserPlus className="size-4" />
+                        Create account
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   )
 }

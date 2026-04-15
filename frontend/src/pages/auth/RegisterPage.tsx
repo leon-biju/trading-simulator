@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 interface RegisterForm {
   username: string
@@ -27,6 +27,8 @@ export default function RegisterPage() {
   const { isAuthenticated, loginWithToken } = useAuth()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showPassword2, setShowPassword2] = useState(false)
 
   const { data: fxRates } = useQuery({
     queryKey: ['fx-rates-public'],
@@ -135,30 +137,50 @@ export default function RegisterPage() {
 
         <div className="space-y-1.5">
           <Label htmlFor="password" className="text-dim">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            {...register('password', { required: 'Required', minLength: { value: 8, message: 'Min 8 characters' } })}
-            autoComplete="new-password"
-            aria-invalid={!!errors.password}
-            className="bg-raised border-edge focus-visible:ring-brand/50"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              {...register('password', { required: 'Required', minLength: { value: 8, message: 'Min 8 characters' } })}
+              autoComplete="new-password"
+              aria-invalid={!!errors.password}
+              className="bg-raised border-edge focus-visible:ring-brand/50 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-faint hover:text-dim transition-colors"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
           {errors.password && <p className="text-xs text-sell">{errors.password.message}</p>}
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="password2" className="text-dim">Confirm password</Label>
-          <Input
-            id="password2"
-            type="password"
-            {...register('password2', {
-              required: 'Required',
-              validate: (v) => v === watch('password') || 'Passwords do not match',
-            })}
-            autoComplete="new-password"
-            aria-invalid={!!errors.password2}
-            className="bg-raised border-edge focus-visible:ring-brand/50"
-          />
+          <div className="relative">
+            <Input
+              id="password2"
+              type={showPassword2 ? 'text' : 'password'}
+              {...register('password2', {
+                required: 'Required',
+                validate: (v) => v === watch('password') || 'Passwords do not match',
+              })}
+              autoComplete="new-password"
+              aria-invalid={!!errors.password2}
+              className="bg-raised border-edge focus-visible:ring-brand/50 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword2(v => !v)}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-faint hover:text-dim transition-colors"
+              tabIndex={-1}
+            >
+              {showPassword2 ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
           {errors.password2 && <p className="text-xs text-sell">{errors.password2.message}</p>}
         </div>
 

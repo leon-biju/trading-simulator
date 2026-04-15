@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { requestPasswordReset, verifyPasswordResetOTP, confirmPasswordReset } from '@/api/auth'
+import { useAuth } from '@/auth/AuthContext'
 import { AxiosError } from 'axios'
 import { cn } from '@/lib/utils'
 import PageWrapper from '@/components/layout/PageWrapper'
@@ -26,7 +27,12 @@ const STAGE_LABELS: Record<Stage, string> = {
 }
 
 export default function ForgotPasswordPage() {
+  const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
   const [stage, setStage] = useState<Stage>('email')
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle, CheckCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react'
 
 interface LoginForm {
   username: string
@@ -21,6 +21,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [serverError, setServerError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const passwordReset = (location.state as { passwordReset?: boolean } | null)?.passwordReset
 
   const {
@@ -77,7 +78,7 @@ export default function LoginPage() {
           <Input
             id="username"
             {...register('username', { required: 'Username is required' })}
-            placeholder="your_username"
+
             autoComplete="username"
             aria-invalid={!!errors.username}
             className="bg-raised border-edge focus-visible:ring-brand/50"
@@ -88,24 +89,25 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-dim">Password</Label>
-            <Link
-              to="/forgot-password"
-              className="text-[11px] text-faint hover:text-dim transition-colors"
+          <Label htmlFor="password" className="text-dim">Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              {...register('password', { required: 'Password is required' })}
+              autoComplete="current-password"
+              aria-invalid={!!errors.password}
+              className="bg-raised border-edge focus-visible:ring-brand/50 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-faint hover:text-dim transition-colors"
+              tabIndex={-1}
             >
-              Forgot password?
-            </Link>
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
           </div>
-          <Input
-            id="password"
-            type="password"
-            {...register('password', { required: 'Password is required' })}
-            placeholder="••••••••"
-            autoComplete="current-password"
-            aria-invalid={!!errors.password}
-            className="bg-raised border-edge focus-visible:ring-brand/50"
-          />
           {errors.password && (
             <p className="text-xs text-sell">{errors.password.message}</p>
           )}
@@ -119,6 +121,15 @@ export default function LoginPage() {
         >
           {isSubmitting ? 'Signing in…' : 'Sign in'}
         </Button>
+
+        <div className="text-center">
+          <Link
+            to="/forgot-password"
+            className="text-[11px] text-faint hover:text-dim transition-colors"
+          >
+            Forgot password?
+          </Link>
+        </div>
       </form>
 
       <p className="mt-6 text-center text-sm text-faint">
