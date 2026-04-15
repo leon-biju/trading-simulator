@@ -1,6 +1,7 @@
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,6 +18,8 @@ from market.models import FXRate
 
 @method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
 class WalletListView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         wallets = list(Wallet.objects.filter(user_id=request.user.id).select_related('currency'))
 
@@ -38,6 +41,8 @@ class WalletListView(APIView):
 
 @method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
 class WalletDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, currency_code):
         try:
             wallet = Wallet.objects.select_related('currency').get(
@@ -63,6 +68,8 @@ class WalletDetailView(APIView):
 
 @method_decorator(ratelimit(key='user', rate='10/m', block=True), name='post')
 class FxTransferView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         serializer = FxTransferInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
