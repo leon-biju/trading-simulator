@@ -5,6 +5,7 @@ import { requestPasswordReset, verifyPasswordResetOTP, confirmPasswordReset } fr
 import { AxiosError } from 'axios'
 import { cn } from '@/lib/utils'
 import PageWrapper from '@/components/layout/PageWrapper'
+import AuthShell from '@/components/layout/AuthShell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -84,8 +85,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <PageWrapper>
-      <div className="flex min-h-[calc(100svh-7rem)] items-center justify-center">
-      <div className="w-full max-w-sm">
+      <AuthShell>
       {/* Step progress bar */}
       <div className="mb-6 flex gap-1.5">
         {STAGES.map((s, i) => (
@@ -260,8 +260,7 @@ export default function ForgotPasswordPage() {
       <p className="mt-6 text-center text-[11px] text-faint">
         <Link to="/login" className="hover:text-dim transition-colors">← Back to sign in</Link>
       </p>
-      </div>
-      </div>
+      </AuthShell>
     </PageWrapper>
   )
 }

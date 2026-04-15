@@ -7,6 +7,7 @@ import { registerUser } from '@/api/auth'
 import { AxiosError } from 'axios'
 import axios from 'axios'
 import PageWrapper from '@/components/layout/PageWrapper'
+import AuthShell from '@/components/layout/AuthShell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -71,8 +72,7 @@ export default function RegisterPage() {
 
   return (
     <PageWrapper>
-      <div className="flex min-h-[calc(100svh-7rem)] items-center justify-center">
-      <div className="w-full max-w-sm">
+      <AuthShell>
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-bright">Create account</h1>
         <p className="mt-1 text-sm text-faint">Start with simulated funds, risk-free</p>
@@ -181,8 +181,7 @@ export default function RegisterPage() {
           Sign in
         </Link>
       </p>
-      </div>
-      </div>
+      </AuthShell>
     </PageWrapper>
   )
 }

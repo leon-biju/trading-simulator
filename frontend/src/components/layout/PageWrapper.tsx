@@ -12,7 +12,7 @@ export default function PageWrapper({ children }: Props) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        {/* Mobile header */}
+        {/* Top bar with sidebar trigger */}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b border-edge px-4 lg:hidden">
           <SidebarTrigger className="-ml-1 text-dim hover:text-bright" />
           <Separator orientation="vertical" className="h-4 bg-edge" />
