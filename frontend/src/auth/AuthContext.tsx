@@ -31,6 +31,33 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+// Module-level singleton: ensures concurrent StrictMode double-mounts share
+// one in-flight refresh request rather than racing to insert the same token.
+let refreshPromise: Promise<{ access: string; user: User } | null> | null = null
+
+function doSilentRefresh(): Promise<{ access: string; user: User } | null> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const { data: refreshData } = await axios.post(
+          '/api/auth/token/refresh/',
+          {},
+          { withCredentials: true },
+        )
+        const { data: userData } = await axios.get('/api/users/me/', {
+          headers: { Authorization: `Bearer ${refreshData.access}` },
+        })
+        return { access: refreshData.access, user: userData as User }
+      } catch {
+        return null
+      } finally {
+        refreshPromise = null
+      }
+    })()
+  }
+  return refreshPromise
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const accessTokenRef = useRef<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
@@ -58,27 +85,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // On mount: attempt silent refresh using the httpOnly cookie
   useEffect(() => {
-    async function silentRefresh() {
-      try {
-        const { data: refreshData } = await axios.post(
-          '/api/auth/token/refresh/',
-          {},
-          { withCredentials: true },
-        )
-        accessTokenRef.current = refreshData.access
+    let cancelled = false
 
-        const { data: userData } = await axios.get('/api/users/me/', {
-          headers: { Authorization: `Bearer ${refreshData.access}` },
-        })
-        setUser(userData)
-      } catch {
-        // No valid cookie or expired — stay logged out
-      } finally {
-        setIsLoading(false)
+    doSilentRefresh().then((result) => {
+      if (cancelled) return
+      if (result) {
+        accessTokenRef.current = result.access
+        setUser(result.user)
       }
-    }
+      setIsLoading(false)
+    })
 
-    silentRefresh()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   async function login(credentials: { username: string; password: string }) {

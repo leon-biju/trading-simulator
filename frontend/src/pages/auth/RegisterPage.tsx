@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/auth/AuthContext'
@@ -52,8 +52,7 @@ export default function RegisterPage() {
   } = useForm<RegisterForm>({ defaultValues: { home_currency: 'GBP' } })
 
   if (isAuthenticated) {
-    navigate('/dashboard', { replace: true })
-    return null
+    return <Navigate to="/dashboard" replace />
   }
 
   async function onSubmit(data: RegisterForm) {

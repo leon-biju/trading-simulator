@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '@/auth/AuthContext'
 import { AxiosError } from 'axios'
@@ -31,8 +31,7 @@ export default function LoginPage() {
   } = useForm<LoginForm>()
 
   if (isAuthenticated) {
-    navigate('/dashboard', { replace: true })
-    return null
+    return <Navigate to="/dashboard" replace />
   }
 
   async function onSubmit(data: LoginForm) {
