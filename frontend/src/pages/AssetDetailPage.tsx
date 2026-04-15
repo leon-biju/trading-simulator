@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -11,6 +11,7 @@ import { getAsset, getChartData } from '@/api/market'
 import { placeOrder, cancelOrder } from '@/api/trading'
 import { useAuth } from '@/auth/AuthContext'
 import { formatCurrency, formatDate, TRADING_FEE_RATE } from '@/lib/utils'
+import { addRecentlyViewed } from '@/hooks/useRecentlyViewed'
 
 const RANGES = ['1H', '1D', '1M', '6M', '1Y'] as const
 type Range = typeof RANGES[number]
@@ -44,6 +45,18 @@ export default function AssetDetailPage() {
     staleTime: 60_000,
     enabled: !!(exchangeCode && ticker),
   })
+
+  useEffect(() => {
+    if (asset && exchangeCode && ticker) {
+      addRecentlyViewed({
+        exchangeCode,
+        ticker,
+        name: asset.name,
+        price: asset.current_price,
+        currency: asset.currency_code,
+      })
+    }
+  }, [asset, exchangeCode, ticker])
 
   const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<OrderForm>()
   const quantity  = watch('quantity')
