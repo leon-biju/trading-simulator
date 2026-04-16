@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Star } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -12,6 +13,7 @@ import { placeOrder, cancelOrder } from '@/api/trading'
 import { useAuth } from '@/auth/AuthContext'
 import { formatCurrency, formatDate, TRADING_FEE_RATE } from '@/lib/utils'
 import { addRecentlyViewed } from '@/hooks/useRecentlyViewed'
+import { useWatchlist } from '@/hooks/useWatchlist'
 
 const RANGES = ['1H', '1D', '1M', '6M', '1Y'] as const
 type Range = typeof RANGES[number]
@@ -31,6 +33,7 @@ export default function AssetDetailPage() {
   const { user, isAuthenticated } = useAuth()
   const homeCurrency = user?.home_currency ?? 'GBP'
   const qc = useQueryClient()
+  const { isWatched, toggleWatch, isPending: watchPending } = useWatchlist()
 
   const { data: asset, isLoading: assetLoading } = useQuery({
     queryKey: ['asset', exchangeCode, ticker],
@@ -204,6 +207,23 @@ export default function AssetDetailPage() {
             <h1 className="text-xl font-semibold text-bright">{asset.name}</h1>
             <span className="text-sm text-faint">{asset.ticker}</span>
             <StatusBadge value={asset.is_exchange_open ? 'OPEN' : 'CLOSED'} />
+            {isAuthenticated && (
+              <button
+                onClick={() => toggleWatch(asset.exchange_code, asset.ticker)}
+                disabled={watchPending}
+                title={isWatched(asset.exchange_code, asset.ticker) ? 'Remove from watchlist' : 'Add to watchlist'}
+                className="flex items-center gap-1 text-[11px] text-faint hover:text-dim disabled:opacity-40 transition-colors"
+              >
+                <Star
+                  className={`size-3.5 transition-colors ${
+                    isWatched(asset.exchange_code, asset.ticker)
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : ''
+                  }`}
+                />
+                {isWatched(asset.exchange_code, asset.ticker) ? 'Watching' : 'Watch'}
+              </button>
+            )}
             {asset.current_price && (
               <span className="ml-auto text-2xl font-semibold tabular-nums text-bright">
                 {formatCurrency(asset.current_price, asset.currency_code)}

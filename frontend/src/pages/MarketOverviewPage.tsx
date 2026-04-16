@@ -8,6 +8,7 @@ import { getExchanges, getMarketMovers } from '@/api/market'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/auth/AuthContext'
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
+import { useWatchlist } from '@/hooks/useWatchlist'
 
 type MoversTab = 'gainers' | 'losers'
 
@@ -21,6 +22,7 @@ export default function MarketOverviewPage() {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const { recent } = useRecentlyViewed()
+  const { watchlist } = useWatchlist()
 
   const { data: exchanges, isLoading } = useQuery({
     queryKey: ['exchanges'],
@@ -219,19 +221,19 @@ export default function MarketOverviewPage() {
 
             {/* Movers */}
             <section className="flex-1 min-w-0 rounded-md border border-edge/30 px-4 py-3">
-              <div className="flex items-center gap-4 mb-3">
-                <span className="text-[11px] uppercase tracking-wider text-faint shrink-0">
-                  Movers
-                </span>
-                {(['gainers', 'losers'] as MoversTab[]).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setMoversTab(tab)}
-                    className={tabCls(moversTab === tab)}
-                  >
-                    {tab === 'gainers' ? 'Top Gainers' : 'Top Losers'}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-bright">Market Movers</span>
+                <div className="flex items-center gap-4">
+                  {(['gainers', 'losers'] as MoversTab[]).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setMoversTab(tab)}
+                      className={tabCls(moversTab === tab)}
+                    >
+                      {tab === 'gainers' ? 'Top Gainers' : 'Top Losers'}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <table className="w-full">
@@ -240,20 +242,19 @@ export default function MarketOverviewPage() {
                     <th className="pb-2 pr-4 text-left font-medium w-6 hidden sm:table-cell">#</th>
                     <th className="pb-2 pr-4 text-left font-medium w-20">Ticker</th>
                     <th className="pb-2 pr-4 text-left font-medium">Name</th>
-                    <th className="pb-2 pr-4 text-right font-medium">Price</th>
-                    <th className="pb-2 text-right font-medium w-16">24h</th>
+                    <th className="pb-2 text-right font-medium">Price</th>
                   </tr>
                 </thead>
                 <tbody>
                   {moversLoading ? (
                     <tr>
-                      <td colSpan={5} className="py-5 text-center">
+                      <td colSpan={4} className="py-5 text-center">
                         <div className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-edge border-t-brand" />
                       </td>
                     </tr>
                   ) : !movers || movers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-5 text-center text-xs text-faint">
+                      <td colSpan={4} className="py-5 text-center text-xs text-faint">
                         No data available
                       </td>
                     </tr>
@@ -265,10 +266,10 @@ export default function MarketOverviewPage() {
                           key={`${mover.exchange_code}-${mover.ticker}`}
                           className="border-b border-edge/20 last:border-0 hover:bg-raised/30 transition-colors"
                         >
-                          <td className="py-2 pr-4 text-[11px] text-faint tabular-nums hidden sm:table-cell">
+                          <td className="py-2.5 pr-4 text-[11px] text-faint tabular-nums hidden sm:table-cell">
                             {i + 1}
                           </td>
-                          <td className="py-2 pr-4">
+                          <td className="py-2.5 pr-4">
                             <Link
                               to={`/market/${mover.exchange_code}/${mover.ticker}`}
                               className="font-mono text-sm font-semibold text-bright hover:text-brand transition-colors"
@@ -276,14 +277,14 @@ export default function MarketOverviewPage() {
                               {mover.ticker}
                             </Link>
                           </td>
-                          <td className="py-2 pr-4 text-xs text-dim truncate max-w-[140px]">
+                          <td className="py-2.5 pr-4 text-xs text-dim truncate max-w-[140px]">
                             {mover.name}
                           </td>
-                          <td className="py-2 pr-4 text-right text-xs tabular-nums font-medium text-bright">
+                          <td className="py-2 text-right text-xs tabular-nums font-medium text-bright whitespace-nowrap">
                             {formatCurrency(Number(mover.current_price), mover.currency_code)}
-                          </td>
-                          <td className={`py-2 text-right text-xs tabular-nums font-semibold w-16 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                            {isPositive ? '+' : ''}{mover.change_pct.toFixed(2)}%
+                            <span className={`ml-1.5 text-[11px] font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                              {isPositive ? '+' : ''}{mover.change_pct.toFixed(2)}%
+                            </span>
                           </td>
                         </tr>
                       )
@@ -294,10 +295,8 @@ export default function MarketOverviewPage() {
             </section>
 
             {/* Watchlist */}
-            <section className="md:w-52 shrink-0 rounded-md border border-edge/30 px-4 py-3">
-              <span className="text-[11px] uppercase tracking-wider text-faint block mb-3">
-                Watchlist
-              </span>
+            <section className="md:w-56 shrink-0 rounded-md border border-edge/30 px-4 py-3">
+              <span className="text-sm font-semibold text-bright block mb-3">Watchlist</span>
               {!isAuthenticated ? (
                 <p className="text-xs text-faint">
                   <Link to="/login" className="text-brand hover:underline">Sign in</Link>{' '}
@@ -307,15 +306,51 @@ export default function MarketOverviewPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-edge/30 text-[11px] uppercase tracking-wider text-faint">
-                      <th className="pb-2 pr-3 text-left font-medium">Ticker</th>
-                      <th className="pb-2 pr-3 text-right font-medium">Price</th>
-                      <th className="pb-2 text-right font-medium">24h</th>
+                      <th className="pb-2 pr-4 text-left font-medium w-20">Ticker</th>
+                      <th className="pb-2 pr-4 text-left font-medium">Name</th>
+                      <th className="pb-2 text-right font-medium">Price</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td colSpan={3} className="pt-4 text-xs text-faint">Coming soon</td>
-                    </tr>
+                    {watchlist.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="pt-4 text-xs text-faint">
+                          No assets in your watchlist.
+                        </td>
+                      </tr>
+                    ) : (
+                      watchlist.map(item => {
+                        const isPositive = item.change_pct != null && item.change_pct >= 0
+                        return (
+                          <tr
+                            key={`${item.exchange_code}-${item.ticker}`}
+                            className="border-b border-edge/20 last:border-0 hover:bg-raised/30 transition-colors"
+                          >
+                            <td className="py-2.5 pr-4">
+                              <Link
+                                to={`/market/${item.exchange_code}/${item.ticker}`}
+                                className="font-mono text-sm font-semibold text-bright hover:text-brand transition-colors"
+                              >
+                                {item.ticker}
+                              </Link>
+                            </td>
+                            <td className="py-2.5 pr-4 text-xs text-dim truncate max-w-[100px]">
+                              {item.name}
+                            </td>
+                            <td className="py-2 text-right text-xs tabular-nums font-medium text-bright whitespace-nowrap">
+                              {item.current_price
+                                ? formatCurrency(Number(item.current_price), item.currency_code)
+                                : <span className="text-faint">—</span>}
+                              {item.change_pct != null && (
+                                <span className={`ml-1.5 text-[11px] font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                                  {isPositive ? '+' : ''}{item.change_pct.toFixed(2)}%
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
                   </tbody>
                 </table>
               )}
@@ -326,7 +361,7 @@ export default function MarketOverviewPage() {
           {/* ── 4. Exchanges ────────────────────────────────────────── */}
           <section>
             <span className="text-[11px] uppercase tracking-wider text-faint block mb-3">
-              Exchanges
+              Browse Exchanges
             </span>
             <div className="divide-y divide-edge/20">
               {(exchanges ?? []).map(exchange => (

@@ -1,16 +1,20 @@
 import { useState, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, X } from 'lucide-react'
+import { Search, X, Star } from 'lucide-react'
 import PageWrapper from '@/components/layout/PageWrapper'
 import StatusBadge from '@/components/common/StatusBadge'
 import { getExchange } from '@/api/market'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useWatchlist } from '@/hooks/useWatchlist'
+import { useAuth } from '@/auth/AuthContext'
 
 export default function ExchangeDetailPage() {
   const { exchangeCode } = useParams<{ exchangeCode: string }>()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
+  const { isAuthenticated } = useAuth()
+  const { isWatched, toggleWatch, isPending: watchPending } = useWatchlist()
 
   const { data: exchange, isLoading } = useQuery({
     queryKey: ['exchange', exchangeCode],
@@ -136,6 +140,7 @@ export default function ExchangeDetailPage() {
                     <th className="px-4 py-3 text-left font-medium">Name</th>
                     <th className="px-4 py-3 text-left font-medium hidden sm:table-cell">Type</th>
                     <th className="px-4 py-3 text-right font-medium">Price</th>
+                    {isAuthenticated && <th className="px-2 py-3 w-8"></th>}
                     <th className="px-4 py-3 text-right font-medium w-20"></th>
                   </tr>
                 </thead>
@@ -157,6 +162,24 @@ export default function ExchangeDetailPage() {
                           ? formatCurrency(asset.current_price, asset.currency_code)
                           : <span className="text-faint">—</span>}
                       </td>
+                      {isAuthenticated && (
+                        <td className="px-2 py-2.5 text-center">
+                          <button
+                            onClick={() => toggleWatch(exchange.code, asset.ticker)}
+                            disabled={watchPending}
+                            title={isWatched(exchange.code, asset.ticker) ? 'Remove from watchlist' : 'Add to watchlist'}
+                            className="text-faint hover:text-dim disabled:opacity-40 transition-colors"
+                          >
+                            <Star
+                              className={`size-3.5 ${
+                                isWatched(exchange.code, asset.ticker)
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : ''
+                              }`}
+                            />
+                          </button>
+                        </td>
+                      )}
                       <td className="px-4 py-2.5 text-right">
                         <Link
                           to={`/market/${exchange.code}/${asset.ticker}`}

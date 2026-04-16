@@ -127,3 +127,25 @@ export async function getMarketMovers(type: 'gainers' | 'losers', n = 10): Promi
   const { data } = await api.get('/api/market/movers/', { params: { type, n } })
   return data
 }
+
+export interface WatchlistItem {
+  ticker: string
+  name: string
+  exchange_code: string
+  currency_code: string
+  current_price: string | null
+  change_pct: number | null
+}
+
+export async function getWatchlist(): Promise<WatchlistItem[]> {
+  const { data } = await api.get('/api/market/watchlist/')
+  return data
+}
+
+export async function addToWatchlist(exchangeCode: string, ticker: string): Promise<void> {
+  await api.post('/api/market/watchlist/', { exchange_code: exchangeCode, ticker })
+}
+
+export async function removeFromWatchlist(exchangeCode: string, ticker: string): Promise<void> {
+  await api.delete(`/api/market/watchlist/${exchangeCode}/${ticker}/`)
+}
