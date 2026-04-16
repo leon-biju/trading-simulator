@@ -1,9 +1,6 @@
-import { useLocation } from 'react-router-dom'
 import PageWrapper from '@/components/layout/PageWrapper'
 
 export default function NotFoundPage() {
-  const location = useLocation()
-
   return (
     <PageWrapper>
       <div className="flex min-h-[calc(100svh-7rem)] flex-col items-center justify-center">
