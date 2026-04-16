@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { Star } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -25,6 +26,7 @@ interface OrderForm {
 
 export default function AssetDetailPage() {
   const { exchangeCode, ticker } = useParams<{ exchangeCode: string; ticker: string }>()
+  usePageTitle(ticker || 'Asset')
   const [range, setRange] = useState<Range>('1D')
   const [side, setSide] = useState<'BUY' | 'SELL'>('BUY')
   const [orderType, setOrderType] = useState<'MARKET' | 'LIMIT'>('MARKET')

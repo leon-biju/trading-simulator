@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { requestPasswordReset, verifyPasswordResetOTP, confirmPasswordReset } from '@/api/auth'
@@ -27,6 +28,7 @@ const STAGE_LABELS: Record<Stage, string> = {
 }
 
 export default function ForgotPasswordPage() {
+  usePageTitle('Reset Password')
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
 

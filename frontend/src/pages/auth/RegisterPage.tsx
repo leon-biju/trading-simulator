@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
@@ -24,6 +25,7 @@ interface RegisterForm {
 }
 
 export default function RegisterPage() {
+  usePageTitle('Register')
   const { isAuthenticated, loginWithToken } = useAuth()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState('')

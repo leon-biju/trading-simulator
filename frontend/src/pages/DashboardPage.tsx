@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Wallet, ClipboardList, TrendingUp, BarChart3, ArrowUpRight, ArrowDownRight } from 'lucide-react'
@@ -496,6 +497,7 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 export default function DashboardPage() {
+  usePageTitle('Dashboard')
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = (searchParams.get('tab') as Tab) ?? 'overview'

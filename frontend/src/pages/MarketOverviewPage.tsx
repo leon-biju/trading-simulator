@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Search, X, ChevronRight } from 'lucide-react'
@@ -13,6 +14,7 @@ import { useWatchlist } from '@/hooks/useWatchlist'
 type MoversTab = 'gainers' | 'losers'
 
 export default function MarketOverviewPage() {
+  usePageTitle('Market')
   const [search, setSearch] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [dropdownIndex, setDropdownIndex] = useState(-1)

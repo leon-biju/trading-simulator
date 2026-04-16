@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -15,6 +16,7 @@ interface AddFundsForm {
 
 export default function WalletDetailPage() {
   const { currencyCode } = useParams<{ currencyCode: string }>()
+  usePageTitle(currencyCode ? `${currencyCode} Wallet` : 'Wallet')
   const [page, setPage] = useState(1)
   const [serverError, setServerError] = useState<string | null>(null)
   const qc = useQueryClient()

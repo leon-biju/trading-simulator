@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Search, X, Star } from 'lucide-react'
@@ -21,6 +22,8 @@ export default function ExchangeDetailPage() {
     queryFn: () => getExchange(exchangeCode!),
     staleTime: 60_000,
   })
+
+  usePageTitle(exchange?.name || exchangeCode || 'Exchange')
 
   const assetTypes = useMemo(() => {
     if (!exchange) return []
