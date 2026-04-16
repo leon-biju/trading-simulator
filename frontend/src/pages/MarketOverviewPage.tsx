@@ -1,8 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import Fuse from 'fuse.js'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, X, ChevronRight } from 'lucide-react'
+import { Search, X, ChevronRight, Building2 } from 'lucide-react'
 import PageWrapper from '@/components/layout/PageWrapper'
 import StatusBadge from '@/components/common/StatusBadge'
 import { getExchanges, getMarketMovers } from '@/api/market'
@@ -12,6 +13,9 @@ import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
 import { useWatchlist } from '@/hooks/useWatchlist'
 
 type MoversTab = 'gainers' | 'losers'
+type AssetResult = { kind: 'asset'; ticker: string; name: string; exchangeCode: string; currency_code: string; current_price: string | null }
+type ExchangeResult = { kind: 'exchange'; code: string; name: string; is_open: boolean; asset_count: number }
+type SearchResult = AssetResult | ExchangeResult
 
 export default function MarketOverviewPage() {
   usePageTitle('Market')
@@ -43,34 +47,57 @@ export default function MarketOverviewPage() {
     searchRef.current?.focus()
   }, [])
 
-  const query = search.trim().toLowerCase()
+  const query = search.trim()
 
-  const allAssets = useMemo(() => {
+  const allAssets = useMemo((): AssetResult[] => {
     if (!exchanges) return []
     return exchanges.flatMap(exchange =>
-      exchange.assets.map(asset => ({ ...asset, exchangeCode: exchange.code })),
+      exchange.assets.map(asset => ({
+        kind: 'asset' as const,
+        ticker: asset.ticker,
+        name: asset.name,
+        exchangeCode: exchange.code,
+        currency_code: asset.currency_code,
+        current_price: asset.current_price,
+      })),
     )
   }, [exchanges])
 
-  const typeaheadResults = useMemo(() => {
-    if (!query) return []
-    return allAssets
-      .filter(
-        a =>
-          a.ticker.toLowerCase().includes(query) ||
-          a.name.toLowerCase().includes(query),
-      )
-      .slice(0, 8)
-  }, [query, allAssets])
+  const allExchanges = useMemo((): ExchangeResult[] => {
+    if (!exchanges) return []
+    return exchanges.map(e => ({
+      kind: 'exchange' as const,
+      code: e.code,
+      name: e.name,
+      is_open: e.is_open,
+      asset_count: e.asset_count,
+    }))
+  }, [exchanges])
 
-  const typeaheadTotal = useMemo(() => {
-    if (!query) return 0
-    return allAssets.filter(
-      a =>
-        a.ticker.toLowerCase().includes(query) ||
-        a.name.toLowerCase().includes(query),
-    ).length
-  }, [query, allAssets])
+  const assetFuse = useMemo(
+    () => new Fuse(allAssets, { keys: [{ name: 'ticker', weight: 2 }, { name: 'name', weight: 1 }], threshold: 0.35, includeScore: true }),
+    [allAssets],
+  )
+
+  const exchangeFuse = useMemo(
+    () => new Fuse(allExchanges, { keys: [{ name: 'code', weight: 2 }, { name: 'name', weight: 1 }], threshold: 0.35, includeScore: true }),
+    [allExchanges],
+  )
+
+  const { typeaheadResults, typeaheadTotal } = useMemo((): { typeaheadResults: SearchResult[]; typeaheadTotal: number } => {
+    if (!query) return { typeaheadResults: [], typeaheadTotal: 0 }
+
+    const assetMatches = assetFuse.search(query).map(r => r.item)
+    const exchangeMatches = exchangeFuse.search(query).map(r => r.item)
+
+    const combined: SearchResult[] = [...exchangeMatches, ...assetMatches]
+    return { typeaheadResults: combined.slice(0, 8), typeaheadTotal: combined.length }
+  }, [query, assetFuse, exchangeFuse])
+
+  function getResultHref(result: SearchResult) {
+    if (result.kind === 'exchange') return `/market/${result.code}`
+    return `/market/${result.exchangeCode}/${result.ticker}`
+  }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!showDropdown || typeaheadResults.length === 0) return
@@ -82,8 +109,7 @@ export default function MarketOverviewPage() {
       setDropdownIndex(i => Math.max(i - 1, -1))
     } else if (e.key === 'Enter' && dropdownIndex >= 0) {
       e.preventDefault()
-      const asset = typeaheadResults[dropdownIndex]
-      navigate(`/market/${asset.exchangeCode}/${asset.ticker}`)
+      navigate(getResultHref(typeaheadResults[dropdownIndex]))
       setSearch('')
       setShowDropdown(false)
     } else if (e.key === 'Escape') {
@@ -120,7 +146,7 @@ export default function MarketOverviewPage() {
             onFocus={() => query && setShowDropdown(true)}
             onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
             onKeyDown={handleKeyDown}
-            placeholder="Search ticker or company name…"
+            placeholder="Search ticker, company or exchange…"
             className="w-full rounded-lg border border-edge bg-panel pl-10 pr-10 py-3 text-sm text-bright placeholder:text-faint focus:outline-none focus:border-brand/50 transition-colors"
           />
           {search && (
@@ -142,28 +168,46 @@ export default function MarketOverviewPage() {
                 </div>
               ) : (
                 <>
-                  {typeaheadResults.map((asset, i) => (
+                  {typeaheadResults.map((result, i) => (
                     <Link
-                      key={`${asset.exchangeCode}-${asset.ticker}`}
-                      to={`/market/${asset.exchangeCode}/${asset.ticker}`}
+                      key={result.kind === 'exchange' ? `exchange-${result.code}` : `${result.exchangeCode}-${result.ticker}`}
+                      to={getResultHref(result)}
                       onMouseEnter={() => setDropdownIndex(i)}
                       onClick={() => { setSearch(''); setShowDropdown(false) }}
                       className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${
                         dropdownIndex === i ? 'bg-raised' : 'hover:bg-raised/50'
                       }`}
                     >
-                      <span className="w-20 shrink-0 font-mono text-sm font-semibold text-bright">
-                        {asset.ticker}
-                      </span>
-                      <span className="flex-1 text-xs text-dim truncate">{asset.name}</span>
-                      <span className="text-[11px] text-faint font-mono border border-edge/60 rounded px-1.5 py-0.5">
-                        {asset.exchangeCode}
-                      </span>
-                      <span className="w-20 text-right text-xs tabular-nums font-medium text-bright">
-                        {asset.current_price
-                          ? formatCurrency(asset.current_price, asset.currency_code)
-                          : <span className="text-faint">—</span>}
-                      </span>
+                      {result.kind === 'exchange' ? (
+                        <>
+                          <Building2 className="size-3.5 text-faint shrink-0" />
+                          <span className="w-16 shrink-0 font-mono text-sm font-semibold text-bright">
+                            {result.code}
+                          </span>
+                          <span className="flex-1 text-xs text-dim truncate">{result.name}</span>
+                          <span className="text-[11px] text-faint border border-edge/60 rounded px-1.5 py-0.5">
+                            Exchange
+                          </span>
+                          <span className="w-16 text-right text-[11px] text-faint tabular-nums">
+                            {result.asset_count} assets
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="w-20 shrink-0 font-mono text-sm font-semibold text-bright">
+                            {result.ticker}
+                          </span>
+                          <span className="flex-1 text-xs text-dim truncate">{result.name}</span>
+                          <span className="text-[11px] text-faint font-mono border border-edge/60 rounded px-1.5 py-0.5">
+                            {result.exchangeCode}
+                          </span>
+                          <span className="w-20 text-right text-xs tabular-nums font-medium text-bright">
+                            {result.current_price
+                              ? formatCurrency(result.current_price, result.currency_code)
+                              : <span className="text-faint">—</span>}
+                          </span>
+                        </>
+                      )}
                     </Link>
                   ))}
                   {typeaheadTotal > 8 && (
