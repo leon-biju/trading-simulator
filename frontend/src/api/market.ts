@@ -75,6 +75,15 @@ export interface FxRate {
   last_updated: string
 }
 
+export interface Mover {
+  ticker: string
+  name: string
+  exchange_code: string
+  currency_code: string
+  current_price: string
+  change_pct: number
+}
+
 export async function getExchanges(): Promise<Exchange[]> {
   const { data } = await api.get('/api/market/exchanges/')
   return data
@@ -111,5 +120,10 @@ export async function getChartData(
 
 export async function getFxRates(): Promise<FxRate[]> {
   const { data } = await api.get('/api/wallets/fx-rates/')
+  return data
+}
+
+export async function getMarketMovers(type: 'gainers' | 'losers', n = 10): Promise<Mover[]> {
+  const { data } = await api.get('/api/market/movers/', { params: { type, n } })
   return data
 }

@@ -1,50 +1,21 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, X, Clock, Star, TrendingUp, TrendingDown } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Search, X, ChevronRight } from 'lucide-react'
 import PageWrapper from '@/components/layout/PageWrapper'
 import StatusBadge from '@/components/common/StatusBadge'
-import EmptyState from '@/components/common/EmptyState'
-import { getExchanges } from '@/api/market'
+import { getExchanges, getMarketMovers } from '@/api/market'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/auth/AuthContext'
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
 
-const CATEGORY_LABELS: Record<string, string> = {
-  STOCK: 'Stocks',
-  ETF: 'ETFs',
-  CRYPTO: 'Crypto',
-}
-
-// ─── Local sub-components ────────────────────────────────────────────────────
-
-interface SectionCardProps {
-  title: string
-  icon: LucideIcon
-  accentClass?: string
-  children: React.ReactNode
-}
-
-function SectionCard({ title, icon: Icon, accentClass = 'text-faint', children }: SectionCardProps) {
-  return (
-    <div className="rounded-lg border border-edge bg-panel overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-edge">
-        <Icon className={`size-3.5 ${accentClass}`} strokeWidth={2} />
-        <span className="text-[11px] uppercase tracking-wider text-faint font-medium">{title}</span>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+type MoversTab = 'gainers' | 'losers'
 
 export default function MarketOverviewPage() {
   const [search, setSearch] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [dropdownIndex, setDropdownIndex] = useState(-1)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [moversTab, setMoversTab] = useState<MoversTab>('gainers')
 
   const searchRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
@@ -55,6 +26,13 @@ export default function MarketOverviewPage() {
     queryKey: ['exchanges'],
     queryFn: getExchanges,
     staleTime: 5 * 60_000,
+  })
+
+  const { data: movers, isLoading: moversLoading } = useQuery({
+    queryKey: ['market-movers', moversTab],
+    queryFn: () => getMarketMovers(moversTab, 10),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
   })
 
   useEffect(() => {
@@ -69,11 +47,6 @@ export default function MarketOverviewPage() {
       exchange.assets.map(asset => ({ ...asset, exchangeCode: exchange.code })),
     )
   }, [exchanges])
-
-  const assetTypes = useMemo(() => {
-    const types = new Set(allAssets.map(a => a.asset_type))
-    return Array.from(types).sort()
-  }, [allAssets])
 
   const typeaheadResults = useMemo(() => {
     if (!query) return []
@@ -95,19 +68,6 @@ export default function MarketOverviewPage() {
     ).length
   }, [query, allAssets])
 
-  const filteredAssets = useMemo(() => {
-    if (!activeCategory) return []
-    return allAssets.filter(a => a.asset_type === activeCategory)
-  }, [activeCategory, allAssets])
-
-  const filteredExchanges = useMemo(() => {
-    if (!exchanges) return []
-    if (!activeCategory) return exchanges
-    return exchanges
-      .map(e => ({ ...e, assets: e.assets.filter(a => a.asset_type === activeCategory) }))
-      .filter(e => e.assets.length > 0)
-  }, [exchanges, activeCategory])
-
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!showDropdown || typeaheadResults.length === 0) return
     if (e.key === 'ArrowDown') {
@@ -127,11 +87,21 @@ export default function MarketOverviewPage() {
     }
   }
 
+  // ─── inline tab helper ─────────────────────────────────────────────────────
+
+  function tabCls(active: boolean) {
+    return `text-xs font-medium transition-colors ${active ? 'text-bright' : 'text-faint hover:text-dim'}`
+  }
+
+  // ─── render ────────────────────────────────────────────────────────────────
+
   return (
     <PageWrapper>
-      {/* ── Search ─────────────────────────────────────────────────────── */}
-      <div className="mb-5">
+
+      {/* ── 1. Search ─────────────────────────────────────────────────── */}
+      <div className="mb-8">
         <h1 className="text-lg font-semibold text-bright mb-4">Markets</h1>
+
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-faint pointer-events-none" />
           <input
@@ -193,7 +163,7 @@ export default function MarketOverviewPage() {
                     </Link>
                   ))}
                   {typeaheadTotal > 8 && (
-                    <div className="border-t border-edge px-4 py-2 text-center text-[11px] text-faint">
+                    <div className="border-t border-edge/40 px-4 py-2 text-center text-[11px] text-faint">
                       Showing 8 of {typeaheadTotal} results
                     </div>
                   )}
@@ -204,202 +174,193 @@ export default function MarketOverviewPage() {
         </div>
       </div>
 
-      {/* ── Category shortcuts ──────────────────────────────────────────── */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-0.5">
-        <button
-          onClick={() => setActiveCategory(null)}
-          className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
-            activeCategory === null
-              ? 'border-brand bg-brand/10 text-brand'
-              : 'border-edge text-faint hover:text-dim hover:border-edge/80'
-          }`}
-        >
-          All
-        </button>
-        {assetTypes.map(type => (
-          <button
-            key={type}
-            onClick={() => setActiveCategory(type === activeCategory ? null : type)}
-            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
-              activeCategory === type
-                ? 'border-brand bg-brand/10 text-brand'
-                : 'border-edge text-faint hover:text-dim hover:border-edge/80'
-            }`}
-          >
-            {CATEGORY_LABELS[type] ?? type}
-          </button>
-        ))}
-      </div>
-
       {isLoading ? (
         <div className="flex h-40 items-center justify-center">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge border-t-brand" />
         </div>
       ) : (
-        <>
-          {/* ── Recently Viewed + Watchlist ─────────────────────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <SectionCard title="Recently Viewed" icon={Clock}>
-              {recent.length === 0 ? (
-                <EmptyState
-                  icon={Clock}
-                  title="No recent assets"
-                  description="Assets you visit will appear here"
-                />
-              ) : (
-                <div className="divide-y divide-edge/40">
-                  {recent.slice(0, 5).map(item => (
+        <div className="space-y-9">
+
+          {/* ── 2. Recently Viewed ──────────────────────────────────── */}
+          <section>
+            <span className="text-[11px] uppercase tracking-wider text-faint block mb-2.5">
+              Recently Viewed
+            </span>
+            {recent.length === 0 ? (
+              <p className="text-xs text-faint py-1">Visit an asset to build your history.</p>
+            ) : (
+              <div className="flex items-center overflow-x-auto">
+                {recent.map((item, i) => (
+                  <div key={`${item.exchangeCode}-${item.ticker}`} className="flex items-center shrink-0">
+                    {i > 0 && (
+                      <span className="px-3 text-faint/30 select-none text-sm">·</span>
+                    )}
                     <Link
-                      key={`${item.exchangeCode}-${item.ticker}`}
                       to={`/market/${item.exchangeCode}/${item.ticker}`}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-raised/50 transition-colors"
+                      className="group flex items-center gap-2 py-1"
                     >
-                      <span className="w-16 shrink-0 font-mono text-sm font-semibold text-bright">
+                      <span className="font-mono text-sm font-semibold text-bright group-hover:text-brand transition-colors">
                         {item.ticker}
                       </span>
-                      <span className="flex-1 text-xs text-dim truncate">{item.name}</span>
-                      <span className="text-xs tabular-nums font-medium text-bright">
-                        {item.price ? formatCurrency(item.price, item.currency) : '—'}
-                      </span>
+                      {item.price && (
+                        <span className="text-xs tabular-nums text-dim">
+                          {formatCurrency(item.price, item.currency)}
+                        </span>
+                      )}
                     </Link>
-                  ))}
-                </div>
-              )}
-            </SectionCard>
-
-            <SectionCard title="Watchlist" icon={Star}>
-              {!isAuthenticated ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
-                  <Star className="size-8 text-faint opacity-60" strokeWidth={1.5} />
-                  <p className="text-sm text-dim">Sign in to see your watchlist</p>
-                  <Link to="/login" className="text-xs text-brand hover:underline">
-                    Sign in
-                  </Link>
-                </div>
-              ) : (
-                <EmptyState
-                  icon={Star}
-                  title="Watchlist coming soon"
-                  description="Save assets for quick access"
-                />
-              )}
-            </SectionCard>
-          </div>
-
-          {/* ── Top Gainers + Top Losers ────────────────────────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <SectionCard title="Top Gainers" icon={TrendingUp} accentClass="text-buy">
-              <EmptyState
-                icon={TrendingUp}
-                title="Coming soon"
-                description="Top performers, refreshed every 30s"
-              />
-            </SectionCard>
-            <SectionCard title="Top Losers" icon={TrendingDown} accentClass="text-sell">
-              <EmptyState
-                icon={TrendingDown}
-                title="Coming soon"
-                description="Biggest decliners, refreshed every 30s"
-              />
-            </SectionCard>
-          </div>
-
-          {/* ── Browse ─────────────────────────────────────────────────── */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] uppercase tracking-wider text-faint font-medium">
-                {activeCategory
-                  ? `${CATEGORY_LABELS[activeCategory] ?? activeCategory} — all exchanges`
-                  : 'Browse by Exchange'}
-              </span>
-              {activeCategory && (
-                <span className="text-[11px] text-faint">
-                  {filteredAssets.length} asset{filteredAssets.length !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-
-            {activeCategory ? (
-              <div className="rounded-lg border border-edge bg-panel overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-edge text-[11px] uppercase tracking-wider text-faint">
-                      <th className="px-4 py-3 text-left font-medium">Ticker</th>
-                      <th className="px-4 py-3 text-left font-medium">Name</th>
-                      <th className="px-4 py-3 text-left font-medium hidden sm:table-cell">
-                        Exchange
-                      </th>
-                      <th className="px-4 py-3 text-right font-medium">Price</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAssets.map(asset => (
-                      <tr
-                        key={`${asset.exchangeCode}-${asset.ticker}`}
-                        className="border-b border-edge/40 last:border-0 hover:bg-raised/50 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/market/${asset.exchangeCode}/${asset.ticker}`)}
-                      >
-                        <td className="px-4 py-2.5">
-                          <span className="text-sm font-semibold text-bright font-mono">
-                            {asset.ticker}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-dim">{asset.name}</td>
-                        <td className="px-4 py-2.5 hidden sm:table-cell">
-                          <Link
-                            to={`/market/${asset.exchangeCode}`}
-                            onClick={e => e.stopPropagation()}
-                            className="inline-flex items-center rounded border border-edge/60 bg-raised px-2 py-0.5 text-[11px] text-faint font-mono hover:text-dim hover:border-edge transition-colors"
-                          >
-                            {asset.exchangeCode}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-xs font-medium text-bright">
-                          {asset.current_price
-                            ? formatCurrency(asset.current_price, asset.currency_code)
-                            : <span className="text-faint">—</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredExchanges.map(exchange => (
-                  <Link
-                    key={exchange.code}
-                    to={`/market/${exchange.code}`}
-                    className="group rounded-lg border border-edge bg-panel hover:bg-raised hover:border-edge/80 transition-all p-4"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-bright group-hover:text-brand transition-colors truncate">
-                          {exchange.name}
-                        </p>
-                        <span className="text-[11px] text-faint font-mono">{exchange.code}</span>
-                      </div>
-                      <StatusBadge value={exchange.is_open ? 'OPEN' : 'CLOSED'} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-faint">
-                        {exchange.is_open
-                          ? `${exchange.open_time}–${exchange.close_time}`
-                          : exchange.hours_until_open != null
-                            ? `Opens in ${exchange.hours_until_open}h`
-                            : 'Closed'}
-                      </span>
-                      <span className="text-[11px] text-faint">
-                        {exchange.asset_count} asset{exchange.asset_count !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}
+          </section>
+
+          {/* ── 3. Market Movers + Watchlist ────────────────────────── */}
+          <div className="flex flex-col md:flex-row md:items-start gap-4">
+
+            {/* Movers */}
+            <section className="flex-1 min-w-0 rounded-md border border-edge/30 px-4 py-3">
+              <div className="flex items-center gap-4 mb-3">
+                <span className="text-[11px] uppercase tracking-wider text-faint shrink-0">
+                  Movers
+                </span>
+                {(['gainers', 'losers'] as MoversTab[]).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setMoversTab(tab)}
+                    className={tabCls(moversTab === tab)}
+                  >
+                    {tab === 'gainers' ? 'Top Gainers' : 'Top Losers'}
+                  </button>
+                ))}
+              </div>
+
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-edge/30 text-[11px] uppercase tracking-wider text-faint">
+                    <th className="pb-2 pr-4 text-left font-medium w-6 hidden sm:table-cell">#</th>
+                    <th className="pb-2 pr-4 text-left font-medium w-20">Ticker</th>
+                    <th className="pb-2 pr-4 text-left font-medium">Name</th>
+                    <th className="pb-2 pr-4 text-right font-medium">Price</th>
+                    <th className="pb-2 text-right font-medium w-16">24h</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {moversLoading ? (
+                    <tr>
+                      <td colSpan={5} className="py-5 text-center">
+                        <div className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-edge border-t-brand" />
+                      </td>
+                    </tr>
+                  ) : !movers || movers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-5 text-center text-xs text-faint">
+                        No data available
+                      </td>
+                    </tr>
+                  ) : (
+                    movers.map((mover, i) => {
+                      const isPositive = mover.change_pct >= 0
+                      return (
+                        <tr
+                          key={`${mover.exchange_code}-${mover.ticker}`}
+                          className="border-b border-edge/20 last:border-0 hover:bg-raised/30 transition-colors"
+                        >
+                          <td className="py-2 pr-4 text-[11px] text-faint tabular-nums hidden sm:table-cell">
+                            {i + 1}
+                          </td>
+                          <td className="py-2 pr-4">
+                            <Link
+                              to={`/market/${mover.exchange_code}/${mover.ticker}`}
+                              className="font-mono text-sm font-semibold text-bright hover:text-brand transition-colors"
+                            >
+                              {mover.ticker}
+                            </Link>
+                          </td>
+                          <td className="py-2 pr-4 text-xs text-dim truncate max-w-[140px]">
+                            {mover.name}
+                          </td>
+                          <td className="py-2 pr-4 text-right text-xs tabular-nums font-medium text-bright">
+                            {formatCurrency(Number(mover.current_price), mover.currency_code)}
+                          </td>
+                          <td className={`py-2 text-right text-xs tabular-nums font-semibold w-16 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                            {isPositive ? '+' : ''}{mover.change_pct.toFixed(2)}%
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </section>
+
+            {/* Watchlist */}
+            <section className="md:w-52 shrink-0 rounded-md border border-edge/30 px-4 py-3">
+              <span className="text-[11px] uppercase tracking-wider text-faint block mb-3">
+                Watchlist
+              </span>
+              {!isAuthenticated ? (
+                <p className="text-xs text-faint">
+                  <Link to="/login" className="text-brand hover:underline">Sign in</Link>{' '}
+                  to view your watchlist.
+                </p>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-edge/30 text-[11px] uppercase tracking-wider text-faint">
+                      <th className="pb-2 pr-3 text-left font-medium">Ticker</th>
+                      <th className="pb-2 pr-3 text-right font-medium">Price</th>
+                      <th className="pb-2 text-right font-medium">24h</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colSpan={3} className="pt-4 text-xs text-faint">Coming soon</td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </section>
+
           </div>
-        </>
+
+          {/* ── 4. Exchanges ────────────────────────────────────────── */}
+          <section>
+            <span className="text-[11px] uppercase tracking-wider text-faint block mb-3">
+              Exchanges
+            </span>
+            <div className="divide-y divide-edge/20">
+              {(exchanges ?? []).map(exchange => (
+                <Link
+                  key={exchange.code}
+                  to={`/market/${exchange.code}`}
+                  className="group flex items-center gap-4 py-3 hover:bg-raised/30 transition-colors -mx-1 px-1 rounded"
+                >
+                  <span className="w-14 shrink-0 font-mono text-sm font-semibold text-bright group-hover:text-brand transition-colors">
+                    {exchange.code}
+                  </span>
+                  <span className="flex-1 text-xs text-dim truncate min-w-0">
+                    {exchange.name}
+                  </span>
+                  <StatusBadge value={exchange.is_open ? 'OPEN' : 'CLOSED'} />
+                  <span className="hidden sm:block text-xs text-faint w-28 shrink-0 text-right">
+                    {exchange.is_open
+                      ? `${exchange.open_time}–${exchange.close_time}`
+                      : exchange.hours_until_open != null
+                        ? `Opens in ${exchange.hours_until_open}h`
+                        : 'Closed'}
+                  </span>
+                  <span className="hidden md:block text-xs text-faint w-16 text-right shrink-0">
+                    {exchange.asset_count} asset{exchange.asset_count !== 1 ? 's' : ''}
+                  </span>
+                  <ChevronRight className="size-3.5 text-faint/40 group-hover:text-faint transition-colors shrink-0" />
+                </Link>
+              ))}
+            </div>
+          </section>
+
+        </div>
       )}
+
     </PageWrapper>
   )
 }

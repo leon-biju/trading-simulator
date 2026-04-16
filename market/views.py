@@ -1,5 +1,6 @@
 import datetime
 
+from django.db.models import OuterRef, Subquery
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
@@ -165,6 +166,64 @@ class ChartDataView(APIView):
             for c in daily_candles
         ]
         return Response({'chart_type': 'line', 'line_series': line_series, 'currency_code': asset.currency.code})
+
+
+@method_decorator(ratelimit(key='ip', rate='60/m', block=True), name='get')
+class MarketMoversView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            n = int(request.GET.get('n', 10))
+            n = max(1, min(n, 100))
+        except (ValueError, TypeError):
+            n = 10
+
+        mover_type = request.GET.get('type', 'gainers')
+        if mover_type not in ('gainers', 'losers'):
+            return Response({'error': 'type must be "gainers" or "losers"'}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = timezone.now()
+        cutoff_24h = now - datetime.timedelta(hours=24)
+
+        latest_price_sq = Subquery(
+            PriceCandle.objects.filter(
+                asset=OuterRef('pk'),
+            ).order_by('-start_at').values('close_price')[:1]
+        )
+
+        price_24h_ago_sq = Subquery(
+            PriceCandle.objects.filter(
+                asset=OuterRef('pk'),
+                start_at__lte=cutoff_24h,
+            ).order_by('-start_at').values('close_price')[:1]
+        )
+
+        assets = (
+            Asset.objects.filter(is_active=True)
+            .select_related('currency', 'exchange')
+            .annotate(latest_price=latest_price_sq, price_24h_ago=price_24h_ago_sq)
+            .filter(latest_price__isnull=False, price_24h_ago__isnull=False)
+        )
+
+        movers = []
+        for asset in assets:
+            latest = float(asset.latest_price)
+            past = float(asset.price_24h_ago)
+            if past == 0:
+                continue
+            change_pct = (latest - past) / past * 100
+            movers.append({
+                'ticker': asset.ticker,
+                'name': asset.name,
+                'exchange_code': asset.exchange.code,
+                'currency_code': asset.currency.code,
+                'current_price': str(asset.latest_price),
+                'change_pct': round(change_pct, 2),
+            })
+
+        movers.sort(key=lambda x: x['change_pct'], reverse=(mover_type == 'gainers'))
+        return Response(movers[:n])
 
 
 @method_decorator(ratelimit(key='ip', rate='30/m', block=True), name='get')
