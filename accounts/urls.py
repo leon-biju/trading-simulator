@@ -9,6 +9,8 @@ from accounts.views import (
     PasswordResetRequestView,
     PasswordResetVerifyView,
     RegisterView,
+    WatchlistView,
+    WatchlistDetailView,
 )
 
 urlpatterns = [
@@ -20,4 +22,6 @@ urlpatterns = [
     path('auth/password/reset/verify/', PasswordResetVerifyView.as_view(), name='api_password_reset_verify'),
     path('auth/password/reset/confirm/', PasswordResetConfirmView.as_view(), name='api_password_reset_confirm'),
     path('users/me/', CurrentUserView.as_view(), name='api_me'),
+    path('users/watchlist/', WatchlistView.as_view(), name='api_watchlist'),
+    path('users/watchlist/<str:exchange_code>/<str:ticker>/', WatchlistDetailView.as_view(), name='api_watchlist_detail'),
 ]

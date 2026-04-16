@@ -1,9 +1,12 @@
+import datetime
 import secrets
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.mail import send_mail
+from django.db.models import OuterRef, Subquery
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework import status
@@ -14,8 +17,9 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from accounts.models import PasswordResetOTP
+from accounts.models import PasswordResetOTP, WatchlistItem
 from accounts.serializers import RegisterSerializer, UserSerializer
+from market.models import Asset, PriceCandle
 
 User = get_user_model()
 
@@ -244,3 +248,84 @@ class PasswordResetConfirmView(APIView):
         user.save()
 
         return Response({'detail': 'Password has been reset.'}, status=status.HTTP_200_OK)
+
+
+@method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
+@method_decorator(ratelimit(key='user', rate='60/m', block=True), name='post')
+class WatchlistView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        asset_ids = WatchlistItem.objects.filter(
+            user=request.user,
+        ).values_list('asset_id', flat=True)
+
+        now = timezone.now()
+        cutoff_24h = now - datetime.timedelta(hours=24)
+
+        latest_price_sq = Subquery(
+            PriceCandle.objects.filter(
+                asset=OuterRef('pk'),
+            ).order_by('-start_at').values('close_price')[:1]
+        )
+        price_24h_ago_sq = Subquery(
+            PriceCandle.objects.filter(
+                asset=OuterRef('pk'),
+                start_at__lte=cutoff_24h,
+            ).order_by('-start_at').values('close_price')[:1]
+        )
+
+        assets = (
+            Asset.objects.filter(pk__in=asset_ids)
+            .select_related('currency', 'exchange')
+            .annotate(latest_price=latest_price_sq, price_24h_ago=price_24h_ago_sq)
+        )
+
+        result = []
+        for asset in assets:
+            change_pct = None
+            if asset.latest_price and asset.price_24h_ago:
+                past = float(asset.price_24h_ago)
+                if past != 0:
+                    change_pct = round((float(asset.latest_price) - past) / past * 100, 2)
+            result.append({
+                'ticker':        asset.ticker,
+                'name':          asset.name,
+                'exchange_code': asset.exchange.code,
+                'currency_code': asset.currency.code,
+                'current_price': str(asset.latest_price) if asset.latest_price else None,
+                'change_pct':    change_pct,
+            })
+        return Response(result)
+
+    def post(self, request):
+        exchange_code = request.data.get('exchange_code')
+        ticker = request.data.get('ticker')
+        if not exchange_code or not ticker:
+            return Response(
+                {'error': 'exchange_code and ticker are required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            asset = Asset.objects.get(exchange__code=exchange_code, ticker=ticker)
+        except Asset.DoesNotExist:
+            return Response({'error': 'Asset not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        WatchlistItem.objects.get_or_create(user=request.user, asset=asset)
+        return Response(status=status.HTTP_200_OK)
+
+
+@method_decorator(ratelimit(key='user', rate='60/m', block=True), name='delete')
+class WatchlistDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, exchange_code, ticker):
+        deleted, _ = WatchlistItem.objects.filter(
+            user=request.user,
+            asset__exchange__code=exchange_code,
+            asset__ticker=ticker,
+        ).delete()
+        if not deleted:
+            return Response({'error': 'Not in watchlist'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_204_NO_CONTENT)

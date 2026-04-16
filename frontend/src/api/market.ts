@@ -138,14 +138,14 @@ export interface WatchlistItem {
 }
 
 export async function getWatchlist(): Promise<WatchlistItem[]> {
-  const { data } = await api.get('/api/market/watchlist/')
+  const { data } = await api.get('/api/users/watchlist/')
   return data
 }
 
 export async function addToWatchlist(exchangeCode: string, ticker: string): Promise<void> {
-  await api.post('/api/market/watchlist/', { exchange_code: exchangeCode, ticker })
+  await api.post('/api/users/watchlist/', { exchange_code: exchangeCode, ticker })
 }
 
 export async function removeFromWatchlist(exchangeCode: string, ticker: string): Promise<void> {
-  await api.delete(`/api/market/watchlist/${exchangeCode}/${ticker}/`)
+  await api.delete(`/api/users/watchlist/${exchangeCode}/${ticker}/`)
 }

@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from market.models import Currency
+from market.models import Asset, Currency
 from market.services.fx import get_fx_conversion
 
 class CustomUser(AbstractUser):
@@ -61,3 +61,29 @@ class PasswordResetOTP(models.Model):
             return False
         age = (timezone.now() - self.created_at).total_seconds()
         return age <= self.OTP_EXPIRY_SECONDS
+
+
+class WatchlistItem(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='watchlist',
+    )
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name='watchlisted_by',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'asset'], name='unique_watchlist_item')
+        ]
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self) -> str:
+        return f"{self.user} watching {self.asset}"
