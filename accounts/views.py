@@ -145,6 +145,56 @@ class CurrentUserView(APIView):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
+    def patch(self, request):
+        profile = request.user.profile
+        errors = {}
+
+        if 'display_name' in request.data:
+            display_name = request.data['display_name']
+            if len(display_name) > 100:
+                errors['display_name'] = 'Max 100 characters.'
+            else:
+                profile.display_name = display_name
+
+        if 'home_currency' in request.data:
+            from market.models import Currency
+            code = request.data['home_currency']
+            try:
+                profile.home_currency = Currency.objects.get(code=code.upper())
+            except Currency.DoesNotExist:
+                errors['home_currency'] = f'Currency "{code}" does not exist.'
+
+        if errors:
+            return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile.save()
+        return Response(UserSerializer(request.user).data)
+
+
+@method_decorator(ratelimit(key='user', rate='10/h', block=True), name='post')
+class PasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        current_password = request.data.get('current_password', '')
+        new_password = request.data.get('new_password', '')
+        new_password2 = request.data.get('new_password2', '')
+
+        if not request.user.check_password(current_password):
+            return Response({'error': 'Current password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_password != new_password2:
+            return Response({'error': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            validate_password(new_password, user=request.user)
+        except Exception as e:
+            return Response({'error': ' '.join(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.set_password(new_password)
+        request.user.save()
+        return Response({'detail': 'Password changed.'}, status=status.HTTP_200_OK)
+
 
 @method_decorator(ratelimit(key='ip', rate='5/h', block=True), name='post')
 class PasswordResetRequestView(APIView):
