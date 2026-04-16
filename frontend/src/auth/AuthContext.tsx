@@ -27,6 +27,7 @@ interface AuthContextValue {
   getAccessToken: () => string | null
   setAccessToken: (token: string) => void
   loginWithToken: (token: string, user: User) => void
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -113,6 +114,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData)
   }
 
+  async function refreshUser() {
+    const token = accessTokenRef.current
+    if (!token) return
+    const { data } = await axios.get('/api/users/me/', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    setUser(data as User)
+  }
+
   async function logout() {
     try {
       await axios.post('/api/auth/token/blacklist/', {}, { withCredentials: true })
@@ -133,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         getAccessToken,
         setAccessToken,
         loginWithToken,
+        refreshUser,
       }}
     >
       {children}

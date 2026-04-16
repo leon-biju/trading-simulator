@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, TrendingUp, LogOut, ChevronsUpDown, LogIn, UserPlus, UserRound } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, LogOut, ChevronsUpDown, LogIn, UserPlus, UserRound, Settings } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import {
   Sidebar,
@@ -127,13 +127,21 @@ export default function AppSidebar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-52 mb-1">
                 {user ? (
-                  <DropdownMenuItem
-                    onClick={handleLogout}
-                    className="text-sell focus:text-sell focus:bg-sell/10 gap-2"
-                  >
-                    <LogOut className="size-4" />
-                    Sign out
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild className="gap-2">
+                      <Link to="/settings">
+                        <Settings className="size-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="text-sell focus:text-sell focus:bg-sell/10 gap-2"
+                    >
+                      <LogOut className="size-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </>
                 ) : (
                   <>
                     <DropdownMenuItem asChild className="gap-2">

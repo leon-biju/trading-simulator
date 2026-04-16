@@ -14,6 +14,7 @@ const MarketOverviewPage = lazy(() => import('@/pages/MarketOverviewPage'))
 const ExchangeDetailPage = lazy(() => import('@/pages/ExchangeDetailPage'))
 const AssetDetailPage    = lazy(() => import('@/pages/AssetDetailPage'))
 const WalletDetailPage   = lazy(() => import('@/pages/WalletDetailPage'))
+const SettingsPage       = lazy(() => import('@/pages/SettingsPage'))
 
 function PageLoader() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/wallets/:currencyCode" element={<WalletDetailPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
 
             <Route path="*" element={<NotFoundPage />} />
