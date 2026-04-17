@@ -5,7 +5,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.mail import send_mail
-from django.db.models import OuterRef, Subquery
+from django.db.models import OuterRef, Subquery, ExpressionWrapper, F, DecimalField
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
@@ -20,6 +21,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from accounts.models import PasswordResetOTP, WatchlistItem
 from accounts.serializers import RegisterSerializer, UserSerializer
 from market.models import Asset, PriceCandle
+from trading.models import PortfolioSnapshot
 
 User = get_user_model()
 
@@ -163,6 +165,13 @@ class CurrentUserView(APIView):
                 profile.home_currency = Currency.objects.get(code=code.upper())
             except Currency.DoesNotExist:
                 errors['home_currency'] = f'Currency "{code}" does not exist.'
+
+        if 'leaderboard_visible' in request.data:
+            value = request.data['leaderboard_visible']
+            if not isinstance(value, bool):
+                errors['leaderboard_visible'] = 'Must be a boolean.'
+            else:
+                profile.leaderboard_visible = value
 
         if errors:
             return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -379,3 +388,92 @@ class WatchlistDetailView(APIView):
         if not deleted:
             return Response({'error': 'Not in watchlist'}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+_VALID_PERIODS = {'today', 'week', 'month', 'year'}
+_DEFAULT_LIMIT = 50
+_MAX_LIMIT = 100
+
+
+def _period_start(period: str) -> datetime.date:
+    today = timezone.now().date()
+    if period == 'today':
+        return today
+    if period == 'week':
+        return today - datetime.timedelta(days=today.weekday())
+    if period == 'month':
+        return today.replace(day=1)
+    # year
+    return today.replace(month=1, day=1)
+
+
+class LeaderboardView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        period = request.query_params.get('period', 'week')
+        if period not in _VALID_PERIODS:
+            return Response({'error': f'period must be one of {sorted(_VALID_PERIODS)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            limit = min(int(request.query_params.get('limit', _DEFAULT_LIMIT)), _MAX_LIMIT)
+        except ValueError:
+            return Response({'error': 'limit must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
+
+        period_start = _period_start(period)
+
+        latest_snap = PortfolioSnapshot.objects.filter(
+            user=OuterRef('pk')
+        ).order_by('-date').values('total_portfolio_value')[:1]
+
+        at_period_start = PortfolioSnapshot.objects.filter(
+            user=OuterRef('pk'),
+            date__lte=period_start,
+        ).order_by('-date').values('total_portfolio_value')[:1]
+
+        earliest_snap = PortfolioSnapshot.objects.filter(
+            user=OuterRef('pk')
+        ).order_by('date').values('total_portfolio_value')[:1]
+
+        users = (
+            User.objects.filter(
+                profile__leaderboard_visible=True,
+                portfolio_snapshots__isnull=False,
+            )
+            .distinct()
+            .annotate(
+                current_total=Subquery(latest_snap),
+                start_total=Coalesce(
+                    Subquery(at_period_start),
+                    Subquery(earliest_snap),
+                ),
+            )
+            .filter(
+                current_total__isnull=False,
+                start_total__isnull=False,
+                start_total__gt=0,
+            )
+            .annotate(
+                return_abs=ExpressionWrapper(
+                    F('current_total') - F('start_total'),
+                    output_field=DecimalField(max_digits=20, decimal_places=2),
+                ),
+                return_pct=ExpressionWrapper(
+                    (F('current_total') - F('start_total')) / F('start_total') * 100,
+                    output_field=DecimalField(max_digits=20, decimal_places=4),
+                ),
+            )
+            .order_by('-return_pct')[:limit]
+        )
+
+        data = [
+            {
+                'rank': i + 1,
+                'username': u.username,
+                'current_total': str(u.current_total),
+                'return_abs': str(u.return_abs),
+                'return_pct': str(round(u.return_pct, 4)),
+            }
+            for i, u in enumerate(users)
+        ]
+        return Response(data)

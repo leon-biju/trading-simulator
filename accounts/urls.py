@@ -5,6 +5,7 @@ from accounts.views import (
     CookieTokenObtainPairView,
     CookieTokenRefreshView,
     CurrentUserView,
+    LeaderboardView,
     PasswordChangeView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
@@ -26,4 +27,5 @@ urlpatterns = [
     path('users/me/', CurrentUserView.as_view(), name='api_me'),
     path('users/watchlist/', WatchlistView.as_view(), name='api_watchlist'),
     path('users/watchlist/<str:exchange_code>/<str:ticker>/', WatchlistDetailView.as_view(), name='api_watchlist_detail'),
+    path('leaderboard/', LeaderboardView.as_view(), name='api_leaderboard'),
 ]

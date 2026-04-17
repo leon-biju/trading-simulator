@@ -43,6 +43,7 @@ class Profile(models.Model):
     preferences_json = models.JSONField(default=dict, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
     home_currency = models.ForeignKey(Currency, on_delete=models.PROTECT, null=False, blank=False)
+    leaderboard_visible = models.BooleanField(default=True)
 
     def __str__(self) -> str:
         return f"{self.user.username}'s profile"
