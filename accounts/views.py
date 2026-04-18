@@ -143,18 +143,21 @@ class PasswordResetRequestView(APIView):
         otp = f"{secrets.randbelow(1_000_000):06d}"
         PasswordResetOTP.objects.create(user=user, otp_hash=make_password(otp))
 
-        send_mail(
-            subject='Your password reset code',
-            message=(
-                f'Hi {user.username},\n\n'
-                f'Your password reset code is: {otp}\n\n'
-                f'It expires in 10 minutes. '
-                f'If you did not request this, you can ignore this email.'
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=True,
-        )
+        try:
+            send_mail(
+                subject='Your password reset code',
+                message=(
+                    f'Hi {user.username},\n\n'
+                    f'Your password reset code is: {otp}\n\n'
+                    f'It expires in 10 minutes. '
+                    f'If you did not request this, you can ignore this email.'
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            logging.error(f"Failed to send password reset email to {user.email}: {e}")
 
         return response
 
