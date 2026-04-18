@@ -4,6 +4,7 @@ from django.db.models import OuterRef, Subquery
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
+from config.ratelimit import client_ip_key
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -31,7 +32,7 @@ RANGE_TO_DAYS = {
 }
 
 
-@method_decorator(ratelimit(key='ip', rate='60/m', block=True), name='get')
+@method_decorator(ratelimit(key=client_ip_key, rate='60/m', block=True), name='get')
 class ExchangeListView(APIView):
     permission_classes = [AllowAny]
 
@@ -57,7 +58,7 @@ class ExchangeListView(APIView):
         return Response(data)
 
 
-@method_decorator(ratelimit(key='ip', rate='60/m', block=True), name='get')
+@method_decorator(ratelimit(key=client_ip_key, rate='60/m', block=True), name='get')
 class ExchangeDetailView(APIView):
     permission_classes = [AllowAny]
 
@@ -75,7 +76,7 @@ class ExchangeDetailView(APIView):
         return Response(data)
 
 
-@method_decorator(ratelimit(key='ip', rate='60/m', block=True), name='get')
+@method_decorator(ratelimit(key=client_ip_key, rate='60/m', block=True), name='get')
 class AssetDetailView(APIView):
     permission_classes = [AllowAny]
 
@@ -119,7 +120,7 @@ class AssetDetailView(APIView):
         return Response(serializer.data)
 
 
-@method_decorator(ratelimit(key='ip', rate='30/m', block=True), name='get')
+@method_decorator(ratelimit(key=client_ip_key, rate='30/m', block=True), name='get')
 class ChartDataView(APIView):
     permission_classes = [AllowAny]
 
@@ -168,7 +169,7 @@ class ChartDataView(APIView):
         return Response({'chart_type': 'line', 'line_series': line_series, 'currency_code': asset.currency.code})
 
 
-@method_decorator(ratelimit(key='ip', rate='60/m', block=True), name='get')
+@method_decorator(ratelimit(key=client_ip_key, rate='60/m', block=True), name='get')
 class MarketMoversView(APIView):
     permission_classes = [AllowAny]
 
@@ -226,7 +227,7 @@ class MarketMoversView(APIView):
         return Response(movers[:n])
 
 
-@method_decorator(ratelimit(key='ip', rate='30/m', block=True), name='get')
+@method_decorator(ratelimit(key=client_ip_key, rate='30/m', block=True), name='get')
 class FxRatesView(APIView):
     """All FX rates, used by the wallet FX transfer preview in React."""
     permission_classes = [AllowAny]

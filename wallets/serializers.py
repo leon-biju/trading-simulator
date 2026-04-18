@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 from wallets.models import Transaction, Wallet
 
@@ -26,8 +28,8 @@ class WalletSerializer(serializers.ModelSerializer):
 class FxTransferInputSerializer(serializers.Serializer):
     from_currency = serializers.CharField(max_length=3)
     to_currency = serializers.CharField(max_length=3)
-    to_amount = serializers.DecimalField(max_digits=20, decimal_places=2, required=False, allow_null=True)
-    from_amount = serializers.DecimalField(max_digits=20, decimal_places=2, required=False, allow_null=True)
+    to_amount = serializers.DecimalField(max_digits=20, decimal_places=2, required=False, allow_null=True, min_value=Decimal('0.01'))
+    from_amount = serializers.DecimalField(max_digits=20, decimal_places=2, required=False, allow_null=True, min_value=Decimal('0.01'))
 
     def validate(self, data):
         if not data.get('to_amount') and not data.get('from_amount'):

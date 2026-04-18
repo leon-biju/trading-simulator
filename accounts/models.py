@@ -51,14 +51,18 @@ class Profile(models.Model):
 
 class PasswordResetOTP(models.Model):
     OTP_EXPIRY_SECONDS = 600  # 10 minutes
+    MAX_ATTEMPTS = 5
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='password_reset_otps')
     otp_hash = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
     used = models.BooleanField(default=False)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
 
     def is_valid(self) -> bool:
         if self.used:
+            return False
+        if self.failed_attempts >= self.MAX_ATTEMPTS:
             return False
         age = (timezone.now() - self.created_at).total_seconds()
         return age <= self.OTP_EXPIRY_SECONDS

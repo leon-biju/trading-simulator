@@ -10,6 +10,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
+from config.ratelimit import client_ip_key
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -23,7 +24,7 @@ from trading.models import PortfolioSnapshot
 User = get_user_model()
 
 
-@method_decorator(ratelimit(key='ip', rate='10/m', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='10/m', block=True), name='post')
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -45,7 +46,7 @@ class LogoutView(APIView):
         return Response({'detail': 'Logged out'})
 
 
-@method_decorator(ratelimit(key='ip', rate='5/h', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='5/h', block=True), name='post')
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
@@ -122,7 +123,7 @@ class PasswordChangeView(APIView):
         return Response({'detail': 'Password changed.'}, status=status.HTTP_200_OK)
 
 
-@method_decorator(ratelimit(key='ip', rate='5/h', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='5/h', block=True), name='post')
 class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
 
@@ -142,23 +143,26 @@ class PasswordResetRequestView(APIView):
         otp = f"{secrets.randbelow(1_000_000):06d}"
         PasswordResetOTP.objects.create(user=user, otp_hash=make_password(otp))
 
-        send_mail(
-            subject='Your password reset code',
-            message=(
-                f'Hi {user.username},\n\n'
-                f'Your password reset code is: {otp}\n\n'
-                f'It expires in 10 minutes. '
-                f'If you did not request this, you can ignore this email.'
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=True,
-        )
+        try:
+            send_mail(
+                subject='Your password reset code',
+                message=(
+                    f'Hi {user.username},\n\n'
+                    f'Your password reset code is: {otp}\n\n'
+                    f'It expires in 10 minutes. '
+                    f'If you did not request this, you can ignore this email.'
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            logging.error(f"Failed to send password reset email to {user.email}: {e}")
 
         return response
 
 
-@method_decorator(ratelimit(key='ip', rate='10/h', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='10/h', block=True), name='post')
 class PasswordResetVerifyView(APIView):
     permission_classes = [AllowAny]
 
@@ -169,7 +173,7 @@ class PasswordResetVerifyView(APIView):
         try:
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
-            return Response({'error': 'Invalid code.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         record = (
             PasswordResetOTP.objects
@@ -178,13 +182,18 @@ class PasswordResetVerifyView(APIView):
             .first()
         )
 
-        if not record or not record.is_valid() or not check_password(otp, record.otp_hash):
+        if not record or not record.is_valid():
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not check_password(otp, record.otp_hash):
+            record.failed_attempts += 1
+            record.save(update_fields=['failed_attempts'])
             return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'detail': 'Code verified.'}, status=status.HTTP_200_OK)
 
 
-@method_decorator(ratelimit(key='ip', rate='10/h', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='10/h', block=True), name='post')
 class PasswordResetConfirmView(APIView):
     permission_classes = [AllowAny]
 
@@ -206,7 +215,12 @@ class PasswordResetConfirmView(APIView):
             .first()
         )
 
-        if not record or not record.is_valid() or not check_password(otp, record.otp_hash):
+        if not record or not record.is_valid():
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not check_password(otp, record.otp_hash):
+            record.failed_attempts += 1
+            record.save(update_fields=['failed_attempts'])
             return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if new_password != new_password2:
