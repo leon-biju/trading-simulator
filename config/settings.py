@@ -45,8 +45,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'rest_framework',
-    'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'accounts',
     'market',
@@ -215,7 +213,7 @@ else:
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -227,16 +225,8 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
 }
 
-# SimpleJWT
-from datetime import timedelta
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'UPDATE_LAST_LOGIN': True,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
 
 # CORS — dev only; prod is same-origin via nginx
 if DEBUG:
@@ -267,10 +257,6 @@ CELERY_BEAT_SCHEDULE = {
     'prune-old-price-data-daily': {
         'task': 'market.tasks.prune_old_price_data',
         'schedule': 86400,  # 1 day in seconds
-    },
-    'flush-expired-jwt-tokens-daily': {
-        'task': 'accounts.tasks.flush_expired_tokens',
-        'schedule': 86400,
     },
 
 }

@@ -26,7 +26,7 @@ interface RegisterForm {
 
 export default function RegisterPage() {
   usePageTitle('Register')
-  const { isAuthenticated, loginWithToken } = useAuth()
+  const { isAuthenticated, loginDirect } = useAuth()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -60,8 +60,8 @@ export default function RegisterPage() {
   async function onSubmit(data: RegisterForm) {
     setServerError('')
     try {
-      const result = await registerUser(data)
-      loginWithToken(result.access, result.user)
+      const user = await registerUser(data)
+      loginDirect(user)
       navigate('/dashboard', { replace: true })
     } catch (err) {
       if (err instanceof AxiosError && err.response?.data) {

@@ -19,7 +19,7 @@ export interface RegisteredUser {
 
 export async function registerUser(payload: RegisterPayload) {
   const { data } = await api.post('/api/auth/register/', payload)
-  return data as { access: string; user: RegisteredUser }
+  return data as RegisteredUser
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
