@@ -91,6 +91,7 @@ def create_portfolio_snapshot(user_id: int) -> PortfolioSnapshot:
             'total_value': total_value,
             'total_cost': total_cost,
             'cash_balance': total_cash,
+            'total_portfolio_value': total_value + total_cash,
         }
     )
     

@@ -1,8 +1,16 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '@/auth/AuthContext'
 import { AxiosError } from 'axios'
+import PageWrapper from '@/components/layout/PageWrapper'
+import AuthShell from '@/components/layout/AuthShell'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react'
 
 interface LoginForm {
   username: string
@@ -10,10 +18,12 @@ interface LoginForm {
 }
 
 export default function LoginPage() {
+  usePageTitle('Login')
   const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [serverError, setServerError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const passwordReset = (location.state as { passwordReset?: boolean } | null)?.passwordReset
 
   const {
@@ -23,8 +33,7 @@ export default function LoginPage() {
   } = useForm<LoginForm>()
 
   if (isAuthenticated) {
-    navigate('/dashboard', { replace: true })
-    return null
+    return <Navigate to="/dashboard" replace />
   }
 
   async function onSubmit(data: LoginForm) {
@@ -41,66 +50,99 @@ export default function LoginPage() {
     }
   }
 
-  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-base px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-lg font-bold text-base">T</div>
-          <h1 className="text-xl font-semibold text-bright">TradeSim</h1>
-          <p className="mt-1 text-sm text-faint">Sign in to your account</p>
+    <PageWrapper>
+      <AuthShell>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-bright">Welcome back</h1>
+        <p className="mt-1 text-sm text-faint">Sign in to your account</p>
+      </div>
+
+      {passwordReset && (
+        <Alert className="mb-4 border-buy/20 bg-buy/8 text-buy">
+          <CheckCircle className="size-4 !text-buy" />
+          <AlertDescription className="text-buy">
+            Password updated. Sign in with your new password.
+          </AlertDescription>
+        </Alert>
+      )}
+      {serverError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="size-4" />
+          <AlertDescription>{serverError}</AlertDescription>
+        </Alert>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="username" className="text-dim">Username</Label>
+          <Input
+            id="username"
+            {...register('username', { required: 'Username is required' })}
+
+            autoComplete="username"
+            aria-invalid={!!errors.username}
+            className="bg-raised border-edge focus-visible:ring-brand/50"
+          />
+          {errors.username && (
+            <p className="text-xs text-sell">{errors.username.message}</p>
+          )}
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-lg border border-edge bg-panel p-6">
-          {passwordReset && (
-            <p className="rounded border border-buy/20 bg-buy/8 px-3 py-2 text-sm text-buy">
-              Password updated. Sign in with your new password.
-            </p>
-          )}
-          {serverError && (
-            <p className="rounded border border-sell/20 bg-sell/8 px-3 py-2 text-sm text-sell">
-              {serverError}
-            </p>
-          )}
-
-          <div>
-            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Username</label>
-            <input
-              {...register('username', { required: 'Username is required' })}
-              className={inputCls}
-              placeholder="your_username"
-              autoComplete="username"
-            />
-            {errors.username && <p className="mt-1 text-xs text-sell">{errors.username.message}</p>}
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Password</label>
-            <input
+        <div className="space-y-1.5">
+          <Label htmlFor="password" className="text-dim">Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
               {...register('password', { required: 'Password is required' })}
-              type="password"
-              className={inputCls}
-              placeholder="••••••••"
               autoComplete="current-password"
+              aria-invalid={!!errors.password}
+              className="bg-raised border-edge focus-visible:ring-brand/50 pr-10"
             />
-            {errors.password && <p className="mt-1 text-xs text-sell">{errors.password.message}</p>}
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-faint hover:text-dim transition-colors"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
           </div>
+          {errors.password && (
+            <p className="text-xs text-sell">{errors.password.message}</p>
+          )}
+        </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded bg-accent px-4 py-2.5 text-sm font-medium text-base transition hover:bg-accent/90 disabled:opacity-50"
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full"
+          size="lg"
+        >
+          {isSubmitting ? 'Signing in…' : 'Sign in'}
+        </Button>
+
+        <div className="text-center">
+          <Link
+            to="/forgot-password"
+            className="text-[11px] text-faint hover:text-dim transition-colors"
           >
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
-          </button>
+            Forgot password?
+          </Link>
+        </div>
+      </form>
 
-          <div className="flex items-center justify-between text-[11px] text-faint">
-            <Link to="/register" className="hover:text-dim transition-colors">Create account</Link>
-            <Link to="/forgot-password" className="hover:text-dim transition-colors">Forgot password?</Link>
-          </div>
-        </form>
-      </div>
-    </div>
+      <p className="mt-6 text-center text-sm text-faint">
+        Don't have an account?{' '}
+        <Link
+          to="/register"
+          className="font-medium text-brand hover:text-brand/80 transition-colors"
+        >
+          Create one
+        </Link>
+      </p>
+      </AuthShell>
+    </PageWrapper>
   )
 }

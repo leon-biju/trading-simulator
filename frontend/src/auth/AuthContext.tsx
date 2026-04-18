@@ -2,12 +2,10 @@ import {
   createContext,
   useContext,
   useEffect,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
-import axios from 'axios'
-import { injectAuthHandlers } from '@/lib/axios'
+import api from '@/lib/axios'
 
 interface User {
   id: number
@@ -24,82 +22,40 @@ interface AuthContextValue {
   isAuthenticated: boolean
   login: (credentials: { username: string; password: string }) => Promise<void>
   logout: () => Promise<void>
-  getAccessToken: () => string | null
-  setAccessToken: (token: string) => void
-  loginWithToken: (token: string, user: User) => void
+  loginDirect: (user: User) => void
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const accessTokenRef = useRef<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const getAccessToken = () => accessTokenRef.current
-  const setAccessToken = (token: string) => {
-    accessTokenRef.current = token
-  }
-  const clearAuth = () => {
-    accessTokenRef.current = null
-    setUser(null)
-  }
-
-  function loginWithToken(token: string, userData: User) {
-    accessTokenRef.current = token
-    setUser(userData)
-  }
-
-  // Inject handlers into the Axios interceptor so it can refresh tokens
-  // and force logout without a circular import
   useEffect(() => {
-    injectAuthHandlers(getAccessToken, clearAuth)
-  })
-
-  // On mount: attempt silent refresh using the httpOnly cookie
-  useEffect(() => {
-    async function silentRefresh() {
-      try {
-        const { data: refreshData } = await axios.post(
-          '/api/auth/token/refresh/',
-          {},
-          { withCredentials: true },
-        )
-        accessTokenRef.current = refreshData.access
-
-        const { data: userData } = await axios.get('/api/users/me/', {
-          headers: { Authorization: `Bearer ${refreshData.access}` },
-        })
-        setUser(userData)
-      } catch {
-        // No valid cookie or expired — stay logged out
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    silentRefresh()
+    api.get('/api/users/me/')
+      .then(({ data }) => setUser(data as User))
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
   }, [])
 
   async function login(credentials: { username: string; password: string }) {
-    const { data } = await axios.post('/api/auth/token/', credentials, {
-      withCredentials: true,
-    })
-    accessTokenRef.current = data.access
-
-    const { data: userData } = await axios.get('/api/users/me/', {
-      headers: { Authorization: `Bearer ${data.access}` },
-    })
-    setUser(userData)
+    const { data } = await api.post('/api/auth/login/', credentials)
+    setUser(data as User)
   }
 
   async function logout() {
-    try {
-      await axios.post('/api/auth/token/blacklist/', {}, { withCredentials: true })
-    } catch {
-      // Ignore — clear locally regardless
-    }
-    clearAuth()
+    try { await api.post('/api/auth/logout/') } catch {}
+    setUser(null)
+  }
+
+  function loginDirect(userData: User) {
+    setUser(userData)
+  }
+
+  async function refreshUser() {
+    const { data } = await api.get('/api/users/me/')
+    setUser(data as User)
   }
 
   return (
@@ -110,9 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: user !== null,
         login,
         logout,
-        getAccessToken,
-        setAccessToken,
-        loginWithToken,
+        loginDirect,
+        refreshUser,
       }}
     >
       {children}

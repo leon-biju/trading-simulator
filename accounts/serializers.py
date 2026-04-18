@@ -56,10 +56,11 @@ class UserSerializer(serializers.ModelSerializer):
     home_currency = serializers.SerializerMethodField()
     display_name = serializers.SerializerMethodField()
     total_cash = serializers.SerializerMethodField()
+    leaderboard_visible = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'home_currency', 'display_name', 'total_cash']
+        fields = ['id', 'username', 'email', 'home_currency', 'display_name', 'total_cash', 'leaderboard_visible']
 
     def get_home_currency(self, obj):
         return obj.home_currency.code
@@ -70,3 +71,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_total_cash(self, obj):
         return str(obj.total_cash)
+
+    def get_leaderboard_visible(self, obj):
+        profile = getattr(obj, 'profile', None)
+        return profile.leaderboard_visible if profile else True

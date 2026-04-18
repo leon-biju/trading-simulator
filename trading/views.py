@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -25,6 +26,8 @@ from trading.services.queries import get_user_positions
 
 @method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
 class OrderListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         """Paginated order history."""
         orders = (
@@ -65,6 +68,8 @@ class OrderListCreateView(APIView):
 
 @method_decorator(ratelimit(key='user', rate='30/m', block=True), name='post')
 class CancelOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, order_id):
         order = cancel_order(order_id=order_id, user_id=request.user.id)
         return Response(OrderSerializer(order).data)
@@ -72,6 +77,8 @@ class CancelOrderView(APIView):
 
 @method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
 class TradeListView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         profile = Profile.objects.get(user_id=request.user.id)
         home_code = profile.home_currency.code
@@ -89,6 +96,8 @@ class TradeListView(APIView):
 
 @method_decorator(ratelimit(key='user', rate='30/m', block=True), name='get')
 class PortfolioView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         home_currency = request.user.home_currency
         home_code = home_currency.code
@@ -126,6 +135,8 @@ class PortfolioView(APIView):
 
 @method_decorator(ratelimit(key='user', rate='20/m', block=True), name='get')
 class PortfolioHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         range_param = request.GET.get('range', '1M')
         days_map = {'1W': 7, '1M': 30, '3M': 90, '6M': 180, '1Y': 365, 'ALL': None}
@@ -163,6 +174,8 @@ class PortfolioHistoryView(APIView):
 
 @method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
 class PositionView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, exchange_code, ticker):
         try:
             asset = Asset.objects.select_related('exchange', 'currency').get(

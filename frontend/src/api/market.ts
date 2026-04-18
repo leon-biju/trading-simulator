@@ -63,7 +63,7 @@ export interface PendingOrder {
 
 export interface ChartData {
   chart_type: 'candlestick' | 'line'
-  candlestick_data?: { x: number; o: number; h: number; l: number; c: number }[]
+  candlestick_data?: { x: string; o: number; h: number; l: number; c: number }[]
   line_series?: { x: string; y: number }[]
   currency_code: string
 }
@@ -73,6 +73,15 @@ export interface FxRate {
   to_currency: string
   rate: string
   last_updated: string
+}
+
+export interface Mover {
+  ticker: string
+  name: string
+  exchange_code: string
+  currency_code: string
+  current_price: string
+  change_pct: number
 }
 
 export async function getExchanges(): Promise<Exchange[]> {
@@ -90,13 +99,21 @@ export async function getAsset(exchangeCode: string, ticker: string): Promise<As
   return data
 }
 
+const RANGE_MAP: Record<string, string> = {
+  '1H': 'hour',
+  '1D': 'day',
+  '1M': 'month',
+  '6M': '6m',
+  '1Y': 'year',
+}
+
 export async function getChartData(
   exchangeCode: string,
   ticker: string,
   range: string,
 ): Promise<ChartData> {
   const { data } = await api.get(`/api/market/data/${exchangeCode}/${ticker}/`, {
-    params: { range },
+    params: { range: RANGE_MAP[range] ?? range },
   })
   return data
 }
@@ -104,4 +121,31 @@ export async function getChartData(
 export async function getFxRates(): Promise<FxRate[]> {
   const { data } = await api.get('/api/wallets/fx-rates/')
   return data
+}
+
+export async function getMarketMovers(type: 'gainers' | 'losers', n = 10): Promise<Mover[]> {
+  const { data } = await api.get('/api/market/movers/', { params: { type, n } })
+  return data
+}
+
+export interface WatchlistItem {
+  ticker: string
+  name: string
+  exchange_code: string
+  currency_code: string
+  current_price: string | null
+  change_pct: number | null
+}
+
+export async function getWatchlist(): Promise<WatchlistItem[]> {
+  const { data } = await api.get('/api/users/watchlist/')
+  return data
+}
+
+export async function addToWatchlist(exchangeCode: string, ticker: string): Promise<void> {
+  await api.post('/api/users/watchlist/', { exchange_code: exchangeCode, ticker })
+}
+
+export async function removeFromWatchlist(exchangeCode: string, ticker: string): Promise<void> {
+  await api.delete(`/api/users/watchlist/${exchangeCode}/${ticker}/`)
 }

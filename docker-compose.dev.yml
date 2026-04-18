@@ -19,29 +19,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    image: trading-simulator-dev
     env_file: .env.dev
     ports: [ "8000:8000" ]
     depends_on: [ db, redis ]
     volumes:
-      - .:/code 
+      - .:/code
 
   celery_worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: trading-simulator-dev
     env_file: .env.dev
-    depends_on: [ db, redis ]
+    depends_on: [ api, db, redis ]
     command: celery -A config worker --loglevel=info
     volumes:
       - .:/code
 
   celery_beat:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: trading-simulator-dev
     env_file: .env.dev
-    depends_on: [ db, redis ]
-
+    depends_on: [ api, db, redis ]
     # important to remove old pid file to avoid startup issues
     command: sh -c "rm -f ./celerybeat.pid &&
              celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"

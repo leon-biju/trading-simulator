@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { Star } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -10,7 +12,9 @@ import StatusBadge from '@/components/common/StatusBadge'
 import { getAsset, getChartData } from '@/api/market'
 import { placeOrder, cancelOrder } from '@/api/trading'
 import { useAuth } from '@/auth/AuthContext'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, TRADING_FEE_RATE } from '@/lib/utils'
+import { addRecentlyViewed } from '@/hooks/useRecentlyViewed'
+import { useWatchlist } from '@/hooks/useWatchlist'
 
 const RANGES = ['1H', '1D', '1M', '6M', '1Y'] as const
 type Range = typeof RANGES[number]
@@ -22,14 +26,16 @@ interface OrderForm {
 
 export default function AssetDetailPage() {
   const { exchangeCode, ticker } = useParams<{ exchangeCode: string; ticker: string }>()
+  usePageTitle(ticker || 'Asset')
   const [range, setRange] = useState<Range>('1D')
   const [side, setSide] = useState<'BUY' | 'SELL'>('BUY')
   const [orderType, setOrderType] = useState<'MARKET' | 'LIMIT'>('MARKET')
   const [orderError, setOrderError] = useState<string | null>(null)
   const [orderSuccess, setOrderSuccess] = useState(false)
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const homeCurrency = user?.home_currency ?? 'GBP'
   const qc = useQueryClient()
+  const { isWatched, toggleWatch, isPending: watchPending } = useWatchlist()
 
   const { data: asset, isLoading: assetLoading } = useQuery({
     queryKey: ['asset', exchangeCode, ticker],
@@ -45,9 +51,41 @@ export default function AssetDetailPage() {
     enabled: !!(exchangeCode && ticker),
   })
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<OrderForm>()
+  useEffect(() => {
+    if (asset && exchangeCode && ticker) {
+      addRecentlyViewed({
+        exchangeCode,
+        ticker,
+        name: asset.name,
+        price: asset.current_price,
+        currency: asset.currency_code,
+      })
+    }
+  }, [asset, exchangeCode, ticker])
+
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<OrderForm>()
   const quantity  = watch('quantity')
   const limitPrice = watch('limit_price')
+
+  const maxQuantity = (() => {
+    if (side === 'SELL') {
+      const avail = asset?.user_position.available_quantity
+      return avail ? parseFloat(avail) : null
+    }
+    // BUY: available cash / (price * (1 + fee rate))
+    const cash = asset?.user_wallet?.available_balance
+    const priceStr = orderType === 'LIMIT' ? limitPrice : asset?.current_price ?? null
+    if (!cash || !priceStr) return null
+    const price = parseFloat(priceStr)
+    if (isNaN(price) || price <= 0) return null
+    return Math.floor(parseFloat(cash) / (price * (1 + TRADING_FEE_RATE)) * 10000) / 10000
+  })()
+
+  const clampQuantity = () => {
+    if (maxQuantity === null || !quantity) return
+    const val = parseFloat(quantity)
+    if (!isNaN(val) && val > maxQuantity) setValue('quantity', String(maxQuantity))
+  }
 
   const estimatedCost = (() => {
     const q = parseFloat(quantity)
@@ -101,7 +139,7 @@ export default function AssetDetailPage() {
     if (chartData.chart_type === 'candlestick' && chartData.candlestick_data) {
       return [{
         name: ticker ?? '',
-        data: chartData.candlestick_data.map(d => ({ x: new Date(d.x * 1000), y: [d.o, d.h, d.l, d.c] })),
+        data: chartData.candlestick_data.map(d => ({ x: new Date(d.x), y: [d.o, d.h, d.l, d.c] })),
       }]
     }
     if (chartData.line_series) {
@@ -145,7 +183,7 @@ export default function AssetDetailPage() {
     },
   }
 
-  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
+  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-brand focus:outline-none transition-colors'
 
   return (
     <PageWrapper>
@@ -171,6 +209,23 @@ export default function AssetDetailPage() {
             <h1 className="text-xl font-semibold text-bright">{asset.name}</h1>
             <span className="text-sm text-faint">{asset.ticker}</span>
             <StatusBadge value={asset.is_exchange_open ? 'OPEN' : 'CLOSED'} />
+            {isAuthenticated && (
+              <button
+                onClick={() => toggleWatch(asset.exchange_code, asset.ticker)}
+                disabled={watchPending}
+                title={isWatched(asset.exchange_code, asset.ticker) ? 'Remove from watchlist' : 'Add to watchlist'}
+                className="flex items-center gap-1 text-[11px] text-faint hover:text-dim disabled:opacity-40 transition-colors"
+              >
+                <Star
+                  className={`size-3.5 transition-colors ${
+                    isWatched(asset.exchange_code, asset.ticker)
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : ''
+                  }`}
+                />
+                {isWatched(asset.exchange_code, asset.ticker) ? 'Watching' : 'Watch'}
+              </button>
+            )}
             {asset.current_price && (
               <span className="ml-auto text-2xl font-semibold tabular-nums text-bright">
                 {formatCurrency(asset.current_price, asset.currency_code)}
@@ -189,7 +244,7 @@ export default function AssetDetailPage() {
                     onClick={() => setRange(r)}
                     className={`rounded px-2.5 py-1 text-xs font-medium transition ${
                       range === r
-                        ? 'bg-accent/15 text-accent'
+                        ? 'bg-brand/15 text-brand'
                         : 'text-faint hover:text-dim'
                     }`}
                   >
@@ -211,170 +266,194 @@ export default function AssetDetailPage() {
               )}
             </div>
 
-            {/* Order ticket */}
+            {/* Order ticket / sign-in prompt */}
             <div className="space-y-4">
-              <div className="rounded-lg border border-edge bg-panel p-4">
-                {!asset.is_exchange_open && (
-                  <div className="mb-4 rounded border border-yellow-500/20 bg-yellow-500/8 px-3 py-2 text-xs text-yellow-400">
-                    Exchange closed — limit orders will be queued
-                  </div>
-                )}
+              {isAuthenticated ? (
+                <>
+                  <div className="rounded-lg border border-edge bg-panel p-4">
+                    {!asset.is_exchange_open && (
+                      <div className="mb-4 rounded border border-yellow-500/20 bg-yellow-500/8 px-3 py-2 text-xs text-yellow-400">
+                        Exchange closed — limit orders will be queued
+                      </div>
+                    )}
 
-                {/* BUY / SELL */}
-                <div className="mb-4 flex rounded-md border border-edge overflow-hidden">
-                  <button
-                    onClick={() => setSide('BUY')}
-                    className={`flex-1 py-2 text-xs font-semibold tracking-wider transition ${
-                      side === 'BUY'
-                        ? 'bg-buy text-white'
-                        : 'text-dim hover:bg-raised'
-                    }`}
-                  >
-                    BUY
-                  </button>
-                  <button
-                    onClick={() => setSide('SELL')}
-                    className={`flex-1 py-2 text-xs font-semibold tracking-wider transition ${
-                      side === 'SELL'
-                        ? 'bg-sell text-white'
-                        : 'text-dim hover:bg-raised'
-                    }`}
-                  >
-                    SELL
-                  </button>
-                </div>
-
-                {/* MARKET / LIMIT */}
-                <div className="mb-4 flex gap-2">
-                  {(['MARKET', 'LIMIT'] as const).map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setOrderType(t)}
-                      className={`flex-1 rounded py-1.5 text-xs font-medium transition border ${
-                        orderType === t
-                          ? 'border-accent text-accent'
-                          : 'border-edge text-faint hover:border-dim hover:text-dim'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-                  <div>
-                    <label className="mb-1 block text-[11px] uppercase tracking-wider text-faint">Quantity</label>
-                    <input
-                      type="number" step="any" min="0.0001" placeholder="0"
-                      {...register('quantity', {
-                        required: 'Required',
-                        min: { value: 0.0001, message: 'Must be positive' },
-                      })}
-                      className={inputCls}
-                    />
-                    {errors.quantity && <p className="mt-1 text-xs text-sell">{errors.quantity.message}</p>}
-                  </div>
-
-                  {orderType === 'LIMIT' && (
-                    <div>
-                      <label className="mb-1 block text-[11px] uppercase tracking-wider text-faint">
-                        Limit price ({asset.currency_code})
-                      </label>
-                      <input
-                        type="number" step="any" min="0.0001" placeholder="0.00"
-                        {...register('limit_price', {
-                          required: orderType === 'LIMIT' ? 'Required' : false,
-                          min: { value: 0.0001, message: 'Must be positive' },
-                        })}
-                        className={inputCls}
-                      />
-                      {errors.limit_price && <p className="mt-1 text-xs text-sell">{errors.limit_price.message}</p>}
+                    {/* BUY / SELL */}
+                    <div className="mb-4 flex rounded-md border border-edge overflow-hidden">
+                      <button
+                        onClick={() => setSide('BUY')}
+                        className={`flex-1 py-2 text-xs font-semibold tracking-wider transition ${
+                          side === 'BUY'
+                            ? 'bg-buy text-white'
+                            : 'text-dim hover:bg-raised'
+                        }`}
+                      >
+                        BUY
+                      </button>
+                      <button
+                        onClick={() => setSide('SELL')}
+                        className={`flex-1 py-2 text-xs font-semibold tracking-wider transition ${
+                          side === 'SELL'
+                            ? 'bg-sell text-white'
+                            : 'text-dim hover:bg-raised'
+                        }`}
+                      >
+                        SELL
+                      </button>
                     </div>
-                  )}
 
-                  {estimatedCost && (
-                    <div className="rounded border border-edge/50 bg-raised px-3 py-2 text-[11px] text-dim">
-                      Est. {side === 'BUY' ? 'cost' : 'proceeds'}:{' '}
-                      <span className="text-bright tabular-nums">{formatCurrency(estimatedCost, asset.currency_code)}</span>
-                      <span className="ml-1 text-faint">(excl. fees)</span>
+                    {/* MARKET / LIMIT */}
+                    <div className="mb-4 flex gap-2">
+                      {(['MARKET', 'LIMIT'] as const).map(t => (
+                        <button
+                          key={t}
+                          onClick={() => setOrderType(t)}
+                          className={`flex-1 rounded py-1.5 text-xs font-medium transition border ${
+                            orderType === t
+                              ? 'border-brand text-brand'
+                              : 'border-edge text-faint hover:border-dim hover:text-dim'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
                     </div>
-                  )}
 
-                  {asset.user_wallet && (
-                    <p className="text-[11px] text-faint">
-                      Available:{' '}
-                      <span className="text-dim tabular-nums">
-                        {formatCurrency(asset.user_wallet.available_balance, asset.user_wallet.currency_code)}
-                      </span>
-                    </p>
-                  )}
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+                      <div>
+                        <label className="mb-1 block text-[11px] uppercase tracking-wider text-faint">Quantity</label>
+                        <input
+                          type="number" step="any" min="0.0001" placeholder="0"
+                          {...register('quantity', {
+                            required: 'Required',
+                            min: { value: 0.0001, message: 'Must be positive' },
+                          })}
+                          onBlur={clampQuantity}
+                          className={inputCls}
+                        />
+                        {errors.quantity && <p className="mt-1 text-xs text-sell">{errors.quantity.message}</p>}
+                      </div>
 
-                  {orderError && <p className="text-xs text-sell">{orderError}</p>}
-                  {orderSuccess && <p className="text-xs text-buy">Order placed</p>}
-
-                  <button
-                    type="submit"
-                    disabled={orderMutation.isPending}
-                    className={`w-full rounded py-2.5 text-sm font-semibold text-white transition disabled:opacity-50 ${
-                      side === 'BUY'
-                        ? 'bg-buy hover:bg-buy/90'
-                        : 'bg-sell hover:bg-sell/90'
-                    }`}
-                  >
-                    {orderMutation.isPending ? 'Placing…' : `${side} ${ticker}`}
-                  </button>
-                </form>
-              </div>
-
-              {/* Position */}
-              {asset.user_position.has_position && (
-                <div className="rounded-lg border border-edge bg-panel p-4">
-                  <h2 className="mb-3 text-[11px] uppercase tracking-wider text-faint">Your position</h2>
-                  <dl className="space-y-1.5">
-                    {[
-                      ['Quantity',  asset.user_position.quantity],
-                      ['Available', asset.user_position.available_quantity],
-                      asset.user_position.pending_quantity && parseFloat(asset.user_position.pending_quantity) > 0
-                        ? ['Pending', asset.user_position.pending_quantity]
-                        : null,
-                      asset.user_position.average_cost
-                        ? ['Avg cost', formatCurrency(asset.user_position.average_cost, asset.currency_code)]
-                        : null,
-                    ].filter(Boolean).map((item) => {
-                      const [k, v] = item as [string, string]
-                      return (
-                        <div key={k} className="flex justify-between text-xs">
-                          <dt className="text-faint">{k}</dt>
-                          <dd className="tabular-nums text-dim">{v}</dd>
+                      {orderType === 'LIMIT' && (
+                        <div>
+                          <label className="mb-1 block text-[11px] uppercase tracking-wider text-faint">
+                            Limit price ({asset.currency_code})
+                          </label>
+                          <input
+                            type="number" step="any" min="0.0001" placeholder="0.00"
+                            {...register('limit_price', {
+                              required: orderType === 'LIMIT' ? 'Required' : false,
+                              min: { value: 0.0001, message: 'Must be positive' },
+                            })}
+                            className={inputCls}
+                          />
+                          {errors.limit_price && <p className="mt-1 text-xs text-sell">{errors.limit_price.message}</p>}
                         </div>
-                      )
-                    })}
-                  </dl>
-                </div>
-              )}
+                      )}
 
-              {/* Wallet */}
-              {asset.user_wallet && (
-                <div className="rounded-lg border border-edge bg-panel p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h2 className="text-[11px] uppercase tracking-wider text-faint">
-                      {asset.user_wallet.currency_code} wallet
-                    </h2>
-                    <Link to={`/wallets/${asset.user_wallet.currency_code}`} className="text-[11px] text-accent hover:text-accent/80">
-                      View →
+                      {estimatedCost && (
+                        <div className="rounded border border-edge/50 bg-raised px-3 py-2 text-[11px] text-dim">
+                          Est. {side === 'BUY' ? 'cost' : 'proceeds'}:{' '}
+                          <span className="text-bright tabular-nums">{formatCurrency(estimatedCost, asset.currency_code)}</span>
+                          <span className="ml-1 text-faint">(excl. fees)</span>
+                        </div>
+                      )}
+
+                      {asset.user_wallet && (
+                        <p className="text-[11px] text-faint">
+                          Available:{' '}
+                          <span className="text-dim tabular-nums">
+                            {formatCurrency(asset.user_wallet.available_balance, asset.user_wallet.currency_code)}
+                          </span>
+                        </p>
+                      )}
+
+                      {orderError && <p className="text-xs text-sell">{orderError}</p>}
+                      {orderSuccess && <p className="text-xs text-buy">Order placed</p>}
+
+                      <button
+                        type="submit"
+                        disabled={orderMutation.isPending}
+                        className={`w-full rounded py-2.5 text-sm font-semibold text-white transition disabled:opacity-50 ${
+                          side === 'BUY'
+                            ? 'bg-buy hover:bg-buy/90'
+                            : 'bg-sell hover:bg-sell/90'
+                        }`}
+                      >
+                        {orderMutation.isPending ? 'Placing…' : `${side} ${ticker}`}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Position */}
+                  {asset.user_position.has_position && (
+                    <div className="rounded-lg border border-edge bg-panel p-4">
+                      <h2 className="mb-3 text-[11px] uppercase tracking-wider text-faint">Your position</h2>
+                      <dl className="space-y-1.5">
+                        {[
+                          ['Quantity',  asset.user_position.quantity],
+                          ['Available', asset.user_position.available_quantity],
+                          asset.user_position.pending_quantity && parseFloat(asset.user_position.pending_quantity) > 0
+                            ? ['Pending', asset.user_position.pending_quantity]
+                            : null,
+                          asset.user_position.average_cost
+                            ? ['Avg cost', formatCurrency(asset.user_position.average_cost, asset.currency_code)]
+                            : null,
+                        ].filter(Boolean).map((item) => {
+                          const [k, v] = item as [string, string]
+                          return (
+                            <div key={k} className="flex justify-between text-xs">
+                              <dt className="text-faint">{k}</dt>
+                              <dd className="tabular-nums text-dim">{v}</dd>
+                            </div>
+                          )
+                        })}
+                      </dl>
+                    </div>
+                  )}
+
+                  {/* Wallet */}
+                  {asset.user_wallet && (
+                    <div className="rounded-lg border border-edge bg-panel p-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <h2 className="text-[11px] uppercase tracking-wider text-faint">
+                          {asset.user_wallet.currency_code} wallet
+                        </h2>
+                        <Link to={`/wallets/${asset.user_wallet.currency_code}`} className="text-[11px] text-brand hover:text-brand/80">
+                          View →
+                        </Link>
+                      </div>
+                      <dl className="space-y-1">
+                        {[
+                          ['Balance',   formatCurrency(asset.user_wallet.balance,           asset.user_wallet.currency_code)],
+                          ['Available', formatCurrency(asset.user_wallet.available_balance,  asset.user_wallet.currency_code)],
+                        ].map(([k, v]) => (
+                          <div key={k} className="flex justify-between text-xs">
+                            <dt className="text-faint">{k}</dt>
+                            <dd className="tabular-nums text-dim">{v}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="rounded-lg border border-edge bg-panel p-6 text-center">
+                  <p className="mb-1 text-sm font-medium text-bright">Sign in to make trades</p>
+                  <p className="mb-5 text-xs text-faint">Create an account or log in to buy and sell {ticker}.</p>
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      to="/login"
+                      className="w-full rounded py-2 text-sm font-semibold text-white bg-brand hover:bg-brand/90 transition text-center"
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="w-full rounded py-2 text-sm font-medium text-dim border border-edge hover:border-dim hover:text-bright transition text-center"
+                    >
+                      Create an account
                     </Link>
                   </div>
-                  <dl className="space-y-1">
-                    {[
-                      ['Balance',   formatCurrency(asset.user_wallet.balance,           asset.user_wallet.currency_code)],
-                      ['Available', formatCurrency(asset.user_wallet.available_balance,  asset.user_wallet.currency_code)],
-                    ].map(([k, v]) => (
-                      <div key={k} className="flex justify-between text-xs">
-                        <dt className="text-faint">{k}</dt>
-                        <dd className="tabular-nums text-dim">{v}</dd>
-                      </div>
-                    ))}
-                  </dl>
                 </div>
               )}
             </div>

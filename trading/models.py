@@ -334,6 +334,12 @@ class PortfolioSnapshot(models.Model):
         default=Decimal('0'),
         help_text="Total cash across all wallets in base currency"
     )
+    total_portfolio_value = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=Decimal('0'),
+        help_text="total_value + cash_balance in base currency"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

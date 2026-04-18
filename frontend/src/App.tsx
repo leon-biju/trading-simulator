@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import NotFoundPage from '@/pages/NotFoundPage'
 import { AuthProvider } from '@/auth/AuthContext'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
@@ -11,8 +13,9 @@ const DashboardPage      = lazy(() => import('@/pages/DashboardPage'))
 const MarketOverviewPage = lazy(() => import('@/pages/MarketOverviewPage'))
 const ExchangeDetailPage = lazy(() => import('@/pages/ExchangeDetailPage'))
 const AssetDetailPage    = lazy(() => import('@/pages/AssetDetailPage'))
-const PortfolioPage      = lazy(() => import('@/pages/PortfolioPage'))
 const WalletDetailPage   = lazy(() => import('@/pages/WalletDetailPage'))
+const SettingsPage       = lazy(() => import('@/pages/SettingsPage'))
+const LeaderboardPage    = lazy(() => import('@/pages/LeaderboardPage'))
 
 function PageLoader() {
   return (
@@ -26,28 +29,29 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <TooltipProvider>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login"    element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
+            <Route path="/market" element={<MarketOverviewPage />} />
+            <Route path="/market/:exchangeCode" element={<ExchangeDetailPage />} />
+            <Route path="/market/:exchangeCode/:ticker" element={<AssetDetailPage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/market" element={<MarketOverviewPage />} />
-              <Route path="/market/:exchangeCode" element={<ExchangeDetailPage />} />
-              <Route path="/market/:exchangeCode/:ticker" element={<AssetDetailPage />} />
-              <Route path="/portfolio" element={<PortfolioPage />} />
               <Route path="/wallets/:currencyCode" element={<WalletDetailPage />} />
-              {/* Legacy redirects */}
-              <Route path="/orders" element={<Navigate to="/portfolio?tab=orders" replace />} />
-              <Route path="/trades" element={<Navigate to="/portfolio?tab=trades" replace />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
 
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
+        </TooltipProvider>
       </AuthProvider>
     </BrowserRouter>
   )

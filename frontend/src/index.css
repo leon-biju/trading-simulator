@@ -1,5 +1,9 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   /* Surfaces */
@@ -9,7 +13,7 @@
   --color-edge:   #1E2840;
 
   /* Brand accent — cyan */
-  --color-accent: #06B6D4;
+  --color-brand: #06B6D4;
 
   /* Trading colours */
   --color-buy:  #10B981;
@@ -25,8 +29,41 @@
   --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
 }
 
+/* shadcn/ui CSS variables — mapped to our dark design system */
 :root {
   color-scheme: dark;
+  --background:   oklch(0.082 0.018 243);   /* #080D14 */
+  --foreground:   oklch(0.912 0.012 222);   /* #E2E8F0 */
+  --card:         oklch(0.112 0.022 240);   /* #0F1520 */
+  --card-foreground:   oklch(0.912 0.012 222);
+  --popover:      oklch(0.112 0.022 240);
+  --popover-foreground: oklch(0.912 0.012 222);
+  --primary:      oklch(0.694 0.149 200);   /* #06B6D4 cyan */
+  --primary-foreground: oklch(0.082 0.018 243);
+  --secondary:    oklch(0.155 0.028 240);   /* #172030 */
+  --secondary-foreground: oklch(0.912 0.012 222);
+  --muted:        oklch(0.155 0.028 240);
+  --muted-foreground: oklch(0.645 0.018 230); /* #94A3B8 */
+  --accent:       oklch(0.21 0.04 238);     /* #1E2840 */
+  --accent-foreground: oklch(0.912 0.012 222);
+  --destructive:  oklch(0.627 0.203 29);    /* #EF4444 */
+  --border:       oklch(0.21 0.04 238);     /* #1E2840 */
+  --input:        oklch(0.21 0.04 238);
+  --ring:         oklch(0.694 0.149 200);   /* #06B6D4 */
+  --chart-1:      oklch(0.694 0.149 200);   /* cyan */
+  --chart-2:      oklch(0.696 0.149 162);   /* #10B981 green */
+  --chart-3:      oklch(0.645 0.018 230);
+  --chart-4:      oklch(0.439 0.025 238);
+  --chart-5:      oklch(0.627 0.203 29);    /* red */
+  --radius:       0.5rem;
+  --sidebar:      oklch(0.112 0.022 240);   /* #0F1520 */
+  --sidebar-foreground: oklch(0.912 0.012 222);
+  --sidebar-primary: oklch(0.694 0.149 200);
+  --sidebar-primary-foreground: oklch(0.082 0.018 243);
+  --sidebar-accent: oklch(0.155 0.028 240);
+  --sidebar-accent-foreground: oklch(0.912 0.012 222);
+  --sidebar-border: oklch(0.21 0.04 238);
+  --sidebar-ring:  oklch(0.694 0.149 200);
 }
 
 body {
@@ -63,4 +100,59 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+@theme inline {
+  --font-heading:   var(--font-sans);
+  --color-sidebar-ring:   var(--sidebar-ring);
+  --color-sidebar-border:   var(--sidebar-border);
+  --color-sidebar-accent-foreground:   var(--sidebar-accent-foreground);
+  --color-sidebar-accent:   var(--sidebar-accent);
+  --color-sidebar-primary-foreground:   var(--sidebar-primary-foreground);
+  --color-sidebar-primary:   var(--sidebar-primary);
+  --color-sidebar-foreground:   var(--sidebar-foreground);
+  --color-sidebar:   var(--sidebar);
+  --color-chart-5:   var(--chart-5);
+  --color-chart-4:   var(--chart-4);
+  --color-chart-3:   var(--chart-3);
+  --color-chart-2:   var(--chart-2);
+  --color-chart-1:   var(--chart-1);
+  --color-ring:   var(--ring);
+  --color-input:   var(--input);
+  --color-border:   var(--border);
+  --color-destructive:   var(--destructive);
+  --color-accent-foreground:   var(--accent-foreground);
+  --color-accent:   var(--accent);
+  --color-muted-foreground:   var(--muted-foreground);
+  --color-muted:   var(--muted);
+  --color-secondary-foreground:   var(--secondary-foreground);
+  --color-secondary:   var(--secondary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-primary:   var(--primary);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-popover:   var(--popover);
+  --color-card-foreground:   var(--card-foreground);
+  --color-card:   var(--card);
+  --color-foreground:   var(--foreground);
+  --color-background:   var(--background);
+  --radius-sm:   calc(var(--radius) * 0.6);
+  --radius-md:   calc(var(--radius) * 0.8);
+  --radius-lg:   var(--radius);
+  --radius-xl:   calc(var(--radius) * 1.4);
+  --radius-2xl:   calc(var(--radius) * 1.8);
+  --radius-3xl:   calc(var(--radius) * 2.2);
+  --radius-4xl:   calc(var(--radius) * 2.6);
+}
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

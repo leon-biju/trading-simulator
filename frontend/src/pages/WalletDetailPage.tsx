@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -15,6 +16,7 @@ interface AddFundsForm {
 
 export default function WalletDetailPage() {
   const { currencyCode } = useParams<{ currencyCode: string }>()
+  usePageTitle(currencyCode ? `${currencyCode} Wallet` : 'Wallet')
   const [page, setPage] = useState(1)
   const [serverError, setServerError] = useState<string | null>(null)
   const qc = useQueryClient()
@@ -38,21 +40,48 @@ export default function WalletDetailPage() {
     staleTime: 10_000,
   })
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<AddFundsForm>()
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<AddFundsForm>()
   const fromCurrency = watch('from_currency')
   const toAmount = watch('to_amount')
 
-  // Estimate how much will be deducted from the source wallet
+  // Max to_amount the user can request given the from-wallet's available balance
+  const maxToAmount = (() => {
+    if (!fxRates || !fromCurrency || !allWallets) return null
+    const fromWallet = allWallets.find(w => w.currency_code === fromCurrency)
+    if (!fromWallet) return null
+    const available = parseFloat(fromWallet.available_balance)
+    const fromEntry = fxRates.find(r => r.to_currency === fromCurrency)
+    const toEntry   = fxRates.find(r => r.to_currency === currencyCode)
+    const fromBaseRate = fromEntry ? parseFloat(fromEntry.rate) : 1.0
+    const toBaseRate   = toEntry   ? parseFloat(toEntry.rate)   : 1.0
+    return Math.floor(available * toBaseRate / fromBaseRate * 100) / 100
+  })()
+
+  const clampToAmount = () => {
+    if (maxToAmount === null || !toAmount) return
+    const val = parseFloat(toAmount)
+    if (!isNaN(val) && val > maxToAmount) setValue('to_amount', maxToAmount.toFixed(2))
+  }
+
+  // Estimate how much will be deducted from the source wallet.
+  // All stored rates are base→target (e.g. USD→X), so cross-rates are toRate/fromRate,
+  // matching Django's get_fx_rate logic. Base currency itself has no entry (implicit rate = 1).
   const previewDeduction = (() => {
     if (!fxRates || !fromCurrency || !toAmount || isNaN(parseFloat(toAmount))) return null
     const amt = parseFloat(toAmount)
-    // Direct rate: fromCurrency → currentWallet (e.g. USD→EUR = 0.9 means 1 USD = 0.9 EUR)
-    const direct = fxRates.find(r => r.from_currency === fromCurrency && r.to_currency === currencyCode)
-    if (direct) return (amt / parseFloat(direct.rate)).toFixed(4)
-    // Inverse rate: currentWallet → fromCurrency (e.g. EUR→USD = 1.11 means 1 EUR = 1.11 USD)
-    const inverse = fxRates.find(r => r.from_currency === currencyCode && r.to_currency === fromCurrency)
-    if (inverse) return (amt * parseFloat(inverse.rate)).toFixed(4)
-    return null
+    // When clamped to max, skip the round-trip and return the exact available balance
+    // to avoid a floor→round discrepancy with what the dropdown shows.
+    if (maxToAmount !== null && toAmount === maxToAmount.toFixed(2)) {
+      const fromWallet = allWallets?.find(w => w.currency_code === fromCurrency)
+      if (fromWallet) return parseFloat(fromWallet.available_balance).toFixed(2)
+    }
+    const fromEntry = fxRates.find(r => r.to_currency === fromCurrency)
+    const toEntry   = fxRates.find(r => r.to_currency === currencyCode)
+    const fromBaseRate = fromEntry ? parseFloat(fromEntry.rate) : 1.0
+    const toBaseRate   = toEntry   ? parseFloat(toEntry.rate)   : 1.0
+    // from_amount = to_amount / (toBaseRate / fromBaseRate)
+    const raw = amt * fromBaseRate / toBaseRate
+    return (Math.round(raw * 100) / 100).toFixed(2)
   })()
 
   const transferMutation = useMutation({
@@ -79,7 +108,7 @@ export default function WalletDetailPage() {
 
   const otherWallets = allWallets?.filter(w => w.currency_code !== currencyCode) ?? []
 
-  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
+  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-brand focus:outline-none transition-colors'
 
   return (
     <PageWrapper>
@@ -141,6 +170,7 @@ export default function WalletDetailPage() {
                         required: 'Amount is required',
                         min: { value: 0.01, message: 'Must be positive' },
                       })}
+                      onBlur={clampToAmount}
                       className={inputCls}
                     />
                     {errors.to_amount && <p className="mt-1 text-xs text-sell">{errors.to_amount.message}</p>}
@@ -148,8 +178,8 @@ export default function WalletDetailPage() {
 
                   {previewDeduction && fromCurrency && (
                     <div className="rounded border border-edge/50 bg-raised px-3 py-2 text-[11px] text-dim">
-                      ≈ <span className="tabular-nums text-bright">{formatCurrency(previewDeduction, fromCurrency, 4)}</span>
-                      <span className="ml-1">deducted from {fromCurrency}</span>
+                      ≈ <span className="tabular-nums text-bright">{formatCurrency(previewDeduction, fromCurrency)}</span>
+                      <span className="ml-1">deducted from {fromCurrency} wallet</span>
                     </div>
                   )}
 
@@ -158,7 +188,7 @@ export default function WalletDetailPage() {
                   <button
                     type="submit"
                     disabled={transferMutation.isPending}
-                    className="w-full rounded bg-accent py-2 text-sm font-medium text-base transition hover:bg-accent/90 disabled:opacity-50"
+                    className="w-full rounded bg-brand py-2 text-sm font-medium text-base transition hover:bg-brand/90 disabled:opacity-50"
                   >
                     {transferMutation.isPending ? 'Adding…' : 'Add funds'}
                   </button>

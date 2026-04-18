@@ -1,11 +1,20 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { useForm, Controller } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/auth/AuthContext'
 import { registerUser } from '@/api/auth'
 import { AxiosError } from 'axios'
 import axios from 'axios'
+import PageWrapper from '@/components/layout/PageWrapper'
+import AuthShell from '@/components/layout/AuthShell'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 interface RegisterForm {
   username: string
@@ -16,9 +25,12 @@ interface RegisterForm {
 }
 
 export default function RegisterPage() {
-  const { isAuthenticated, loginWithToken } = useAuth()
+  usePageTitle('Register')
+  const { isAuthenticated, loginDirect } = useAuth()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showPassword2, setShowPassword2] = useState(false)
 
   const { data: fxRates } = useQuery({
     queryKey: ['fx-rates-public'],
@@ -37,19 +49,19 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<RegisterForm>({ defaultValues: { home_currency: 'GBP' } })
 
   if (isAuthenticated) {
-    navigate('/dashboard', { replace: true })
-    return null
+    return <Navigate to="/dashboard" replace />
   }
 
   async function onSubmit(data: RegisterForm) {
     setServerError('')
     try {
-      const result = await registerUser(data)
-      loginWithToken(result.access, result.user)
+      const user = await registerUser(data)
+      loginDirect(user)
       navigate('/dashboard', { replace: true })
     } catch (err) {
       if (err instanceof AxiosError && err.response?.data) {
@@ -61,78 +73,138 @@ export default function RegisterPage() {
     }
   }
 
-  const inputCls = 'w-full rounded border border-edge bg-raised px-3 py-2 text-sm text-bright placeholder-faint focus:border-accent focus:outline-none transition-colors'
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-base px-4 py-8">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-lg font-bold text-base">T</div>
-          <h1 className="text-xl font-semibold text-bright">Create account</h1>
-          <p className="mt-1 text-sm text-faint">Start with £100,000 in simulated funds</p>
+    <PageWrapper>
+      <AuthShell>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-bright">Create account</h1>
+        <p className="mt-1 text-sm text-faint">Start with simulated funds, risk-free</p>
+      </div>
+
+      {serverError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="size-4" />
+          <AlertDescription>{serverError}</AlertDescription>
+        </Alert>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="username" className="text-dim">Username</Label>
+          <Input
+            id="username"
+            {...register('username', { required: 'Required' })}
+            autoComplete="username"
+            aria-invalid={!!errors.username}
+            className="bg-raised border-edge focus-visible:ring-brand/50"
+          />
+          {errors.username && <p className="text-xs text-sell">{errors.username.message}</p>}
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-lg border border-edge bg-panel p-6">
-          {serverError && (
-            <p className="rounded border border-sell/20 bg-sell/8 px-3 py-2 text-sm text-sell">
-              {serverError}
-            </p>
-          )}
+        <div className="space-y-1.5">
+          <Label htmlFor="email" className="text-dim">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            {...register('email', { required: 'Required' })}
+            autoComplete="email"
+            aria-invalid={!!errors.email}
+            className="bg-raised border-edge focus-visible:ring-brand/50"
+          />
+          {errors.email && <p className="text-xs text-sell">{errors.email.message}</p>}
+        </div>
 
-          <div>
-            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Username</label>
-            <input {...register('username', { required: 'Required' })} className={inputCls} autoComplete="username" />
-            {errors.username && <p className="mt-1 text-xs text-sell">{errors.username.message}</p>}
-          </div>
+        <div className="space-y-1.5">
+          <Label className="text-dim">Home currency</Label>
+          <Controller
+            control={control}
+            name="home_currency"
+            rules={{ required: 'Required' }}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger className="bg-raised border-edge focus:ring-brand/50">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currencies.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.home_currency && <p className="text-xs text-sell">{errors.home_currency.message}</p>}
+        </div>
 
-          <div>
-            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Email</label>
-            <input {...register('email', { required: 'Required' })} type="email" className={inputCls} autoComplete="email" />
-            {errors.email && <p className="mt-1 text-xs text-sell">{errors.email.message}</p>}
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Home currency</label>
-            <select {...register('home_currency', { required: 'Required' })} className={inputCls}>
-              {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Password</label>
-            <input
+        <div className="space-y-1.5">
+          <Label htmlFor="password" className="text-dim">Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
               {...register('password', { required: 'Required', minLength: { value: 8, message: 'Min 8 characters' } })}
-              type="password" className={inputCls} autoComplete="new-password"
+              autoComplete="new-password"
+              aria-invalid={!!errors.password}
+              className="bg-raised border-edge focus-visible:ring-brand/50 pr-10"
             />
-            {errors.password && <p className="mt-1 text-xs text-sell">{errors.password.message}</p>}
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-faint hover:text-dim transition-colors"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
           </div>
+          {errors.password && <p className="text-xs text-sell">{errors.password.message}</p>}
+        </div>
 
-          <div>
-            <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-faint">Confirm password</label>
-            <input
+        <div className="space-y-1.5">
+          <Label htmlFor="password2" className="text-dim">Confirm password</Label>
+          <div className="relative">
+            <Input
+              id="password2"
+              type={showPassword2 ? 'text' : 'password'}
               {...register('password2', {
                 required: 'Required',
                 validate: (v) => v === watch('password') || 'Passwords do not match',
               })}
-              type="password" className={inputCls} autoComplete="new-password"
+              autoComplete="new-password"
+              aria-invalid={!!errors.password2}
+              className="bg-raised border-edge focus-visible:ring-brand/50 pr-10"
             />
-            {errors.password2 && <p className="mt-1 text-xs text-sell">{errors.password2.message}</p>}
+            <button
+              type="button"
+              onClick={() => setShowPassword2(v => !v)}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-faint hover:text-dim transition-colors"
+              tabIndex={-1}
+            >
+              {showPassword2 ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
           </div>
+          {errors.password2 && <p className="text-xs text-sell">{errors.password2.message}</p>}
+        </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded bg-accent px-4 py-2.5 text-sm font-medium text-base transition hover:bg-accent/90 disabled:opacity-50"
-          >
-            {isSubmitting ? 'Creating account…' : 'Create account'}
-          </button>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full"
+          size="lg"
+        >
+          {isSubmitting ? 'Creating account…' : 'Create account'}
+        </Button>
+      </form>
 
-          <p className="text-center text-[11px] text-faint">
-            Already have an account?{' '}
-            <Link to="/login" className="text-accent hover:text-accent/80 transition-colors">Sign in</Link>
-          </p>
-        </form>
-      </div>
-    </div>
+      <p className="mt-6 text-center text-sm text-faint">
+        Already have an account?{' '}
+        <Link
+          to="/login"
+          className="font-medium text-brand hover:text-brand/80 transition-colors"
+        >
+          Sign in
+        </Link>
+      </p>
+      </AuthShell>
+    </PageWrapper>
   )
 }
