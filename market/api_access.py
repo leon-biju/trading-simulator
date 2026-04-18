@@ -11,7 +11,7 @@ def get_currency_layer_api_data() -> dict[str, Any] | None:
     base_url = "http://api.currencylayer.com/live"
     api_key = os.getenv('CURRENCY_LAYER_API_KEY')
     if not api_key:
-        print("Currency Layer API key not found in environment variables.")
+        logging.error("Currency Layer API key not found in environment variables.")
         return None
 
     base_currency = Currency.objects.get(is_base=True)
@@ -28,12 +28,12 @@ def get_currency_layer_api_data() -> dict[str, Any] | None:
     response = requests.get(base_url, params=params)
 
     if response.status_code != 200:
-        print(f"Failed to fetch data from Currency Layer API. Status code: {response.status_code}")
+        logging.error(f"Failed to fetch data from Currency Layer API. Status code: {response.status_code}")
         return None
     
     data: dict[str, Any] = response.json()
     if not data.get('success'):
-        print(f"Currency Layer API error: {data.get('error')}")
+        logging.error(f"Currency Layer API error: {data.get('error')}")
         return None
     else:
         return data
