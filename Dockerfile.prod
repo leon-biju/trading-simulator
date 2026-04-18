@@ -24,9 +24,11 @@ COPY . .
 # Copy built React SPA into place for collectstatic
 COPY --from=frontend-builder /frontend/dist /code/frontend/dist
 
-RUN python manage.py collectstatic --noinput
-
 RUN chown -R appuser:appuser /code
 USER appuser
 
+COPY --chown=appuser entrypoint.prod.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]
