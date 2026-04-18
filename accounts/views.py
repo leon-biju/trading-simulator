@@ -170,7 +170,7 @@ class PasswordResetVerifyView(APIView):
         try:
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
-            return Response({'error': 'Invalid code.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         record = (
             PasswordResetOTP.objects
