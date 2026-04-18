@@ -10,6 +10,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
+from config.ratelimit import client_ip_key
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -23,7 +24,7 @@ from trading.models import PortfolioSnapshot
 User = get_user_model()
 
 
-@method_decorator(ratelimit(key='ip', rate='10/m', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='10/m', block=True), name='post')
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -45,7 +46,7 @@ class LogoutView(APIView):
         return Response({'detail': 'Logged out'})
 
 
-@method_decorator(ratelimit(key='ip', rate='5/h', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='5/h', block=True), name='post')
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
@@ -122,7 +123,7 @@ class PasswordChangeView(APIView):
         return Response({'detail': 'Password changed.'}, status=status.HTTP_200_OK)
 
 
-@method_decorator(ratelimit(key='ip', rate='5/h', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='5/h', block=True), name='post')
 class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
 
@@ -158,7 +159,7 @@ class PasswordResetRequestView(APIView):
         return response
 
 
-@method_decorator(ratelimit(key='ip', rate='10/h', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='10/h', block=True), name='post')
 class PasswordResetVerifyView(APIView):
     permission_classes = [AllowAny]
 
@@ -184,7 +185,7 @@ class PasswordResetVerifyView(APIView):
         return Response({'detail': 'Code verified.'}, status=status.HTTP_200_OK)
 
 
-@method_decorator(ratelimit(key='ip', rate='10/h', block=True), name='post')
+@method_decorator(ratelimit(key=client_ip_key, rate='10/h', block=True), name='post')
 class PasswordResetConfirmView(APIView):
     permission_classes = [AllowAny]
 
