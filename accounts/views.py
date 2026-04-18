@@ -179,7 +179,12 @@ class PasswordResetVerifyView(APIView):
             .first()
         )
 
-        if not record or not record.is_valid() or not check_password(otp, record.otp_hash):
+        if not record or not record.is_valid():
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not check_password(otp, record.otp_hash):
+            record.failed_attempts += 1
+            record.save(update_fields=['failed_attempts'])
             return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'detail': 'Code verified.'}, status=status.HTTP_200_OK)
@@ -207,7 +212,12 @@ class PasswordResetConfirmView(APIView):
             .first()
         )
 
-        if not record or not record.is_valid() or not check_password(otp, record.otp_hash):
+        if not record or not record.is_valid():
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not check_password(otp, record.otp_hash):
+            record.failed_attempts += 1
+            record.save(update_fields=['failed_attempts'])
             return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if new_password != new_password2:
