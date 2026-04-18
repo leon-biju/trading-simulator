@@ -15,6 +15,7 @@ const ExchangeDetailPage = lazy(() => import('@/pages/ExchangeDetailPage'))
 const AssetDetailPage    = lazy(() => import('@/pages/AssetDetailPage'))
 const WalletDetailPage   = lazy(() => import('@/pages/WalletDetailPage'))
 const SettingsPage       = lazy(() => import('@/pages/SettingsPage'))
+const LeaderboardPage    = lazy(() => import('@/pages/LeaderboardPage'))
 
 function PageLoader() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/market" element={<MarketOverviewPage />} />
             <Route path="/market/:exchangeCode" element={<ExchangeDetailPage />} />
             <Route path="/market/:exchangeCode/:ticker" element={<AssetDetailPage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

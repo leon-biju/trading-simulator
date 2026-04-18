@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, TrendingUp, LogOut, ChevronsUpDown, LogIn, UserPlus, UserRound, Settings } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Trophy, LogOut, ChevronsUpDown, LogIn, UserPlus, UserRound, Settings } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import {
   Sidebar,
@@ -21,12 +21,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const ANON_NAV = [
-  { to: '/market', label: 'Markets', icon: TrendingUp },
+  { to: '/market',      label: 'Markets',     icon: TrendingUp },
+  { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
 ]
 
 const APP_NAV = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/market',    label: 'Markets',   icon: TrendingUp },
+  { to: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
+  { to: '/market',      label: 'Markets',     icon: TrendingUp },
+  { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
 ]
 
 export default function AppSidebar() {
