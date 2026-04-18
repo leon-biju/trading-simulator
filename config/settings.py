@@ -180,6 +180,11 @@ CACHES = {
 
 RATELIMIT_USE_CACHE = 'default'
 
+# django-ipware: walk XFF chain right-to-left, skipping trusted proxy IPs.
+# When adding Cloudflare, append their published IP ranges to this list.
+IPWARE_META_PRECEDENCE_ORDER = ('HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP')
+IPWARE_TRUSTED_PROXY_LIST = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
+
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", 'redis://redis:6379/0')
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", 'redis://redis:6379/0')
