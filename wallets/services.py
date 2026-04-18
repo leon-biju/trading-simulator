@@ -66,6 +66,10 @@ def perform_fx_transfer(
     """
     if from_wallet_currency_code == to_wallet_currency_code:
         raise ValueError("Cannot perform FX transfer between same currency wallets")
+    if from_amount is not None and from_amount <= 0:
+        raise ValueError("from_amount must be positive")
+    if to_amount is not None and to_amount <= 0:
+        raise ValueError("to_amount must be positive")
     from_amount, to_amount = get_fx_conversion(
         from_currency_code=from_wallet_currency_code,
         to_currency_code=to_wallet_currency_code,
