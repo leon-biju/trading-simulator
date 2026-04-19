@@ -18,9 +18,12 @@ import io
 import time
 from decimal import Decimal
 
+import re
+
 import pandas as pd
 import requests
 import yfinance as yf
+from bs4 import BeautifulSoup
 
 _WIKI_HEADERS = {
     "User-Agent": (
@@ -563,12 +566,28 @@ class Command(BaseCommand):
         )
 
     def _scrape_nikkei225(self) -> list[tuple[str, str]]:
-        return self._scrape_generic(
+        # Wikipedia lists Nikkei 225 constituents as bullet points (not a table),
+        # formatted as "Company Name (TYO: XXXX)" — parse with BeautifulSoup.
+        resp = requests.get(
             "https://en.wikipedia.org/wiki/Nikkei_225",
-            ticker_cols=("code", "ticker", "symbol"),
-            name_cols=("company", "name", "security"),
-            min_rows=100,
+            headers=_WIKI_HEADERS,
+            timeout=30,
         )
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        results: list[tuple[str, str]] = []
+        pattern = re.compile(r"TYO\s*:\s*(\d{4})")
+        for li in soup.find_all("li"):
+            text = li.get_text(" ", strip=True)
+            m = pattern.search(text)
+            if not m:
+                continue
+            code = m.group(1)
+            name = re.sub(r"\s*\(.*?\)\s*$", "", text).strip()
+            results.append((code, name))
+        if len(results) < 100:
+            raise ValueError(f"Only {len(results)} Nikkei 225 tickers found — page structure may have changed")
+        return results
 
     def _scrape_hangseng(self) -> list[tuple[str, str]]:
         rows = self._scrape_generic(
