@@ -14,10 +14,21 @@ Flow:
 
 import concurrent.futures
 import datetime
+import io
+import time
 from decimal import Decimal
 
 import pandas as pd
+import requests
 import yfinance as yf
+
+_WIKI_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0"
+    ),
+    "Accept": "text/html,application/xhtml+xml",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 from django.core.management.base import BaseCommand, CommandError
 
 from market.api_access import get_currency_layer_api_data
@@ -167,6 +178,30 @@ INDICES: dict[str, dict] = {
     },
 }
 
+# All currencies defined across every index — used to allow any as base currency
+_ALL_CURRENCIES: dict[str, str] = {
+    conf["currency"][0]: conf["currency"][1] for conf in INDICES.values()
+}
+
+# Suffixes that unambiguously identify an exchange in a yfinance ticker
+_KNOWN_YF_SUFFIXES = {
+    ".L", ".PA", ".AS", ".SW", ".HK", ".T", ".TO", ".AX",
+    ".DE", ".MI", ".MC", ".BR", ".LS", ".CO", ".OL", ".ST", ".HE",
+}
+
+
+def _build_yf_ticker(db_ticker: str, yf_suffix: str) -> str:
+    """Return the correct yfinance ticker, avoiding double-suffix."""
+    if not yf_suffix:
+        return db_ticker.replace(".", "-")
+    if db_ticker.endswith(yf_suffix):
+        return db_ticker
+    # Ticker already carries a different known exchange suffix (e.g. MT.AS in CAC40)
+    dot_part = db_ticker[db_ticker.rfind("."):] if "." in db_ticker else ""
+    if dot_part in _KNOWN_YF_SUFFIXES:
+        return db_ticker
+    return db_ticker.replace(".", "-") + yf_suffix
+
 _YF_EXCHANGE_TO_DB: dict[str, str] = {
     "NMS": "NASDAQ",
     "NGM": "NASDAQ",
@@ -221,8 +256,23 @@ class Command(BaseCommand):
             action="store_true",
             help="Run even if market data already exists.",
         )
+        parser.add_argument(
+            "--tickers",
+            nargs="+",
+            metavar="TICKER",
+            help=(
+                "Seed prices only for these DB ticker symbols (must already exist as assets). "
+                "Skips all scraping, exchange, currency, and asset steps. "
+                "E.g. --tickers MT.AS YAN.AX XYX.AX"
+            ),
+        )
 
     def handle(self, *args, **options):  # type: ignore[no-untyped-def]
+        # ── Targeted price-only mode ──────────────────────────────────────────
+        if options.get("tickers"):
+            self._handle_tickers(options)
+            return
+
         if self._has_existing_data() and not options["force"]:
             self.stdout.write(
                 self.style.WARNING("Market data already exists. Use --force to continue.")
@@ -266,7 +316,7 @@ class Command(BaseCommand):
                     "name": name,
                     "exchange_code": conf["default_exchange"],
                     "currency_code": conf["currency"][0],
-                    "yf_ticker": db_ticker.replace(".", "-") + conf["yf_suffix"],
+                    "yf_ticker": _build_yf_ticker(db_ticker, conf["yf_suffix"]),
                 })
             self.stdout.write(self.style.SUCCESS(f"  {conf['name']}: {len(rows)} tickers scraped."))
 
@@ -294,6 +344,50 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("Setup complete."))
         self.stdout.write("Run 'python manage.py createsuperuser' to create an admin account.")
+
+    def _handle_tickers(self, options: dict) -> None:
+        requested = options["tickers"]
+        assets: dict[str, Asset] = {a.ticker: a for a in Asset.objects.filter(ticker__in=requested)}
+
+        # Also accept yfinance-style tickers (e.g. "YAN.AX") by stripping known suffixes
+        for raw in set(requested) - set(assets):
+            for suffix in _KNOWN_YF_SUFFIXES:
+                if raw.endswith(suffix):
+                    base = raw[: -len(suffix)]
+                    asset = Asset.objects.filter(ticker=base).first()
+                    if asset:
+                        assets[raw] = asset
+                        break
+
+        missing = set(requested) - set(assets)
+        if missing:
+            self.stdout.write(self.style.WARNING(f"Not found in DB (skipping): {', '.join(sorted(missing))}"))
+        if not assets:
+            raise CommandError("None of the requested tickers exist as assets.")
+
+        # Build yf_ticker for each asset from its exchange suffix
+        suffix_map: dict[str, str] = {}
+        for conf in INDICES.values():
+            for ex in conf["exchanges"]:
+                suffix_map[ex["code"]] = conf["yf_suffix"]
+
+        ticker_data = {}
+        for db_ticker, asset in assets.items():
+            yf_suffix = suffix_map.get(asset.exchange.code, "")
+            ticker_data[db_ticker] = {
+                "yf_ticker": _build_yf_ticker(db_ticker, yf_suffix),
+                "exchange_code": asset.exchange.code,
+                "currency_code": asset.currency.code,
+                "name": asset.name,
+            }
+            self.stdout.write(f"  {db_ticker} → {ticker_data[db_ticker]['yf_ticker']}")
+
+        if options.get("reset"):
+            deleted, _ = PriceCandle.objects.filter(asset__in=list(assets.values())).delete()
+            self.stdout.write(self.style.WARNING(f"Cleared {deleted} existing candles."))
+
+        self._seed_prices(assets, ticker_data, options["days"], options["intraday_days"])
+        self.stdout.write(self.style.SUCCESS("Done."))
 
     # ── Existence check ───────────────────────────────────────────────────────
 
@@ -374,19 +468,26 @@ class Command(BaseCommand):
         return result
 
     def _setup_currencies(self, currency_defs: list[tuple[str, str]]) -> Currency:
-        codes = [c for c, _ in currency_defs]
-        self.stdout.write(f"Currencies from selected indices: {', '.join(codes)}")
-        default = "USD" if "USD" in codes else codes[0]
+        selected_codes = [c for c, _ in currency_defs]
+        all_codes = list(_ALL_CURRENCIES.keys())
+        self.stdout.write(f"Currencies from selected indices: {', '.join(selected_codes)}")
+        self.stdout.write(f"Any of these may be used as base: {', '.join(all_codes)}")
+        default = "USD" if "USD" in all_codes else selected_codes[0]
 
         while True:
             raw = input(f"Base currency [{default}]: ").strip().upper()
             base_code = raw or default
-            if base_code in codes:
+            if base_code in all_codes:
                 break
-            self.stdout.write(self.style.ERROR(f"Choose from: {', '.join(codes)}"))
+            self.stdout.write(self.style.ERROR(f"Choose from: {', '.join(all_codes)}"))
+
+        # Merge base currency into the set to create (may not be in selected indices)
+        currency_map = dict(currency_defs)
+        if base_code not in currency_map:
+            currency_map[base_code] = _ALL_CURRENCIES[base_code]
 
         base: Currency | None = None
-        for code, name in currency_defs:
+        for code, name in currency_map.items():
             obj, _ = Currency.objects.update_or_create(
                 code=code,
                 defaults={"name": name, "is_base": code == base_code},
@@ -424,6 +525,11 @@ class Command(BaseCommand):
 
     # ── Wikipedia scrapers ────────────────────────────────────────────────────
 
+    def _fetch_wiki_tables(self, url: str, **kwargs) -> list[pd.DataFrame]:
+        resp = requests.get(url, headers=_WIKI_HEADERS, timeout=30)
+        resp.raise_for_status()
+        return pd.read_html(io.StringIO(resp.text), **kwargs)
+
     def _scrape_index(self, key: str) -> list[tuple[str, str]]:
         try:
             return {
@@ -441,7 +547,7 @@ class Command(BaseCommand):
             return []
 
     def _scrape_sp500(self) -> list[tuple[str, str]]:
-        tables = pd.read_html(
+        tables = self._fetch_wiki_tables(
             "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
             attrs={"id": "constituents"},
         )
@@ -473,10 +579,12 @@ class Command(BaseCommand):
         )
         result = []
         for ticker, name in rows:
+            # Wikipedia may return "SEHK: 1234" — strip the exchange prefix
+            clean = ticker.split(":")[-1].strip()
             try:
-                result.append((str(int(float(ticker))).zfill(4), name))
+                result.append((str(int(float(clean))).zfill(4), name))
             except ValueError:
-                result.append((ticker, name))
+                result.append((clean, name))
         return result
 
     def _scrape_cac40(self) -> list[tuple[str, str]]:
@@ -518,7 +626,7 @@ class Command(BaseCommand):
         name_cols: tuple[str, ...],
         min_rows: int = 10,
     ) -> list[tuple[str, str]]:
-        for df in pd.read_html(url):
+        for df in self._fetch_wiki_tables(url):
             if len(df) < min_rows:
                 continue
             flat = {str(c).lower().strip(): c for c in df.columns}
@@ -609,31 +717,53 @@ class Command(BaseCommand):
             candles: list[PriceCandle] = []
 
             for interval_minutes, start, iv_str in intervals:
-                try:
-                    df = yf.download(
-                        yf_tickers,
-                        start=start,
-                        end=now,
-                        interval=iv_str,
-                        group_by="ticker",
-                        auto_adjust=True,
-                        progress=False,
-                        threads=True,
+                df = self._download_with_retry(yf_tickers, start, now, iv_str)
+                if df is None or df.empty:
+                    continue
+                for _, yf_ticker, asset in batch:
+                    candles.extend(
+                        self._candles_from_df(df, yf_ticker, asset, len(yf_tickers), interval_minutes)
                     )
-                    if df.empty:
-                        continue
-                    for _, yf_ticker, asset in batch:
-                        candles.extend(
-                            self._candles_from_df(df, yf_ticker, asset, len(yf_tickers), interval_minutes)
-                        )
-                except Exception as exc:
-                    self.stdout.write(self.style.WARNING(f"  {iv_str} failed: {exc}"))
 
             PriceCandle.objects.bulk_create(candles, ignore_conflicts=True)
             total += len(candles)
             self.stdout.write(f"  {len(candles)} candles saved.")
 
         self.stdout.write(self.style.SUCCESS(f"Total candles seeded: {total}"))
+
+    def _download_with_retry(
+        self,
+        tickers: list[str],
+        start: datetime.datetime,
+        end: datetime.datetime,
+        interval: str,
+        retries: int = 3,
+    ) -> "pd.DataFrame | None":
+        for attempt in range(1, retries + 1):
+            try:
+                return yf.download(
+                    tickers,
+                    start=start,
+                    end=end,
+                    interval=interval,
+                    group_by="ticker",
+                    auto_adjust=True,
+                    progress=False,
+                    threads=True,
+                )
+            except Exception as exc:
+                msg = str(exc)
+                if "RateLimit" in msg or "Too Many Requests" in msg:
+                    wait = 30 * attempt
+                    self.stdout.write(self.style.WARNING(
+                        f"  {interval} rate limited (attempt {attempt}/{retries}), waiting {wait}s..."
+                    ))
+                    time.sleep(wait)
+                else:
+                    self.stdout.write(self.style.WARNING(f"  {interval} failed: {exc}"))
+                    return None
+        self.stdout.write(self.style.WARNING(f"  {interval} gave up after {retries} attempts."))
+        return None
 
     def _candles_from_df(
         self,
