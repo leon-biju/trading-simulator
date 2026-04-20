@@ -709,6 +709,32 @@ class Command(BaseCommand):
 
     # ── Price seeding ─────────────────────────────────────────────────────────
 
+    def _get_price_divisors(self, yf_tickers: list[str], workers: int = 20) -> dict[str, int]:
+        """Return a divisor for each ticker: 100 if yfinance reports GBp/GBX, else 1."""
+        lse_tickers = [t for t in yf_tickers if t.endswith(".L")]
+        if not lse_tickers:
+            return {}
+
+        divisors: dict[str, int] = {}
+
+        def fetch(ticker: str) -> tuple[str, int]:
+            try:
+                currency = yf.Ticker(ticker).fast_info.currency
+                return ticker, 100 if currency in ("GBp", "GBX") else 1
+            except Exception:
+                return ticker, 1
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            for ticker, divisor in pool.map(fetch, lse_tickers):
+                if divisor == 100:
+                    divisors[ticker] = divisor
+
+        if divisors:
+            self.stdout.write(
+                f"  GBX→GBP conversion needed for {len(divisors)} LSE tickers."
+            )
+        return divisors
+
     def _seed_prices(
         self,
         assets: dict[str, Asset],
@@ -733,6 +759,7 @@ class Command(BaseCommand):
         for i, batch in enumerate(batches, 1):
             yf_tickers = [yf_t for _, yf_t, _ in batch]
             self.stdout.write(f"Batch {i}/{len(batches)}: {len(yf_tickers)} tickers...")
+            divisors = self._get_price_divisors(yf_tickers)
             candles: list[PriceCandle] = []
 
             for interval_minutes, start, iv_str in intervals:
@@ -741,7 +768,10 @@ class Command(BaseCommand):
                     continue
                 for _, yf_ticker, asset in batch:
                     candles.extend(
-                        self._candles_from_df(df, yf_ticker, asset, len(yf_tickers), interval_minutes)
+                        self._candles_from_df(
+                            df, yf_ticker, asset, len(yf_tickers), interval_minutes,
+                            divisors.get(yf_ticker, 1),
+                        )
                     )
 
             PriceCandle.objects.bulk_create(candles, ignore_conflicts=True)
@@ -791,6 +821,7 @@ class Command(BaseCommand):
         asset: Asset,
         n_tickers: int,
         interval_minutes: int,
+        divisor: int = 1,
     ) -> list[PriceCandle]:
         ticker_df = self._extract_ticker_df(df, yf_ticker, n_tickers)
         if ticker_df is None or ticker_df.empty:
@@ -804,6 +835,9 @@ class Command(BaseCommand):
                 o, h, l, c = row["Open"], row["High"], row["Low"], row["Close"]
                 if any(pd.isna(v) for v in (o, h, l, c)):
                     continue
+
+                if divisor != 1:
+                    o, h, l, c = o / divisor, h / divisor, l / divisor, c / divisor
 
                 if interval_minutes == 1440:
                     day = ts.date() if hasattr(ts, "date") else ts
