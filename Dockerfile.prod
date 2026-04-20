@@ -24,7 +24,7 @@ COPY . .
 # Copy built React SPA into place for collectstatic
 COPY --from=frontend-builder /frontend/dist /code/frontend/dist
 
-RUN chown -R appuser:appuser /code
+RUN mkdir -p /code/staticfiles /code/media && chown -R appuser:appuser /code
 USER appuser
 
 COPY --chown=appuser entrypoint.prod.sh /entrypoint.sh
