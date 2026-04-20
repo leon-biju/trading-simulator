@@ -14,9 +14,9 @@ FX_RATES_UPDATE_INTERVAL_MINUTES = 8 * 60  # Interval for FX rates updates (8hrs
 ORDER_EXPIRY_DAYS = 30  # Pending orders older than this are expired
 
 # SImulation parameters
-SIMULATION_INITIAL_PRICE_RANGE = (50.0, 250.0)  # Initial price range
-SIMULATION_MU = 0.08  # Annual Drift coefficient
-SIMULATION_SIGMA = 0.20  # Annual Volatility coefficient
+SIMULATION_INITIAL_PRICE_RANGE = (50.0, 250.0)  # Initial price range Note: probably don't need this if seeding with real data
+SIMULATION_MU = 0.06  # Annual Drift coefficient
+SIMULATION_SIGMA = 0.25  # Annual Volatility coefficient
 
 
 # WARNING: Must match frontend/src/lib/utils.ts TRADING_FEE_RATE
