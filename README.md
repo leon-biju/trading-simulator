@@ -118,11 +118,11 @@ docker-compose exec api python manage.py migrate
 ### 4. Set up market data and create admin account
 
 ```bash
-docker-compose exec api python manage.py setup_market_data
+docker-compose exec api python manage.py setup_market
 docker-compose exec api python manage.py createsuperuser
 ```
 
-The `setup_market_data` wizard lets you choose currencies, loads exchanges and assets from bundled JSON data ( stored in market/data), and sets up FX rates. The wizard also lets you choose a base currency, which is used for currency conversion and internal calculations.
+The `setup_market` wizard lets you select which indices to include (S&P 500, FTSE 100, Nikkei 225, Hang Seng, CAC 40, SMI, TSX 60, ASX 200). Exchanges and currencies are derived automatically from your selection. It then scrapes current constituents from Wikipedia, downloads real OHLC price history from Yahoo Finance, and seeds everything into the database. The GBM simulation continues from the real prices on each market tick.
 
 ### 5. Access the application locally
 
@@ -149,8 +149,8 @@ docker-compose exec api pytest wallets/
 ## Useful Commands
 
 ```bash
-# Backfill price history for a specific list of assets
-docker-compose exec api python manage.py backfill_asset_history --ticker AAPL GOOGL PLTR
+# Add more indices to an existing setup
+docker-compose exec api python manage.py setup_market --index asx200 --force
 ```
 
 ---
