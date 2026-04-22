@@ -9,6 +9,7 @@ import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 
+const AnalyticsPage      = lazy(() => import('@/pages/AnalyticsPage'))
 const DashboardPage      = lazy(() => import('@/pages/DashboardPage'))
 const MarketOverviewPage = lazy(() => import('@/pages/MarketOverviewPage'))
 const ExchangeDetailPage = lazy(() => import('@/pages/ExchangeDetailPage'))
@@ -44,6 +45,7 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/wallets/:currencyCode" element={<WalletDetailPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

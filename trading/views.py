@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from django.db.models import Count
+from django.db.models.functions import TruncWeek
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework import status
@@ -9,6 +11,7 @@ from rest_framework.views import APIView
 
 from accounts.models import Profile
 from config.pagination import StandardPagination
+from config.utils import convert_to_home
 from trading.serializers import (
     OrderSerializer,
     PlaceOrderSerializer,
@@ -18,10 +21,11 @@ from trading.serializers import (
 )
 from market.models import Asset, Currency
 from market.services.fx import get_fx_rate
-from trading.models import Order, OrderStatus, Position, Trade
+from trading.models import Order, OrderStatus, Position, PortfolioSnapshot, Trade
 from trading.services.orders import cancel_order, place_order
 from trading.services.portfolio import get_portfolio_history
 from trading.services.queries import get_user_positions
+from wallets.models import Wallet
 
 
 @method_decorator(ratelimit(key='user', rate='60/m', block=True), name='get')
@@ -195,3 +199,125 @@ class PositionView(APIView):
             return Response(data)
         except Position.DoesNotExist:
             return Response({'has_position': False})
+
+
+@method_decorator(ratelimit(key='user', rate='20/m', block=True), name='get')
+class AnalyticsStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        home_code = user.home_currency.code
+
+        total_trades = Trade.objects.filter(user=user).count()
+
+        traded_positions = Position.objects.filter(user=user).exclude(realized_pnl=Decimal('0'))
+        total_traded = traded_positions.count()
+        winning = traded_positions.filter(realized_pnl__gt=0).count()
+        win_rate = float(winning / total_traded * 100) if total_traded > 0 else None
+
+        trades_qs = Trade.objects.filter(user=user).select_related('fee_currency')
+        total_fees_home = sum(
+            (convert_to_home(t.fee_currency.code, home_code, t.fee) or Decimal('0'))
+            for t in trades_qs
+        )
+
+        values = list(
+            PortfolioSnapshot.objects
+            .filter(user=user)
+            .order_by('date')
+            .values_list('total_portfolio_value', flat=True)
+        )
+        max_drawdown = None
+        if values:
+            peak = values[0]
+            max_dd = Decimal('0')
+            for v in values:
+                if v > peak:
+                    peak = v
+                elif peak > 0:
+                    dd = (peak - v) / peak * 100
+                    if dd > max_dd:
+                        max_dd = dd
+            max_drawdown = float(max_dd)
+
+        return Response({
+            'total_trades': total_trades,
+            'win_rate': win_rate,
+            'winning_positions': winning,
+            'total_traded_positions': total_traded,
+            'total_fees_home': float(total_fees_home),
+            'max_drawdown_pct': max_drawdown,
+            'home_currency': home_code,
+        })
+
+
+@method_decorator(ratelimit(key='user', rate='20/m', block=True), name='get')
+class AnalyticsAllocationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        home_code = user.home_currency.code
+
+        by_currency: dict[str, dict] = {}
+
+        positions = (
+            Position.objects
+            .filter(user=user, quantity__gt=0)
+            .select_related('asset', 'asset__currency')
+        )
+        for pos in positions:
+            code = pos.asset.currency.code
+            price = pos.asset.get_latest_price()
+            if price is None:
+                continue
+            value_home = convert_to_home(code, home_code, pos.quantity * price) or Decimal('0')
+            entry = by_currency.setdefault(code, {'invested': Decimal('0'), 'cash': Decimal('0')})
+            entry['invested'] += value_home
+
+        wallets = Wallet.objects.filter(user=user).select_related('currency')
+        for wallet in wallets:
+            code = wallet.currency.code
+            cash_home = convert_to_home(code, home_code, wallet.balance) or Decimal('0')
+            entry = by_currency.setdefault(code, {'invested': Decimal('0'), 'cash': Decimal('0')})
+            entry['cash'] += cash_home
+
+        total = sum(v['invested'] + v['cash'] for v in by_currency.values())
+        allocations = [
+            {
+                'currency': code,
+                'invested_home': float(v['invested']),
+                'cash_home': float(v['cash']),
+                'total_home': float(v['invested'] + v['cash']),
+                'percent': float((v['invested'] + v['cash']) / total * 100) if total > 0 else 0,
+            }
+            for code, v in by_currency.items()
+            if v['invested'] + v['cash'] > 0
+        ]
+        allocations.sort(key=lambda x: -x['total_home'])
+
+        return Response({
+            'allocations': allocations,
+            'total_home': float(total),
+            'home_currency': home_code,
+        })
+
+
+@method_decorator(ratelimit(key='user', rate='20/m', block=True), name='get')
+class AnalyticsActivityView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        activity = (
+            Trade.objects
+            .filter(user=request.user)
+            .annotate(week=TruncWeek('executed_at'))
+            .values('week')
+            .annotate(count=Count('id'))
+            .order_by('week')
+        )
+        return Response([
+            {'week': entry['week'].date().isoformat(), 'count': entry['count']}
+            for entry in activity
+        ])

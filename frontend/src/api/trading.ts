@@ -132,3 +132,47 @@ export async function getPosition(
   const { data } = await api.get(`/api/trading/position/${exchangeCode}/${ticker}/`)
   return data
 }
+
+export interface AnalyticsStats {
+  total_trades: number
+  win_rate: number | null
+  winning_positions: number
+  total_traded_positions: number
+  total_fees_home: number
+  max_drawdown_pct: number | null
+  home_currency: string
+}
+
+export interface AllocationEntry {
+  currency: string
+  invested_home: number
+  cash_home: number
+  total_home: number
+  percent: number
+}
+
+export interface AnalyticsAllocation {
+  allocations: AllocationEntry[]
+  total_home: number
+  home_currency: string
+}
+
+export interface ActivityEntry {
+  week: string
+  count: number
+}
+
+export async function getAnalyticsStats(): Promise<AnalyticsStats> {
+  const { data } = await api.get('/api/trading/analytics/stats/')
+  return data
+}
+
+export async function getAnalyticsAllocation(): Promise<AnalyticsAllocation> {
+  const { data } = await api.get('/api/trading/analytics/allocation/')
+  return data
+}
+
+export async function getAnalyticsActivity(): Promise<ActivityEntry[]> {
+  const { data } = await api.get('/api/trading/analytics/activity/')
+  return data
+}

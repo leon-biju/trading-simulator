@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, TrendingUp, Trophy, LogOut, ChevronsUpDown, LogIn, UserPlus, UserRound, Settings } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Trophy, LogOut, ChevronsUpDown, LogIn, UserPlus, UserRound, Settings, BarChart3 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import {
   Sidebar,
@@ -27,6 +27,7 @@ const ANON_NAV = [
 
 const APP_NAV = [
   { to: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
+  { to: '/analytics',   label: 'Analytics',   icon: BarChart3 },
   { to: '/market',      label: 'Markets',     icon: TrendingUp },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
 ]
